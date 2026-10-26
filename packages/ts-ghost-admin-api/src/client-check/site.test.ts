@@ -2,7 +2,7 @@ import createFetchMock from "vitest-fetch-mock";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import { TSGhostAdminAPI } from "../admin-api";
-import { serveFixtures, type FixtureServer } from "./fixture-server";
+import { PINNED_GHOST, serveFixtures, type FixtureServer } from "./fixture-server";
 
 const fetchMocker = createFetchMock(vi);
 
@@ -12,7 +12,7 @@ describe("client check: site", () => {
 
   beforeEach(() => {
     fetchMocker.enableMocks();
-    server = serveFixtures(fetchMocker, "ghost-6.72");
+    server = serveFixtures(fetchMocker, PINNED_GHOST.fixtureDir);
     api = new TSGhostAdminAPI(
       "https://ghost.org",
       "1efedd9db174adee2d23d982:4b74dca0219bad629852191af326a45037346c2231240e0f7aec1f9371cc14e8",

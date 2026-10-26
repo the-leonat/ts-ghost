@@ -15,6 +15,19 @@ export type Fixture = {
 export const FIXTURES_ROOT = path.resolve(__dirname, "../../fixtures");
 
 /**
+ * The Ghost release the fixtures were recorded from, read from `fixtures/ghost-ref`
+ * (a release tag such as `v6.72.0`). The recorder records it, the drift job bumps
+ * it, and client checks load `fixtureDir` so ordinary runs assert against it only.
+ */
+export const PINNED_GHOST = (() => {
+  const ref = readFileSync(path.join(FIXTURES_ROOT, "ghost-ref"), "utf8").trim();
+  const match = /^v(\d+\.\d+)\.\d+$/.exec(ref);
+  if (match === null) throw new Error(`fixtures/ghost-ref must be a Ghost release tag, got: ${ref}`);
+  const minor = match[1];
+  return { ref, minor, fixtureDir: `ghost-${minor}` };
+})();
+
+/**
  * Concrete stand-ins for the markers the recorder writes in place of volatile
  * values. Each satisfies the Ghost matcher pattern its marker is named after.
  */

@@ -1,0 +1,163 @@
+name: 🌊 Drift check
+
+# Re-records the admin-api artefacts from the newest Ghost release and diffs them
+# against the committed ones (docs/adr/0002-fixture-recorded-conformance-checks.md).
+# Kept off the path of ordinary work: pull requests only run the drift tooling's
+# own unit tests, and the client check in deploy.yml asserts against the pinned
+# release (packages/ts-ghost-admin-api/fixtures/ghost-ref) only.
+#
+# Fails on any difference. When the newest release is not the pinned one, it first
+# opens a pull request carrying the pin bump and the re-recorded artefacts, and
+# dispatches the test workflow on it, whose checks fail until the client is
+# brought up to the new shapes.
+#
+# Needs no secrets: Ghost and MySQL run in containers on the runner, Ghost's tags
+# are read anonymously, and the pull request is opened with the built-in token
+# (the repository must allow GitHub Actions to create pull requests).
+
+on:
+  schedule:
+    - cron: "23 5 * * *"
+  workflow_dispatch:
+    inputs:
+      ghost_ref:
+        description: "Ghost release tag to record (default: the newest release)"
+        required: false
+        type: string
+  pull_request:
+    paths:
+      - "scripts/drift/**"
+      - ".github/workflows/drift.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  tooling:
+    name: 🧪 Drift tooling
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: ⬇️ Checkout repo
+        uses: actions/checkout@v6
+
+      - name: ⎔ Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22.x
+          check-latest: true
+
+      - name: 🧪 Test drift tooling
+        run: node --test scripts/drift/*.test.mjs
+
+  drift:
+    name: 🌊 Record and diff
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    concurrency: drift
+    permissions:
+      contents: write
+      pull-requests: write
+      actions: write
+    env:
+      FIXTURES: packages/ts-ghost-admin-api/fixtures
+    steps:
+      - name: ⬇️ Checkout repo
+        uses: actions/checkout@v6
+
+      - name: ⎔ Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22.x
+          check-latest: true
+
+      - name: 🧪 Test drift tooling
+        run: node --test scripts/drift/*.test.mjs
+
+      - name: 📁 Scratch paths
+        run: |
+          echo "RECORDED=$RUNNER_TEMP/recorded" >> "$GITHUB_ENV"
+          echo "REPORT=$RUNNER_TEMP/drift.md" >> "$GITHUB_ENV"
+
+      - name: 🔭 Pinned and newest Ghost release
+        id: versions
+        env:
+          REQUESTED_REF: ${{ inputs.ghost_ref }}
+        run: |
+          pinned="$(tr -d '[:space:]' < "$FIXTURES/ghost-ref")"
+          target="${REQUESTED_REF:-$(node scripts/drift/release.mjs latest)}"
+          {
+            echo "pinned=$pinned"
+            echo "pinned_dir=$(node scripts/drift/release.mjs fixture-dir "$pinned")"
+            echo "target=$target"
+            echo "target_dir=$(node scripts/drift/release.mjs fixture-dir "$target")"
+          } >> "$GITHUB_OUTPUT"
+          echo "Pinned Ghost $pinned; recording $target"
+
+      # Same image and MySQL composition as a local `recorder/record.sh` run.
+      - name: 🎙️ Record
+        env:
+          GHOST_REF: ${{ steps.versions.outputs.target }}
+        run: RECORDER_OUT_DIR="$RECORDED" recorder/record.sh
+
+      - name: 🔍 Diff against committed artefacts
+        id: diff
+        env:
+          COMMITTED: ${{ env.FIXTURES }}/${{ steps.versions.outputs.pinned_dir }}
+        run: |
+          status=0
+          node scripts/drift/check.mjs --committed "$COMMITTED" --recorded "$RECORDED" --report "$REPORT" || status=$?
+          [ "$status" -le 1 ] || exit "$status"
+          echo "drift=$status" >> "$GITHUB_OUTPUT"
+          {
+            echo "## Ghost ${{ steps.versions.outputs.target }} against pinned ${{ steps.versions.outputs.pinned }}"
+            echo
+            cat "$REPORT"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: 📬 Open pin-bump pull request
+        if: steps.versions.outputs.target != steps.versions.outputs.pinned
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BASE: ${{ github.ref_name }}
+          PINNED: ${{ steps.versions.outputs.pinned }}
+          PINNED_DIR: ${{ steps.versions.outputs.pinned_dir }}
+          TARGET: ${{ steps.versions.outputs.target }}
+          TARGET_DIR: ${{ steps.versions.outputs.target_dir }}
+        run: |
+          branch="drift/ghost-$TARGET"
+          if git ls-remote --exit-code --heads origin "$branch" > /dev/null; then
+            echo "Branch $branch already exists; not opening another pull request"
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "$branch"
+          git rm -r -q "$FIXTURES/$PINNED_DIR"
+          mkdir -p "$FIXTURES/$TARGET_DIR"
+          cp -R "$RECORDED/." "$FIXTURES/$TARGET_DIR/"
+          printf '%s\n' "$TARGET" > "$FIXTURES/ghost-ref"
+          git add -A "$FIXTURES"
+          git commit -q -m "chore(admin-api): pin Ghost $TARGET and re-record its artefacts"
+          git push origin "$branch"
+
+          body="$RUNNER_TEMP/pr-body.md"
+          {
+            echo "Ghost $TARGET is out; the pin was $PINNED. This moves the pin and carries the artefacts re-recorded from $TARGET, so the diff below is what Ghost changed."
+            echo
+            echo "The client check runs against the new pin, so this pull request fails until the client is brought up to the new shapes. Opened by the drift check (\`.github/workflows/drift.yml\`)."
+            echo
+            head -c 60000 "$REPORT"
+          } > "$body"
+          gh pr create --base "$BASE" --head "$branch" --title "Pin Ghost $TARGET (drift check)" --body-file "$body"
+
+          # Pushes and pull requests made with the built-in token trigger no
+          # workflows, so run the tests on the branch explicitly.
+          gh workflow run deploy.yml --ref "$branch"
+
+      - name: 🚨 Fail on drift
+        if: steps.diff.outputs.drift != '0'
+        run: |
+          echo "::error::Ghost ${{ steps.versions.outputs.target }} differs from the committed artefacts; see the job summary"
+          exit 1

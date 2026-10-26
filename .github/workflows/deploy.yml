@@ -5,6 +5,9 @@ on:
       - main
       - dev
   pull_request: {}
+  # The drift check dispatches this on the pin-bump branches it opens, because
+  # pull requests opened with the built-in token trigger no workflows.
+  workflow_dispatch: {}
 permissions:
   actions: write
   contents: read

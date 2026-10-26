@@ -3,13 +3,14 @@ import { describe, expect, test } from "vitest";
 import { TSGhostAdminAPI } from "../admin-api";
 import { describeClient } from "./client-claims";
 import { crossCheck, loadRouteSpec } from "./cross-check";
+import { PINNED_GHOST } from "./fixture-server";
 
 const api = new TSGhostAdminAPI(
   "https://ghost.org",
   "1efedd9db174adee2d23d982:4b74dca0219bad629852191af326a45037346c2231240e0f7aec1f9371cc14e8",
   "v6.72",
 );
-const { failures, uncovered } = crossCheck(describeClient(api), loadRouteSpec("ghost-6.72"));
+const { failures, uncovered } = crossCheck(describeClient(api), loadRouteSpec(PINNED_GHOST.fixtureDir));
 
 /**
  * Claims the client makes that Ghost does not back, kept here as assertions
@@ -27,7 +28,7 @@ const KNOWN_DEFECTS = {
   ),
 };
 
-describe("route-spec cross-check: admin client against Ghost 6.72", () => {
+describe(`route-spec cross-check: admin client against pinned Ghost ${PINNED_GHOST.ref}`, () => {
   test("every claim the client makes is registered by Ghost, apart from the known defects", () => {
     const known = Object.values(KNOWN_DEFECTS).flat();
     expect(failures.filter((failure) => !known.includes(failure))).toEqual([]);
