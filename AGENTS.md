@@ -127,7 +127,7 @@ pnpm version-packages # Apply changesets and bump versions
 
 ## Key Dependencies
 
-- **Zod**: Schema validation and TypeScript type inference (imported as `zod/v3`)
+- **Zod**: Schema validation and TypeScript type inference (imported as `zod`)
 - **jose**: JWT signing for Admin API authentication
 - **Turborepo**: Build orchestration
 - **tsup**: TypeScript bundling

@@ -31,8 +31,7 @@ export const baseMembersSchema = z.object({
   subscriptions: z
     .array(baseSubscriptionsSchema)
     .meta({ description: "The subscriptions associated with the member" }),
-  // A Gravatar URL built from the email, or null when Gravatar is off
-  // (`privacy.useGravatar: false` or `useTinfoil`).
+  // Null when Gravatar is off.
   avatar_image: z
     .string()
     .meta({ description: "(nullable) The URL of the member's avatar image" })

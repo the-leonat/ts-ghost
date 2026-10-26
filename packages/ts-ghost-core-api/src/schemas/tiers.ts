@@ -29,4 +29,7 @@ export const baseTiersSchema = z.object({
   visibility: ghostVisibilitySchema,
   currency: z.string().nullish(),
   trial_days: z.number().default(0),
+  monthly_price_id: z.string().nullish(),
+  yearly_price_id: z.string().nullish(),
+  expiry_at: z.string().nullish(),
 });

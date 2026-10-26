@@ -2,12 +2,13 @@ import { z, ZodRawShape } from "zod";
 
 import { BrowseParamsSchema } from "../helpers/browse-params";
 import { DebugOption } from "../helpers/debug";
-import type { HTTPClient } from "../helpers/http-client";
-import { sentIncludes } from "../helpers/includes";
 import { sanitizeFormatMask, sanitizeMask } from "../helpers/masks";
+import type { HTTPClient } from "../helpers/http-client";
+import { filterSendableIncludes, requiredIncludes } from "../helpers/includes";
 import { ghostMetaSchema, type APIResource } from "../schemas/shared";
 import type { Exactly, Mask, NoUnrecognizedKeys } from "../utils";
 import { contentFormats, type ContentFormats } from "./formats";
+import { toFetcherResult } from "./result";
 
 export class BrowseFetcher<
   const Resource extends APIResource = any,
@@ -81,9 +82,11 @@ export class BrowseFetcher<
       ...this._params,
       include: Object.keys(parsedInclude),
     };
-    const requiredIncludeKeys = sanitizeMask(this.config.output, parsedInclude, {
-      excludeDotNotation: true,
-    });
+    const requiredIncludeKeys = sanitizeMask(
+      this.config.output,
+      requiredIncludes(this.config.include, parsedInclude),
+      { excludeDotNotation: true },
+    );
 
     return new BrowseFetcher(
       this.resource,
@@ -153,7 +156,7 @@ export class BrowseFetcher<
     if (inputKeys.length !== outputKeys.length && outputKeys.length > 0) {
       this._urlParams.fields = outputKeys.filter((key) => key !== "count").join(",");
     }
-    const include = sentIncludes(this.config.include, this._params.include ?? []);
+    const include = filterSendableIncludes(this.config.include, this._params.include ?? []);
     if (include.length > 0) {
       this._urlParams.include = include.join(",");
     }
@@ -203,39 +206,30 @@ export class BrowseFetcher<
     ]);
   }
 
-  public async fetch(options?: RequestInit & DebugOption) {
-    const resultSchema = this._getResultSchema();
-    const {
-      data: result,
-      status,
-      body,
-    } = (await this.httpClient.fetchWithStatus({
+  private async _fetchResult(options?: RequestInit & DebugOption) {
+    const response = await this.httpClient.fetchWithStatus({
       resource: this.resource,
       searchParams: this._urlSearchParams,
       options,
-    })) as { data: any; status: number; body?: string };
-    let data: any = {};
-    if (result.errors) {
-      data.success = false;
-      data.errors = result.errors;
-      data.status = status;
-      if (body !== undefined) data.body = body;
-    } else {
-      data = {
-        success: true,
-        meta: result.meta || {
-          pagination: {
-            pages: 0,
-            page: 0,
-            limit: 15,
-            total: 0,
-            prev: null,
-            next: null,
-          },
+    });
+    return toFetcherResult(response, (result) => ({
+      meta: result.meta || {
+        pagination: {
+          pages: 0,
+          page: 0,
+          limit: 15,
+          total: 0,
+          prev: null,
+          next: null,
         },
-        data: result[this.resource],
-      };
-    }
+      },
+      data: result[this.resource],
+    }));
+  }
+
+  public async fetch(options?: RequestInit & DebugOption) {
+    const resultSchema = this._getResultSchema();
+    const data = await this._fetchResult(options);
     return resultSchema.parse(data);
   }
 
@@ -249,37 +243,7 @@ export class BrowseFetcher<
     }
 
     const resultSchema = this._getResultSchema();
-    const {
-      data: result,
-      status,
-      body,
-    } = (await this.httpClient.fetchWithStatus({
-      resource: this.resource,
-      searchParams: this._urlSearchParams,
-      options,
-    })) as { data: any; status: number; body?: string };
-    let data: any = {};
-    if (result.errors) {
-      data.success = false;
-      data.errors = result.errors;
-      data.status = status;
-      if (body !== undefined) data.body = body;
-    } else {
-      data = {
-        success: true,
-        meta: result.meta || {
-          pagination: {
-            pages: 0,
-            page: 0,
-            limit: 15,
-            total: 0,
-            prev: null,
-            next: null,
-          },
-        },
-        data: result[this.resource],
-      };
-    }
+    const data = await this._fetchResult(options);
     const response: {
       current: z.infer<typeof resultSchema>;
       next: BrowseFetcher<Resource, Params, Fields, BaseShape, OutputShape, IncludeShape> | undefined;

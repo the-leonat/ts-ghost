@@ -1,12 +1,25 @@
 import { z } from "zod";
 import { baseAuthorsSchema } from "@ts-ghost/core-api";
 
+// Ghost's user states; `invited` is kept for existing consumers.
+export const adminUserStatusSchema = z.union([
+  z.literal("active"),
+  z.literal("invited"),
+  z.literal("locked"),
+  z.literal("inactive"),
+  z.literal("warn-1"),
+  z.literal("warn-2"),
+  z.literal("warn-3"),
+  z.literal("warn-4"),
+]);
+
 export const adminAuthorsSchema = baseAuthorsSchema.merge(
   z.object({
     accessibility: z.string().nullish(),
     comment_notifications: z.boolean(),
     created_at: z.string().nullish(),
     updated_at: z.string().nullish(),
+    tour: z.string().nullish(),
     email: z.string().nullish(),
     free_member_signup_notification: z.boolean(),
     last_seen: z.string().nullish(),
@@ -14,7 +27,10 @@ export const adminAuthorsSchema = baseAuthorsSchema.merge(
     milestone_notifications: z.boolean().optional(),
     paid_subscription_canceled_notification: z.boolean(),
     paid_subscription_started_notification: z.boolean(),
-    status: z.union([z.literal("active"), z.literal("invited"), z.literal("locked")]),
+    donation_notifications: z.boolean().optional(),
+    gift_subscription_notifications: z.boolean().optional(),
+    recommendation_notifications: z.boolean().optional(),
+    status: adminUserStatusSchema,
     roles: z
       .array(
         z.object({

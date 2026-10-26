@@ -2,7 +2,15 @@
   "request": {
     "method": "POST",
     "path": "/ghost/api/admin/members/",
-    "query": {}
+    "query": {},
+    "body": {
+      "members": [
+        {
+          "email": "ts-ghost-recorder@example.com",
+          "name": "ts-ghost recorder member"
+        }
+      ]
+    }
   },
   "response": {
     "body": {

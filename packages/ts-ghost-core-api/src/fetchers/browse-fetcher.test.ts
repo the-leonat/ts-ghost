@@ -2,7 +2,7 @@ import createFetchMock from "vitest-fetch-mock";
 import { assert, describe, expect, test } from "vitest";
 import { z } from "zod";
 
-import { HTTPClient, ignoredInclude, type HTTPClientOptions } from "../helpers";
+import { HTTPClient, ignoredInclude, sparseInclude, type HTTPClientOptions } from "../helpers";
 import { BrowseFetcher } from "./browse-fetcher";
 
 const fetchMocker = createFetchMock(vi);
@@ -125,6 +125,27 @@ describe("BrowseFetcher", () => {
 
     expect(browseFetcher.getIncludes()).toEqual(["count", "legacy"]);
     expect(browseFetcher.getURLSearchParams()?.get("include")).toBe("count");
+  });
+
+  test("an include key marked sparseInclude() is sent but does not make its key required", async () => {
+    const output = simplifiedSchema.extend({ extra: z.unknown().optional() });
+    const browseFetcher = new BrowseFetcher(
+      "posts",
+      {
+        schema: output,
+        output,
+        include: z.object({ count: z.literal(true).optional(), extra: sparseInclude() }),
+      },
+      {},
+      httpClient,
+    ).include({ count: true, extra: true });
+    fetchMocker.doMockOnce(postsStub);
+
+    expect(browseFetcher.getURLSearchParams()?.get("include")).toBe("count,extra");
+    const result = await browseFetcher.fetch();
+    assert(result.success);
+    expect(result.data[0]).toMatchObject({ title: "title", count: 1 });
+    expect(result.data[0].extra).toBeUndefined();
   });
 
   test("should return a BrowseFetcher instance with Admin API", async () => {

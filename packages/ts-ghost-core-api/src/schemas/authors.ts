@@ -13,6 +13,13 @@ export const baseAuthorsSchema = z.object({
   location: z.string().nullable(),
   facebook: z.string().nullable(),
   twitter: z.string().nullable(),
+  bluesky: z.string().nullish(),
+  instagram: z.string().nullish(),
+  linkedin: z.string().nullish(),
+  mastodon: z.string().nullish(),
+  threads: z.string().nullish(),
+  tiktok: z.string().nullish(),
+  youtube: z.string().nullish(),
   count: z
     .object({
       posts: z.number(),

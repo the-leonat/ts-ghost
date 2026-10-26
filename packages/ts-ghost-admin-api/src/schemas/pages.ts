@@ -10,6 +10,7 @@ export const adminPagesSchema = basePagesSchema.merge(
     mobiledoc: z.string().nullish(),
     status: z.union([z.literal("draft"), z.literal("published"), z.literal("scheduled")]),
     frontmatter: z.string().nullish(),
+    show_title_and_feature_image: z.boolean().optional(),
     tiers: z.array(adminTiersSchema).nullish(),
     count: z
       .object({

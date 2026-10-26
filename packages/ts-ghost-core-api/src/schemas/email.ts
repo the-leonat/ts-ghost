@@ -12,14 +12,18 @@ export const baseEmailSchema = z.object({
   opened_count: z.number(),
   failed_count: z.number(),
   subject: z.string(),
-  // Null on an email whose sender and source Ghost did not store, as on
-  // Ghost's own `members:emails` seed.
   from: z.string().nullable(),
   reply_to: z.string().nullable(),
   source: z.string().nullable(), // lexical format
   html: z.string().nullable(),
   plaintext: z.string().nullable(),
   track_opens: z.boolean(),
+  track_clicks: z.boolean().optional(),
+  feedback_enabled: z.boolean().optional(),
+  post_id: z.string().optional(),
+  newsletter_id: z.string().nullish(),
+  source_type: z.string().optional(),
+  csd_email_count: z.number().nullish(),
   submitted_at: z.string(),
   created_at: z.string(),
   updated_at: z.string(),

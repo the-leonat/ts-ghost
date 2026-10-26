@@ -1,6 +1,6 @@
 ---
-"@ts-ghost/core-api": minor
-"@ts-ghost/admin-api": minor
+"@ts-ghost/core-api": major
+"@ts-ghost/admin-api": major
 ---
 
 Offers: retention offers read without a validation error, and trial offers can be created. Checked against offers recorded from Ghost 6.72.

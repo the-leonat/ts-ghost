@@ -1,5 +1,5 @@
 ---
-"@ts-ghost/admin-api": minor
+"@ts-ghost/admin-api": major
 ---
 
 Webhook schemas accept what Ghost's webhooks input schema accepts:

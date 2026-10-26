@@ -2,7 +2,7 @@ import createFetchMock from "vitest-fetch-mock";
 import { describe, expect, test } from "vitest";
 import { z } from "zod";
 
-import { APIComposer } from "./api-composer";
+import { APIComposer, inputSchemasOf } from "./api-composer";
 import { BrowseFetcher, ReadFetcher } from "./fetchers";
 import type { BrowseParams } from "./helpers/browse-params";
 import { HTTPClientFactory, HTTPClientOptions } from "./helpers/http-client";
@@ -694,5 +694,33 @@ describe("APIComposer add / edit", () => {
         type: "NotFoundError",
       },
     ]);
+  });
+});
+
+describe("inputSchemasOf", () => {
+  const createSchema = z.object({ name: z.string(), note: z.string().optional() });
+  const composer = new APIComposer(
+    "posts",
+    {
+      schema: z.object({ id: z.string() }),
+      identitySchema: z.object({ id: z.string() }),
+      include: z.object({}),
+      createSchema,
+    },
+    new HTTPClientFactory({ url: "https://ghost.org", key: "a:b", version: "v6.0", endpoint: "admin" }),
+  );
+
+  test("edit parses with the create schema made partial, built once for every access()", () => {
+    const first = inputSchemasOf(composer.access(["add", "edit"]));
+    const second = inputSchemasOf(composer.access(["edit"]));
+
+    expect(first?.add).toBe(createSchema);
+    expect(z.safeParse(first!.edit!, {}).success).toBe(true);
+    expect(second?.edit).toBe(first?.edit);
+  });
+
+  test("covers only the operations access() exposed", () => {
+    expect(inputSchemasOf(composer.access(["delete"]))).toEqual({});
+    expect(inputSchemasOf({})).toBeUndefined();
   });
 });

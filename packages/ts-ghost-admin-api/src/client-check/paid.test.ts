@@ -12,18 +12,6 @@ import { fetchMocker, sentBody, useClientCheck } from "./harness";
 
 const BY_SLUG = { order: "slug asc" } as const;
 
-/** The issue paths of the validation error a call rejected with, as `a.0.b`. */
-async function rejectedPaths(call: Promise<unknown>): Promise<string[]> {
-  const error: unknown = await call.then(
-    () => undefined,
-    (reason: unknown) => reason,
-  );
-  assert(error !== undefined, "expected the call to reject");
-  const issues = (error as { issues?: { path: PropertyKey[] }[] }).issues;
-  assert(issues !== undefined, `expected a validation error, got: ${String(error)}`);
-  return issues.map((issue) => issue.path.map(String).join("."));
-}
-
 function recorded(name: string): Fixture {
   const fixture = loadFixtures(PINNED_GHOST.fixtureDir).find(
     (candidate) =>

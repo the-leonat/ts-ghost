@@ -11,7 +11,7 @@ import { adminTiersSchema } from "../schemas/tiers";
 import { adminUsersSchema } from "../schemas/users";
 import { adminWebhookSchema } from "../schemas/webhooks";
 import { describeClient } from "./client-claims";
-import { emptyReads, unbackedFields, unfilledIncludes } from "./evidence";
+import { emptyReads, keyMismatches, unbackedFields, unfilledIncludes } from "./evidence";
 import { loadFixtures, PINNED_GHOST, type Fixture } from "./fixture-server";
 import { ADMIN_KEY } from "./harness";
 
@@ -78,6 +78,56 @@ describe("evidence guards", () => {
   });
 });
 
+describe("key check", () => {
+  const schema = z.object({
+    id: z.string(),
+    note: z.string().nullish(),
+    tags: z.array(z.object({ name: z.string(), color: z.string().nullable() })).optional(),
+    meta: z.object({ a: z.string() }).nullable(),
+    data: z.unknown().optional(),
+  });
+
+  test("a key a fixture sends that the schema does not model fails, at any depth", () => {
+    const fixtures = [
+      fixture("GET", "posts/", 200, {
+        posts: [{ id: "1", meta: null, extra: 1, tags: [{ name: "n", color: null, hue: 2 }] }],
+      }),
+      fixture("POST", "posts/", 201, { posts: [{ id: "2", meta: { a: "x", b: 3 }, data: { free: 1 } }] }),
+      fixture("GET", "posts/0/", 404, { errors: [{ type: "NotFoundError", context: 1 }] }),
+    ];
+
+    expect(keyMismatches(fixtures, { posts: schema })).toEqual([
+      'posts: "extra" is sent but not modelled',
+      'posts: "tags[].hue" is sent but not modelled',
+      'posts: "meta.b" is sent but not modelled',
+    ]);
+  });
+
+  test("a required key a fixture omits fails, unless the request selected fields", () => {
+    const fixtures = [
+      fixture("GET", "posts/", 200, { posts: [{ meta: { a: "x" }, tags: [{ name: "n" }] }] }),
+      {
+        ...fixture("GET", "posts/", 200, { posts: [{ id: "1" }] }),
+        request: { method: "GET", path: "/ghost/api/admin/posts/", query: { fields: "id" } },
+      },
+    ];
+
+    expect(keyMismatches(fixtures, { posts: schema })).toEqual([
+      'posts: "id" is required but not sent',
+      'posts: "tags[].color" is required but not sent',
+    ]);
+  });
+
+  test("a union value is checked against the option it parses as", () => {
+    const union = z.object({
+      offer: z.union([z.object({ type: z.literal("a"), x: z.string() }), z.object({ type: z.literal("b") })]),
+    });
+    const fixtures = [fixture("GET", "x/", 200, { x: [{ offer: { type: "b" } }, { offer: { type: "a", x: "s", y: 1 } }] })];
+
+    expect(keyMismatches(fixtures, { x: union })).toEqual(['x: "offer.y" is sent but not modelled']);
+  });
+});
+
 describe(`evidence in the fixtures recorded from pinned Ghost ${PINNED_GHOST.ref}`, () => {
   const fixtures = loadFixtures(PINNED_GHOST.fixtureDir);
   const modelled = describeClient(new TSGhostAdminAPI("https://ghost.org", ADMIN_KEY, "v6.72")).map(
@@ -98,20 +148,28 @@ describe(`evidence in the fixtures recorded from pinned Ghost ${PINNED_GHOST.ref
     ]);
   });
 
+  // The schema each resource's records are parsed with, as `TSGhostAdminAPI` builds it.
+  const RESPONSE_SCHEMAS = {
+    posts: adminPostsSchema,
+    pages: adminPagesSchema,
+    tags: baseTagsSchema,
+    labels: adminLabelsSchema,
+    newsletters: baseNewsletterSchema,
+    users: adminUsersSchema,
+    webhooks: adminWebhookSchema,
+    site: baseSiteSchema,
+    members: adminMembersSchema,
+    tiers: adminTiersSchema.required({ benefits: true }),
+    offers: baseOffersSchema,
+    settings: z.object({ key: z.string(), value: z.unknown() }),
+  };
+
+  test("every key a fixture sends is modelled, and every required key is sent", () => {
+    expect(keyMismatches(fixtures, RESPONSE_SCHEMAS)).toEqual([]);
+  });
+
   test("modelled fields no fixture fills are reported, never failed", () => {
-    const report = unbackedFields(fixtures, {
-      posts: adminPostsSchema,
-      pages: adminPagesSchema,
-      tags: baseTagsSchema,
-      labels: adminLabelsSchema,
-      newsletters: baseNewsletterSchema,
-      users: adminUsersSchema,
-      webhooks: adminWebhookSchema,
-      site: baseSiteSchema,
-      members: adminMembersSchema,
-      tiers: adminTiersSchema,
-      offers: baseOffersSchema,
-    });
+    const report = unbackedFields(fixtures, { ...RESPONSE_SCHEMAS, tiers: adminTiersSchema });
 
     const lines = Object.entries(report)
       .filter(([, fields]) => fields.length > 0)

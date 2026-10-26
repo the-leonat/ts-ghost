@@ -2,7 +2,27 @@
   "request": {
     "method": "POST",
     "path": "/ghost/api/admin/offers/",
-    "query": {}
+    "query": {},
+    "body": {
+      "offers": [
+        {
+          "amount": 10,
+          "cadence": "month",
+          "code": "ts-ghost-retention",
+          "currency": null,
+          "currency_restriction": false,
+          "display_description": "10% off if you stay",
+          "display_title": "Stay with us",
+          "duration": "forever",
+          "duration_in_months": null,
+          "name": "ts-ghost retention offer",
+          "redemption_type": "retention",
+          "status": "active",
+          "tier": null,
+          "type": "percent"
+        }
+      ]
+    }
   },
   "response": {
     "body": {

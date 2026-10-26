@@ -8,7 +8,11 @@ import type { FetchMock } from "vitest-fetch-mock";
  * the recorder (see `recorder/` at the repository root).
  */
 export type Fixture = {
-  request: { method: string; path: string; query: Record<string, string> };
+  /**
+   * `body` is recorded only when another fixture records the same method, path
+   * and query (two variants of one `add`), to tell the two apart.
+   */
+  request: { method: string; path: string; query: Record<string, string>; body?: unknown };
   response: { status: number; headers: Record<string, string>; body: unknown };
 };
 
@@ -122,6 +126,22 @@ function editDistance(a: string, b: string) {
   return previous[b.length];
 }
 
+/** Whether every value `recorded` holds is in `sent` too, at the same place. */
+function containedIn(recorded: unknown, sent: unknown): boolean {
+  if (Array.isArray(recorded)) {
+    return (
+      Array.isArray(sent) &&
+      recorded.length === sent.length &&
+      recorded.every((item, i) => containedIn(item, sent[i]))
+    );
+  }
+  if (recorded !== null && typeof recorded === "object") {
+    if (sent === null || typeof sent !== "object" || Array.isArray(sent)) return false;
+    return Object.entries(recorded).every(([k, v]) => containedIn(v, (sent as Record<string, unknown>)[k]));
+  }
+  return recorded === sent;
+}
+
 export class UnmatchedRequestError extends Error {
   constructor(
     readonly received: string,
@@ -144,23 +164,45 @@ export type FixtureServer = {
 
 /**
  * Answers fetch from fixtures, matching on method, path and normalised query.
+ * Fixtures that share a request are told apart by the body each recorded;
+ * two that share one and did not record a body are refused, since only one
+ * could ever answer.
  * Fails closed: a request matching no fixture rejects and is recorded, naming
  * the request and the nearest recorded key.
  */
 export function serveFixtures(fetchMocker: FetchMock, fixtures: Fixture[] | string): FixtureServer {
   const loaded = typeof fixtures === "string" ? loadFixtures(fixtures) : fixtures;
-  const byKey = new Map(loaded.map((fixture) => [fixtureKey(fixture), fixture]));
+  const byKey = new Map<string, Fixture[]>();
+  for (const fixture of loaded) {
+    const key = fixtureKey(fixture);
+    byKey.set(key, [...(byKey.get(key) ?? []), fixture]);
+  }
+  for (const [key, group] of byKey) {
+    if (group.length > 1 && group.some((fixture) => fixture.request.body === undefined)) {
+      throw new Error(`Two fixtures record the same request: ${key}`);
+    }
+  }
   const unmatched: UnmatchedRequestError[] = [];
+  const fail = (error: UnmatchedRequestError) => {
+    unmatched.push(error);
+    throw error;
+  };
 
-  fetchMocker.mockResponse((request) => {
+  fetchMocker.mockResponse(async (request) => {
     const url = new URL(request.url);
     const key = requestKey(request.method, url.pathname, url.searchParams);
-    const fixture = byKey.get(key);
-    if (fixture === undefined) {
+    const group = byKey.get(key);
+    if (group === undefined) {
       const nearest = [...byKey.keys()].sort((a, b) => editDistance(key, a) - editDistance(key, b))[0];
-      const error = new UnmatchedRequestError(key, nearest);
-      unmatched.push(error);
-      throw error;
+      return fail(new UnmatchedRequestError(key, nearest));
+    }
+    let fixture = group[0];
+    if (group.length > 1) {
+      const text = await request.text();
+      const sent: unknown = text === "" ? undefined : JSON.parse(text);
+      const matching = group.filter((f) => containedIn(resolveMarkers(f.request.body), sent));
+      if (matching.length !== 1) return fail(new UnmatchedRequestError(`${key} with this body`, key));
+      fixture = matching[0];
     }
     const { status, headers, body } = fixture.response;
     const resolvedHeaders = resolveMarkers(headers) as Record<string, string>;

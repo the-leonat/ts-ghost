@@ -1,7 +1,7 @@
 import { assert, describe, expect, test } from "vitest";
 
-import { fixtureId } from "./fixture-server";
-import { useClientCheck } from "./harness";
+import { fixtureId, loadFixtures, PINNED_GHOST, serveFixtures } from "./fixture-server";
+import { fetchMocker, useClientCheck } from "./harness";
 
 const BY_SLUG = { order: "slug asc" } as const;
 
@@ -57,6 +57,32 @@ describe("client check: posts", () => {
     expect(byId.data.id).toBe(id);
     expect(byId.data.email).toMatchObject({ status: "failed", from: null, source: null });
     expect(bySlug.data).toEqual(byId.data);
+  });
+
+  // The seed's post authors are all active, so the recorded read is given an
+  // inactive one: a post keeps its author after the user is suspended.
+  test("read returns a post whose author is inactive", async () => {
+    const recorded = loadFixtures(PINNED_GHOST.fixtureDir).find(
+      (f) => f.request.path === "/ghost/api/admin/posts/618ba1ffbe2896088840a6e1/",
+    )!;
+    const body = recorded.response.body as { posts: Record<string, any>[] };
+    const [post] = body.posts;
+    const inactive = { ...post.primary_author, status: "inactive" };
+    serveFixtures(fetchMocker, [
+      {
+        ...recorded,
+        response: {
+          ...recorded.response,
+          body: { posts: [{ ...post, authors: [inactive], primary_author: inactive }] },
+        },
+      },
+    ]);
+
+    const result = await check.api.posts.read({ id: "618ba1ffbe2896088840a6e1" }).fetch();
+
+    assert(result.success);
+    expect(result.data.primary_author.status).toBe("inactive");
+    expect(result.data.authors.map((author) => author.status)).toEqual(["inactive"]);
   });
 
   test("add, edit, read and delete a post the walk created", async () => {

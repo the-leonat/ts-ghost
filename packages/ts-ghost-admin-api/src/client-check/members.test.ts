@@ -4,7 +4,7 @@
  */
 import { assert, describe, expect, test } from "vitest";
 
-import { fixtureId } from "./fixture-server";
+import { fixtureId, loadFixtures, PINNED_GHOST, serveFixtures } from "./fixture-server";
 import { fetchMocker, useClientCheck } from "./harness";
 
 const BY_EMAIL = { order: "email asc" } as const;
@@ -79,6 +79,32 @@ describe("client check: members", () => {
     const [url] = fetchMocker.mock.calls[0];
     expect(new URL(String(url)).searchParams.get("include")).toBe("metafields");
     expect(result.data).toHaveLength(9);
+  });
+
+  // No seed gives a member metafields, so the recorded browse is given one:
+  // Ghost sends them as an object keyed by field, values per field type.
+  test("an included metafields value is kept", async () => {
+    const recorded = loadFixtures(PINNED_GHOST.fixtureDir).find(
+      (f) => f.request.path === "/ghost/api/admin/members/" && f.request.query.include === "metafields",
+    )!;
+    const body = recorded.response.body as { members: Record<string, unknown>[] };
+    const metafields = { company: "Ghost", address: { line1: "1 Main St", city: "Berlin" } };
+    const server = serveFixtures(fetchMocker, [
+      {
+        ...recorded,
+        response: {
+          ...recorded.response,
+          body: { ...body, members: [{ ...body.members[0], metafields }, ...body.members.slice(1)] },
+        },
+      },
+    ]);
+
+    const result = await check.api.members.browse(BY_EMAIL).include({ metafields: true }).fetch();
+
+    server.assertAllRequestsMatched();
+    assert(result.success);
+    expect(result.data[0].metafields).toEqual(metafields);
+    expect(result.data[1].metafields).toBeUndefined();
   });
 
   test("a subscription on a Stripe price without a nickname validates", async () => {

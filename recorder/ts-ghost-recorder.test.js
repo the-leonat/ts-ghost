@@ -314,8 +314,9 @@ describe("ts-ghost recorder", function () {
     for (const step of planWalk(spec)) {
       const url = typeof step.url === "function" ? step.url(context) : step.url;
       let request = agent[step.method.toLowerCase()](url);
-      if (step.body !== undefined) {
-        request = request.body(typeof step.body === "function" ? step.body(context) : step.body);
+      const sent = typeof step.body === "function" ? step.body(context) : step.body;
+      if (sent !== undefined) {
+        request = request.body(sent);
       }
       const res = await request;
       // Let Ghost's event handlers (Stripe sync, member events) finish before
@@ -360,13 +361,20 @@ describe("ts-ghost recorder", function () {
       }
       // A 204 has no body; the agent reports it as {}.
       const body = res.statusCode === 204 ? null : res.body;
-      recorded.push({ step, url, response: { status: res.statusCode, headers, body } });
+      recorded.push({ step, url, sent, response: { status: res.statusCode, headers, body } });
     }
 
     // Normalised only once the walk is done, so an id the walk named late (a
     // read target picked from an earlier browse) carries its alias everywhere.
-    for (const { step, url, response } of recorded) {
-      const fixture = { request: requestKey(step.method, url), response: normalise(response) };
+    // Two steps that make the same request (two variants of one add) also
+    // record the body each sent, so the client check can tell them apart.
+    const keyOf = ({ step, url }) => JSON.stringify(requestKey(step.method, url));
+    const shared = new Set(recorded.map(keyOf).filter((key, i, keys) => keys.indexOf(key) !== i));
+    for (const entry of recorded) {
+      const { step, url, sent, response } = entry;
+      const request = requestKey(step.method, url);
+      if (shared.has(keyOf(entry))) request.body = normalise(sent);
+      const fixture = { request, response: normalise(response) };
       const file = path.join(OUT, `${step.name}.json`);
       fs.mkdirSync(path.dirname(file), { recursive: true });
       fs.writeFileSync(file, `${JSON.stringify(fixture, null, 2)}\n`);

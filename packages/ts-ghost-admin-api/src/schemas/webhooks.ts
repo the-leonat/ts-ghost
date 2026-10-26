@@ -69,22 +69,16 @@ export type GhostWebhookEventTypes = z.infer<typeof ghostEventTypes>;
 export type GhostWebhookEvent = GhostWebhookEventTypes | (string & {});
 
 /** A stored webhook's event, as Ghost returns it. */
-const webhookEventSchema = z
+const webhookEventSchema: z.ZodType<GhostWebhookEvent, GhostWebhookEvent> = z
   .string()
-  .meta({ description: "The event that triggers the webhook" }) as unknown as z.ZodType<
-  GhostWebhookEvent,
-  GhostWebhookEvent
->;
+  .meta({ description: "The event that triggers the webhook" });
 
 /** A webhook event as Ghost's webhooks input schema accepts it: lowercase, at most 50 characters. */
-const webhookEventInputSchema = z
+const webhookEventInputSchema: z.ZodType<GhostWebhookEvent, GhostWebhookEvent> = z
   .string()
   .max(50)
   .refine((event) => event === event.toLowerCase(), { message: "The event must be lowercase" })
-  .meta({ description: "The event that triggers the webhook" }) as unknown as z.ZodType<
-  GhostWebhookEvent,
-  GhostWebhookEvent
->;
+  .meta({ description: "The event that triggers the webhook" });
 
 /** Ghost accepts any URI reference as the target, relative ones included, of up to 2000 characters. */
 const webhookTargetUrlInputSchema = z.string().max(2000).meta({ description: "The URL of the webhook" });
@@ -126,8 +120,6 @@ export const adminWebhookUpdateSchema = z.object({
   event: webhookEventInputSchema.optional(),
   target_url: webhookTargetUrlInputSchema.optional(),
   name: z.string().meta({ description: "The name of the webhook" }).optional(),
-  // Ghost's webhooks.edit input schema accepts the secret (string or null), so a
-  // rotation goes through the update like any other field.
   secret: z.string().meta({ description: "The secret of the webhook" }).nullish(),
   api_version: z.string().meta({ description: "The API version of the webhook" }).nullish(),
 });

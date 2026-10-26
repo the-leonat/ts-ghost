@@ -1,5 +1,10 @@
 import { z } from "zod";
-import { baseMembersSchema } from "@ts-ghost/core-api";
+import {
+  baseAttributionSchema,
+  baseMembersSchema,
+  baseSubscriptionsSchema,
+  sparseInclude,
+} from "@ts-ghost/core-api";
 
 import { adminTiersSchema } from "./tiers";
 
@@ -71,10 +76,7 @@ export const adminMembersCreateSchema = z.object({
   // subscriptions: NOT_USED it seems that subscriptions are not used on the API see Ghost source code: ghost/members-api/lib/repositories/member.js (method create)
 });
 
-/**
- * One email Ghost sent to a member, as its `email_recipients` row. The
- * timestamps come from Mailgun events and are null until the event arrives.
- */
+// Mailgun timestamps, null until the event arrives.
 export const adminMemberEmailRecipientSchema = z.object({
   id: z.string(),
   email_id: z.string(),
@@ -89,39 +91,16 @@ export const adminMemberEmailRecipientSchema = z.object({
   member_name: z.string().nullable(),
 });
 
-/**
- * A member as Ghost's admin members serializer sends it. `labels`,
- * `newsletters` and `subscriptions` are always sent and cannot be included;
- * `tiers` and `email_recipients` are includable, optional here and required
- * on the type an `.include()` returns.
- *
- * Evidence gaps: the recorded fixtures (Ghost's seed, its in-process Stripe
- * mock, network off, privacy tinfoil on) cannot vouch for these, so a passing
- * client check says nothing about them; they are typed from Ghost's source.
- * - `avatar_image`: always null (Gravatar off); production sends a URL.
- * - `geolocation`, `note`, `last_seen_at`: always null. `geolocation` is
- *   GeoJS's answer as a JSON string, kept opaque.
- * - `email_suppression.info`: always null; no member is suppressed.
- * - `email_recipients[].failed_at`: always null; Ghost's `members:emails`
- *   seed leaves its failed recipients out. The other fields are recorded.
- * - `metafields`: never sent; no member has any (not modelled, see the include schema).
- * - `subscriptions[].cancellation_reason` (free text) and `.offer`: always null.
- * - `subscriptions[].status`: always `active`; `default_payment_card_last4`
- *   is the seed's `4242` or the stand-in `****`; `price.id` is the seed's
- *   64-hex form, not Stripe's `price_…`; `customer` values are seed or mock literals.
- */
+// Fields the fixtures cannot vouch for are listed in ADR 0002, "Evidence gaps".
 export const adminMembersSchema = baseMembersSchema.merge(
   z.object({
+    uuid: z.string().optional(),
     subscribed: z.boolean(),
     comped: z.boolean().nullish(),
     email_suppression: z
       .object({
         suppressed: z.boolean(),
-        // Mailgun bounce and complaint events, normalised by Ghost's
-        // `EmailSuppressionData` (`email-suppression-list.js`). Null when not
-        // suppressed, and when Ghost disabled the email with no suppression
-        // list entry behind it. No fixture covers a suppressed member: Ghost
-        // records one only from Mailgun events, so this follows Ghost's source.
+        // Ghost's `EmailSuppressionData`, from Mailgun bounce and complaint events.
         info: z
           .object({
             reason: z.union([z.literal("spam"), z.literal("fail")]),
@@ -143,31 +122,44 @@ export const adminMembersSchema = baseMembersSchema.merge(
         }),
       }),
     ),
-    // Includable (`include=tiers`): a browse sends it only when included; a
-    // read, add or edit always sends it.
+    // The member's active subscription, without its price, tier and offer.
+    current_subscription: baseSubscriptionsSchema
+      .omit({ price: true, tier: true, offer: true, next_payment: true, offer_redemptions: true })
+      .nullish(),
+    attribution: baseAttributionSchema.nullish(),
+    unsubscribe_url: z.string().optional(),
+    can_comment: z.boolean().optional(),
+    commenting: z
+      .object({
+        disabled: z.boolean(),
+        disabled_reason: z.string().nullable(),
+        disabled_until: z.string().nullable(),
+      })
+      .optional(),
+    enable_comment_notifications: z.boolean().optional(),
+    enable_updates_and_announcements: z.boolean().nullish(),
+    // A browse sends it only when included; a read, add or edit always does.
     tiers: z
       .array(adminTiersSchema)
       .meta({ description: "The tiers the member has access to (include: tiers)" })
       .optional(),
-    // Includable (`include=email_recipients`), sent only when included. Typed
-    // from Ghost's `email_recipients` table and checked against the recipients
-    // of Ghost's `members:emails` seed.
     email_recipients: z
       .array(adminMemberEmailRecipientSchema)
       .meta({ description: "The emails sent to the member (include: email_recipients)" })
       .optional(),
+    // Keyed by field; a value's shape depends on the field's type (text or address).
+    metafields: z
+      .unknown()
+      .meta({ description: "The member's custom field values (include: metafields)" })
+      .optional(),
   }),
 );
 
-/** The relations a member read or browse can include, as Ghost's members endpoint allows them. */
 export const adminMembersIncludeSchema = z.object({
   tiers: z.literal(true).optional(),
   email_recipients: z.literal(true).optional(),
-  // Ghost omits `metafields` for a member who has none, even when included, so
-  // an include cannot make it required; and since an included key that the
-  // member schema models is made required, `metafields` is left out of the
-  // member schema (and stripped) until it can be typed from a recorded value.
-  metafields: z.literal(true).optional(),
+  // Ghost leaves `metafields` out for a member who has none, even when included.
+  metafields: sparseInclude(),
 });
 
 export type Member = z.infer<typeof adminMembersSchema>;

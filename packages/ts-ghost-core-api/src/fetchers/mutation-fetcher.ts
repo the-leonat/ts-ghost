@@ -4,6 +4,7 @@ import * as z4 from "zod/v4/core";
 import { DebugOption } from "../helpers/debug";
 import { HTTPClient } from "../helpers/http-client";
 import type { APIResource } from "../schemas/shared";
+import { toFetcherResult } from "./result";
 
 type ExplicitObjectKeys<T> = {
   [K in keyof T as string extends K ? never : number extends K ? never : symbol extends K ? never : K]: T[K];
@@ -88,28 +89,12 @@ export class MutationFetcher<
     const createData = {
       [this.resource]: [this._options.body],
     };
-    const {
-      data: response,
-      status,
-      body,
-    } = (await this.httpClient.fetchWithStatus({
+    const response = await this.httpClient.fetchWithStatus({
       resource: this.resource,
       searchParams: this._urlSearchParams,
       pathnameIdentity: this._pathnameIdentity,
       options: { ...options, method: this._options.method, body: JSON.stringify(createData) },
-    })) as { data: any; status: number; body?: string };
-    let result: any = {};
-    if (response.errors) {
-      result.success = false;
-      result.errors = response.errors;
-      result.status = status;
-      if (body !== undefined) result.body = body;
-    } else {
-      result = {
-        success: true,
-        data: response[this.resource][0],
-      };
-    }
-    return schema.parse(result);
+    });
+    return schema.parse(toFetcherResult(response, (data) => ({ data: data[this.resource][0] })));
   }
 }

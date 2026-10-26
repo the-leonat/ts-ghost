@@ -17,7 +17,6 @@ export const adminLabelsSchema = z.object({
     .optional(),
 });
 
-// Ghost's labels.add input schema requires a name; name and slug are its label properties.
 export const adminLabelsCreateSchema = z.object({
   name: z.string().min(1).max(191).meta({ description: "The name of the label" }),
   slug: z.string().max(191).meta({ description: "The slug of the label" }).optional(),

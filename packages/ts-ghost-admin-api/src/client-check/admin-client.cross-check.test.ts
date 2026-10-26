@@ -95,6 +95,9 @@ describe(`route-spec cross-check: admin client against pinned Ghost ${PINNED_GHO
   });
 
   test("resources the client does not cover are reported, not failed", () => {
+    console.info(
+      `Integration-reachable resources the client does not cover (report only):\n  ${uncovered.join(", ")}`,
+    );
     expect(uncovered).toContain("actions");
     expect(uncovered).not.toContain("posts");
   });

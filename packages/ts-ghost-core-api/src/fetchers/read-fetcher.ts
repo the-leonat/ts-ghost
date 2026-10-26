@@ -2,11 +2,12 @@ import { z, ZodRawShape } from "zod";
 
 import { DebugOption } from "../helpers/debug";
 import type { HTTPClient } from "../helpers/http-client";
-import { sentIncludes } from "../helpers/includes";
+import { filterSendableIncludes, requiredIncludes } from "../helpers/includes";
 import { sanitizeFormatMask, sanitizeMask } from "../helpers/masks";
 import { type APIResource, type GhostIdentityInput } from "../schemas/shared";
 import type { Exactly, Mask, NoUnrecognizedKeys } from "../utils";
 import { contentFormats, type ContentFormats } from "./formats";
+import { toFetcherResult } from "./result";
 
 export class ReadFetcher<
   const Resource extends APIResource = any,
@@ -81,9 +82,11 @@ export class ReadFetcher<
       ...this._params,
       include: Object.keys(parsedInclude),
     };
-    const requiredIncludeKeys = sanitizeMask(this.config.output, parsedInclude, {
-      excludeDotNotation: true,
-    });
+    const requiredIncludeKeys = sanitizeMask(
+      this.config.output,
+      requiredIncludes(this.config.include, parsedInclude),
+      { excludeDotNotation: true },
+    );
     return new ReadFetcher(
       this.resource,
       {
@@ -145,7 +148,7 @@ export class ReadFetcher<
     if (inputKeys.length !== outputKeys.length && outputKeys.length > 0) {
       this._urlParams.fields = outputKeys.join(",");
     }
-    const include = sentIncludes(this.config.include, this._params.include ?? []);
+    const include = filterSendableIncludes(this.config.include, this._params.include ?? []);
     if (include.length > 0) {
       this._urlParams.include = include.join(",");
     }
@@ -186,28 +189,12 @@ export class ReadFetcher<
         body: z.string().optional(),
       }),
     ]);
-    const {
-      data: result,
-      status,
-      body,
-    } = (await this.httpClient.fetchWithStatus({
+    const response = await this.httpClient.fetchWithStatus({
       resource: this.resource,
       pathnameIdentity: this._pathnameIdentity,
       searchParams: this._urlSearchParams,
       options,
-    })) as { data: any; status: number; body?: string };
-    let data: any = {};
-    if (result.errors) {
-      data.success = false;
-      data.errors = result.errors;
-      data.status = status;
-      if (body !== undefined) data.body = body;
-    } else {
-      data = {
-        success: true,
-        data: result[this.resource][0],
-      };
-    }
-    return res.parse(data);
+    });
+    return res.parse(toFetcherResult(response, (result) => ({ data: result[this.resource][0] })));
   }
 }

@@ -72,7 +72,7 @@ export function unfilledIncludes(fixtures: Fixture[]): string[] {
     );
 }
 
-type SchemaNode = { _zod: { def: Record<string, any> } };
+type SchemaNode = { _zod: { def: Record<string, any> }; safeParse?: (value: unknown) => { success: boolean } };
 
 /** Field paths of a zod object schema, with `[]` marking array elements: `authors[].name`. */
 function fieldPaths(schema: SchemaNode, prefix = ""): string[] {
@@ -132,4 +132,90 @@ export function unbackedFields(
       return [resource, unbacked];
     }),
   );
+}
+
+const WRAPPERS = ["optional", "nullable", "default", "prefault", "readonly", "catch", "nonoptional"];
+
+/** The schema under its wrappers, and whether a wrapper lets the key be left out. */
+function unwrap(schema: SchemaNode): { inner: SchemaNode; optional: boolean } {
+  let inner = schema;
+  let optional = false;
+  for (;;) {
+    const def = inner._zod.def;
+    if (def.type === "optional" || def.type === "default" || def.type === "prefault") optional = true;
+    if (WRAPPERS.includes(def.type)) inner = def.innerType;
+    else if (def.type === "pipe") inner = def.in;
+    else if (def.type === "lazy") inner = def.getter();
+    else return { inner, optional };
+  }
+}
+
+type KeyIssue = { path: string; kind: "unmodelled" | "missing" };
+
+/** Keys `value` sends that `schema` does not model, and, with `required`, required keys it omits. */
+function keyIssues(schema: SchemaNode, value: unknown, prefix: string, required: boolean): KeyIssue[] {
+  if (value === null || value === undefined) return [];
+  const { inner } = unwrap(schema);
+  const def = inner._zod.def;
+  switch (def.type) {
+    case "array":
+      return Array.isArray(value)
+        ? value.flatMap((item) => keyIssues(def.element, item, `${prefix}[]`, required))
+        : [];
+    case "union": {
+      const fits = (def.options as SchemaNode[]).filter((option) => option.safeParse?.(value).success);
+      const checked = (fits.length > 0 ? fits : (def.options as SchemaNode[])).map((option) =>
+        keyIssues(option, value, prefix, required),
+      );
+      return checked.reduce((best, issues) => (issues.length < best.length ? issues : best));
+    }
+    case "object": {
+      if (typeof value !== "object" || Array.isArray(value)) return [];
+      const shape = def.shape as Record<string, SchemaNode>;
+      const record = value as Record<string, unknown>;
+      const at = (key: string) => (prefix === "" ? key : `${prefix}.${key}`);
+      const open = def.catchall !== undefined && def.catchall._zod.def.type !== "never";
+      const unmodelled = open
+        ? []
+        : Object.keys(record)
+            .filter((key) => !(key in shape))
+            .map((key): KeyIssue => ({ path: at(key), kind: "unmodelled" }));
+      const missing = required
+        ? Object.entries(shape)
+            .filter(([key, child]) => !(key in record) && !unwrap(child).optional)
+            .map(([key]): KeyIssue => ({ path: at(key), kind: "missing" }))
+        : [];
+      const nested = Object.entries(shape).flatMap(([key, child]) =>
+        keyIssues(child, record[key], at(key), required),
+      );
+      return [...unmodelled, ...missing, ...nested];
+    }
+    default:
+      return [];
+  }
+}
+
+/**
+ * The two-way key check: per resource, every key a successful fixture's
+ * records send that its schema does not model, and every required key they
+ * omit (skipped for a request that selects `fields`), each listed once. At
+ * runtime unknown keys are stripped; here they fail, so a key Ghost adds is
+ * noticed.
+ */
+export function keyMismatches(fixtures: Fixture[], schemas: Record<string, SchemaNode>): string[] {
+  const found = new Set<string>();
+  for (const fixture of fixtures) {
+    const resource = resourceOf(fixture);
+    const schema = schemas[resource];
+    if (schema === undefined || !isSuccess(fixture)) continue;
+    const required = fixture.request.query.fields === undefined;
+    for (const record of recordsOf(fixture)) {
+      for (const { path, kind } of keyIssues(schema, record, "", required)) {
+        found.add(
+          `${resource}: "${path}" ${kind === "unmodelled" ? "is sent but not modelled" : "is required but not sent"}`,
+        );
+      }
+    }
+  }
+  return [...found];
 }

@@ -2,7 +2,20 @@
   "request": {
     "method": "POST",
     "path": "/ghost/api/admin/members/",
-    "query": {}
+    "query": {},
+    "body": {
+      "members": [
+        {
+          "email": "ts-ghost-comped@example.com",
+          "name": "ts-ghost comped member",
+          "tiers": [
+            {
+              "id": "{{anyObjectId:tiers.seeded}}"
+            }
+          ]
+        }
+      ]
+    }
   },
   "response": {
     "body": {

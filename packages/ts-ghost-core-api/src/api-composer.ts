@@ -162,12 +162,18 @@ export class APIComposer<
     return fetcher.submit();
   }
 
+  private _effectiveUpdateSchema: { schema: z4.$ZodObject | undefined } | undefined;
+
+  /** The update schema, or the create schema made partial; built once per composer. */
   private effectiveUpdateSchema(): z4.$ZodObject | undefined {
-    if (this.config.updateSchema) return this.config.updateSchema;
-    if (this.config.createSchema && isZodObject(this.config.createSchema)) {
-      return this.config.createSchema.partial();
+    if (this._effectiveUpdateSchema === undefined) {
+      let schema: z4.$ZodObject | undefined = this.config.updateSchema;
+      if (!schema && this.config.createSchema && isZodObject(this.config.createSchema)) {
+        schema = this.config.createSchema.partial();
+      }
+      this._effectiveUpdateSchema = { schema };
     }
-    return undefined;
+    return this._effectiveUpdateSchema.schema;
   }
 
   public access<const Keys extends keyof this>(keys: Keys[]) {

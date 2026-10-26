@@ -106,6 +106,44 @@ describe("fixture server", () => {
     expect(body.html).toBe('<p class="{{post_class}}">');
   });
 
+  test("refuses two fixtures for the same request instead of letting the last one win", () => {
+    const first = created("/ghost/api/admin/x/", 200, { x: [1] });
+    const second = created("/ghost/api/admin/x/", 200, { x: [2] });
+
+    expect(() => serveFixtures(fetchMocker, [first, second])).toThrow(
+      "Two fixtures record the same request: GET /ghost/api/admin/x/",
+    );
+  });
+
+  test("tells two fixtures for the same request apart by the request body each recorded", async () => {
+    const posted = (name: string, id: string) => ({
+      request: { method: "POST", path: "/ghost/api/admin/x/", query: {}, body: { x: [{ name, tier: { id } }] } },
+      response: { status: 201, headers: {}, body: { x: [{ name }] } },
+    });
+    const server = serveFixtures(fetchMocker, [
+      posted("free", "{{anyObjectId:t.seeded}}"),
+      posted("comped", "{{anyObjectId:t.seeded}}"),
+    ]);
+    const post = async (body: unknown) =>
+      (await fetch("https://ghost.org/ghost/api/admin/x/", { method: "POST", body: JSON.stringify(body) })).json();
+
+    expect(await post({ x: [{ name: "comped", tier: { id: fixtureId("t.seeded") }, extra: 1 }] })).toEqual({
+      x: [{ name: "comped" }],
+    });
+    expect(await post({ x: [{ name: "free", tier: { id: fixtureId("t.seeded") } }] })).toEqual({
+      x: [{ name: "free" }],
+    });
+    server.assertAllRequestsMatched();
+
+    await expect(post({ x: [{ name: "other" }] })).rejects.toThrow(
+      "No fixture matches POST /ghost/api/admin/x/ with this body",
+    );
+  });
+
+  test("the pinned fixtures can each be told apart", () => {
+    expect(() => serveFixtures(fetchMocker, "ghost-6.72")).not.toThrow();
+  });
+
   test("answers a recorded 204 with an empty body", async () => {
     serveFixtures(fetchMocker, [created("/ghost/api/admin/x/", 204, null)]);
 
