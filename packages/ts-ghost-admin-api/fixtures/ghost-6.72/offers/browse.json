@@ -1,0 +1,60 @@
+{
+  "request": {
+    "method": "GET",
+    "path": "/ghost/api/admin/offers/",
+    "query": {}
+  },
+  "response": {
+    "body": {
+      "offers": [
+        {
+          "amount": 10,
+          "cadence": "month",
+          "code": "ts-ghost-retention",
+          "created_at": "{{anyISODateTime}}",
+          "currency": null,
+          "currency_restriction": false,
+          "display_description": "10% off if you stay",
+          "display_title": "Stay with us",
+          "duration": "forever",
+          "duration_in_months": null,
+          "id": "{{anyObjectId:offers.created-retention}}",
+          "last_redeemed": null,
+          "name": "ts-ghost retention offer, edited",
+          "redemption_count": 0,
+          "redemption_type": "retention",
+          "status": "active",
+          "tier": null,
+          "type": "percent"
+        },
+        {
+          "amount": 14,
+          "cadence": "year",
+          "code": "ts-ghost-trial",
+          "created_at": "{{anyISODateTime}}",
+          "currency": null,
+          "currency_restriction": false,
+          "display_description": "",
+          "display_title": "",
+          "duration": "trial",
+          "duration_in_months": null,
+          "id": "{{anyObjectId:offers.created-trial}}",
+          "last_redeemed": null,
+          "name": "ts-ghost trial offer",
+          "redemption_count": 0,
+          "redemption_type": "signup",
+          "status": "active",
+          "tier": {
+            "id": "{{anyObjectId:tiers.seeded}}",
+            "name": "Default Product"
+          },
+          "type": "trial"
+        }
+      ]
+    },
+    "headers": {
+      "content-version": "v6.72"
+    },
+    "status": 200
+  }
+}

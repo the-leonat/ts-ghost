@@ -1,0 +1,14 @@
+{
+  "request": {
+    "method": "DELETE",
+    "path": "/ghost/api/admin/members/{{anyObjectId:members.created-free}}/",
+    "query": {}
+  },
+  "response": {
+    "body": null,
+    "headers": {
+      "content-version": "v6.72"
+    },
+    "status": 204
+  }
+}

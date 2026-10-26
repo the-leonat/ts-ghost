@@ -38,6 +38,7 @@ const MARKER_SAMPLES: Record<string, string> = {
   anyISODateTimeWithTZ: "2000-01-01T00:00:00.000+00:00",
   anyObjectId: "aaaaaaaaaaaaaaaaaaaaaaaa",
   publicHash: "000000000000000000000000000000",
+  unsubscribeKey: "0000000000000000000000000000000000000000000000000000000000000000",
 };
 
 /**
@@ -54,7 +55,7 @@ export function fixtureId(name: string) {
  * `{{anyObjectId:posts.created}}`. Only marker names are matched, because
  * recorded content has braces of its own (a post's `{{post_class}}`).
  */
-const MARKER = /\{\{(any[A-Z]\w*|publicHash)(?::([\w.-]+))?\}\}/g;
+const MARKER = /\{\{(any[A-Z]\w*|publicHash|unsubscribeKey)(?::([\w.-]+))?\}\}/g;
 
 function resolveString(value: string) {
   return value.replace(MARKER, (marker, name: string, idName: string | undefined) => {

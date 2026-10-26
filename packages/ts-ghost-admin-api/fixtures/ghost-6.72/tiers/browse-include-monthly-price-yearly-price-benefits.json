@@ -1,0 +1,78 @@
+{
+  "request": {
+    "method": "GET",
+    "path": "/ghost/api/admin/tiers/",
+    "query": {
+      "include": "monthly_price,yearly_price,benefits",
+      "order": "slug asc"
+    }
+  },
+  "response": {
+    "body": {
+      "meta": {
+        "pagination": {
+          "limit": 3,
+          "next": null,
+          "page": 1,
+          "pages": 1,
+          "prev": null,
+          "total": 3
+        }
+      },
+      "tiers": [
+        {
+          "active": true,
+          "benefits": [],
+          "created_at": "{{anyISODateTime}}",
+          "description": null,
+          "id": "{{anyObjectId}}",
+          "name": "Free",
+          "slug": "free",
+          "trial_days": 0,
+          "type": "free",
+          "updated_at": "{{anyISODateTime}}",
+          "visibility": "public",
+          "welcome_page_url": "/welcome-free"
+        },
+        {
+          "active": true,
+          "benefits": [],
+          "created_at": "{{anyISODateTime}}",
+          "currency": "USD",
+          "description": null,
+          "id": "{{anyObjectId:tiers.seeded}}",
+          "monthly_price": 500,
+          "name": "Default Product",
+          "slug": "default-product",
+          "trial_days": 0,
+          "type": "paid",
+          "updated_at": "{{anyISODateTime}}",
+          "visibility": "public",
+          "welcome_page_url": "/welcome-paid",
+          "yearly_price": 5000
+        },
+        {
+          "active": false,
+          "benefits": [],
+          "created_at": "{{anyISODateTime}}",
+          "currency": "USD",
+          "description": null,
+          "id": "{{anyObjectId}}",
+          "monthly_price": 500,
+          "name": "product",
+          "slug": "gold",
+          "trial_days": 0,
+          "type": "paid",
+          "updated_at": "{{anyISODateTime}}",
+          "visibility": "public",
+          "welcome_page_url": null,
+          "yearly_price": 5000
+        }
+      ]
+    },
+    "headers": {
+      "content-version": "v6.72"
+    },
+    "status": 200
+  }
+}

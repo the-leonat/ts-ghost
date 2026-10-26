@@ -1,0 +1,40 @@
+{
+  "request": {
+    "method": "POST",
+    "path": "/ghost/api/admin/offers/",
+    "query": {}
+  },
+  "response": {
+    "body": {
+      "offers": [
+        {
+          "amount": 14,
+          "cadence": "year",
+          "code": "ts-ghost-trial",
+          "created_at": "{{anyISODateTime}}",
+          "currency": null,
+          "currency_restriction": false,
+          "display_description": "",
+          "display_title": "",
+          "duration": "trial",
+          "duration_in_months": null,
+          "id": "{{anyObjectId:offers.created-trial}}",
+          "last_redeemed": null,
+          "name": "ts-ghost trial offer",
+          "redemption_count": 0,
+          "redemption_type": "signup",
+          "status": "active",
+          "tier": {
+            "id": "{{anyObjectId:tiers.seeded}}"
+          },
+          "type": "trial"
+        }
+      ]
+    },
+    "headers": {
+      "content-version": "v6.72",
+      "location": "http://127.0.0.1:2369/ghost/api/admin/offers/{{anyObjectId:offers.created-trial}}/"
+    },
+    "status": 200
+  }
+}

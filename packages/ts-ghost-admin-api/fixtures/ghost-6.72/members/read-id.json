@@ -1,0 +1,196 @@
+{
+  "request": {
+    "method": "GET",
+    "path": "/ghost/api/admin/members/{{anyObjectId:members.seeded}}/",
+    "query": {}
+  },
+  "response": {
+    "body": {
+      "members": [
+        {
+          "attribution": {
+            "id": "618ba1ffbe2896088840a6e1",
+            "referrer_medium": "Social",
+            "referrer_source": "Twitter",
+            "referrer_url": "https://twitter.com",
+            "title": "Ghostly Kitchen Sink",
+            "type": "post",
+            "url": "http://127.0.0.1:2369/ghostly-kitchen-sink/"
+          },
+          "avatar_image": null,
+          "can_comment": true,
+          "commenting": {
+            "disabled": false,
+            "disabled_reason": null,
+            "disabled_until": null
+          },
+          "comped": false,
+          "created_at": "{{anyISODateTime}}",
+          "current_subscription": {
+            "cancel_at_period_end": true,
+            "cancellation_reason": null,
+            "current_period_end": "{{anyISODateTime}}",
+            "customer": {
+              "email": null,
+              "id": "cus_HR3tBmNhx4QsZ0",
+              "name": null
+            },
+            "default_payment_card_last4": "4242",
+            "discount_end": null,
+            "discount_start": null,
+            "id": "sub_HR3tLNgGAHsa7d",
+            "plan": {
+              "amount": 0,
+              "currency": "USD",
+              "id": "173e16a1fffa7d232b398e4a9b08d266a456ae8f3d23e5f11cc608ced6730ba0",
+              "interval": "year",
+              "nickname": "Complimentary"
+            },
+            "start_date": "{{anyISODateTime}}",
+            "status": "active",
+            "trial_end_at": null,
+            "trial_start_at": null
+          },
+          "email": "comped@test.com",
+          "email_count": 0,
+          "email_open_rate": null,
+          "email_opened_count": 0,
+          "email_suppression": {
+            "info": null,
+            "suppressed": false
+          },
+          "enable_comment_notifications": true,
+          "enable_updates_and_announcements": null,
+          "geolocation": null,
+          "id": "{{anyObjectId:members.seeded}}",
+          "labels": [],
+          "last_seen_at": null,
+          "name": "Vinz Clortho",
+          "newsletters": [
+            {
+              "description": null,
+              "id": "{{anyObjectId:newsletters.seeded}}",
+              "name": "Daily newsletter",
+              "status": "active"
+            },
+            {
+              "description": null,
+              "id": "{{anyObjectId}}",
+              "name": "Weekly newsletter",
+              "status": "active"
+            }
+          ],
+          "note": null,
+          "status": "paid",
+          "subscribed": true,
+          "subscriptions": [
+            {
+              "attribution": {
+                "id": "618ba1ffbe2896088840a6e3",
+                "referrer_medium": "Social",
+                "referrer_source": "Twitter",
+                "referrer_url": "https://twitter.com",
+                "title": "Short and Sweet",
+                "type": "post",
+                "url": "http://127.0.0.1:2369/short-and-sweet/"
+              },
+              "cancel_at_period_end": true,
+              "cancellation_reason": null,
+              "current_period_end": "{{anyISODateTime}}",
+              "customer": {
+                "email": "comped@test.com",
+                "id": "cus_HR3tBmNhx4QsZ0",
+                "name": "Vinz Clortho"
+              },
+              "default_payment_card_last4": "4242",
+              "discount_end": null,
+              "discount_start": null,
+              "id": "sub_HR3tLNgGAHsa7d",
+              "next_payment": {
+                "amount": 0,
+                "currency": "USD",
+                "discount": null,
+                "interval": "year",
+                "original_amount": 0
+              },
+              "offer": null,
+              "offer_redemptions": [],
+              "plan": {
+                "amount": 0,
+                "currency": "USD",
+                "id": "173e16a1fffa7d232b398e4a9b08d266a456ae8f3d23e5f11cc608ced6730ba0",
+                "interval": "year",
+                "nickname": "Complimentary"
+              },
+              "price": {
+                "amount": 12000,
+                "currency": "GBP",
+                "id": "173e16a1fffa7d232b398e4a9b08d266a456ae8f3d23e5f11cc608ced6730ba0",
+                "interval": "year",
+                "nickname": "Yearly",
+                "price_id": "{{anyObjectId}}",
+                "tier": {
+                  "id": "109c85c734fb9992e7bc30a26af66c22f5c94d8dc62e0a33cb797be902c06b2d",
+                  "name": "Default Product",
+                  "tier_id": "{{anyObjectId:tiers.seeded}}"
+                },
+                "type": "recurring"
+              },
+              "start_date": "{{anyISODateTime}}",
+              "status": "active",
+              "tier": {
+                "active": true,
+                "created_at": "{{anyISODateTime}}",
+                "currency": "usd",
+                "description": null,
+                "expiry_at": null,
+                "id": "{{anyObjectId:tiers.seeded}}",
+                "monthly_price": 500,
+                "monthly_price_id": "{{anyObjectId}}",
+                "name": "Default Product",
+                "slug": "default-product",
+                "trial_days": 0,
+                "type": "paid",
+                "updated_at": "{{anyISODateTime}}",
+                "visibility": "public",
+                "welcome_page_url": "/welcome-paid",
+                "yearly_price": 5000,
+                "yearly_price_id": "{{anyObjectId}}"
+              },
+              "trial_end_at": null,
+              "trial_start_at": null
+            }
+          ],
+          "tiers": [
+            {
+              "active": true,
+              "created_at": "{{anyISODateTime}}",
+              "currency": "usd",
+              "description": null,
+              "expiry_at": null,
+              "id": "{{anyObjectId:tiers.seeded}}",
+              "monthly_price": 500,
+              "monthly_price_id": "{{anyObjectId}}",
+              "name": "Default Product",
+              "slug": "default-product",
+              "trial_days": 0,
+              "type": "paid",
+              "updated_at": "{{anyISODateTime}}",
+              "visibility": "public",
+              "welcome_page_url": "/welcome-paid",
+              "yearly_price": 5000,
+              "yearly_price_id": "{{anyObjectId}}"
+            }
+          ],
+          "unsubscribe_url": "http://127.0.0.1:2369/unsubscribe/?uuid={{anyUuid}}&key={{unsubscribeKey}}",
+          "updated_at": "{{anyISODateTime}}",
+          "uuid": "{{anyUuid}}"
+        }
+      ]
+    },
+    "headers": {
+      "content-version": "v6.72"
+    },
+    "status": 200
+  }
+}

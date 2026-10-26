@@ -1,0 +1,36 @@
+{
+  "request": {
+    "method": "PUT",
+    "path": "/ghost/api/admin/tiers/{{anyObjectId:tiers.created}}/",
+    "query": {}
+  },
+  "response": {
+    "body": {
+      "tiers": [
+        {
+          "active": true,
+          "benefits": [
+            "ts-ghost recorder benefit"
+          ],
+          "created_at": "{{anyISODateTime}}",
+          "currency": "USD",
+          "description": "A paid tier the recorder created",
+          "id": "{{anyObjectId:tiers.created}}",
+          "monthly_price": 700,
+          "name": "ts-ghost recorder tier, edited",
+          "slug": "ts-ghost-recorder-tier",
+          "trial_days": 0,
+          "type": "paid",
+          "updated_at": null,
+          "visibility": "public",
+          "welcome_page_url": null,
+          "yearly_price": 7000
+        }
+      ]
+    },
+    "headers": {
+      "content-version": "v6.72"
+    },
+    "status": 200
+  }
+}

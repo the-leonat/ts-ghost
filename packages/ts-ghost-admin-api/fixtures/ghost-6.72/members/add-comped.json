@@ -1,0 +1,159 @@
+{
+  "request": {
+    "method": "POST",
+    "path": "/ghost/api/admin/members/",
+    "query": {}
+  },
+  "response": {
+    "body": {
+      "members": [
+        {
+          "attribution": {
+            "id": null,
+            "referrer_medium": "Admin API",
+            "referrer_source": "Integration: ts-ghost recorder",
+            "referrer_url": null,
+            "title": null,
+            "type": null,
+            "url": null
+          },
+          "avatar_image": null,
+          "can_comment": true,
+          "commenting": {
+            "disabled": false,
+            "disabled_reason": null,
+            "disabled_until": null
+          },
+          "comped": true,
+          "created_at": "{{anyISODateTime}}",
+          "current_subscription": null,
+          "email": "ts-ghost-comped@example.com",
+          "email_count": 0,
+          "email_open_rate": null,
+          "email_opened_count": 0,
+          "email_suppression": {
+            "info": null,
+            "suppressed": false
+          },
+          "enable_comment_notifications": true,
+          "enable_updates_and_announcements": null,
+          "geolocation": null,
+          "id": "{{anyObjectId:members.created-comped}}",
+          "labels": [],
+          "last_seen_at": null,
+          "name": "ts-ghost comped member",
+          "newsletters": [
+            {
+              "description": null,
+              "id": "{{anyObjectId}}",
+              "name": "Default Newsletter",
+              "status": "active"
+            },
+            {
+              "description": null,
+              "id": "{{anyObjectId}}",
+              "name": "Weekly newsletter",
+              "status": "active"
+            }
+          ],
+          "note": null,
+          "status": "comped",
+          "subscribed": true,
+          "subscriptions": [
+            {
+              "cancel_at_period_end": false,
+              "cancellation_reason": null,
+              "current_period_end": null,
+              "customer": {
+                "email": "ts-ghost-comped@example.com",
+                "id": "",
+                "name": "ts-ghost comped member"
+              },
+              "default_payment_card_last4": "****",
+              "id": "",
+              "next_payment": {
+                "amount": 0,
+                "currency": "USD",
+                "discount": null,
+                "interval": "year",
+                "original_amount": 0
+              },
+              "offer": null,
+              "offer_redemptions": [],
+              "plan": {
+                "amount": 0,
+                "currency": "USD",
+                "id": "",
+                "interval": "year",
+                "nickname": "Complimentary"
+              },
+              "price": {
+                "amount": 0,
+                "currency": "USD",
+                "id": "",
+                "interval": "year",
+                "nickname": "Complimentary",
+                "price_id": "",
+                "tier": {
+                  "id": "",
+                  "tier_id": "{{anyObjectId:tiers.seeded}}"
+                },
+                "type": "recurring"
+              },
+              "start_date": "{{anyISODateTime}}",
+              "status": "active",
+              "tier": {
+                "active": true,
+                "created_at": "{{anyISODateTime}}",
+                "currency": "usd",
+                "description": null,
+                "expiry_at": null,
+                "id": "{{anyObjectId:tiers.seeded}}",
+                "monthly_price": 500,
+                "monthly_price_id": "{{anyObjectId}}",
+                "name": "Default Product",
+                "slug": "default-product",
+                "trial_days": 0,
+                "type": "paid",
+                "updated_at": "{{anyISODateTime}}",
+                "visibility": "public",
+                "welcome_page_url": "/welcome-paid",
+                "yearly_price": 5000,
+                "yearly_price_id": "{{anyObjectId}}"
+              }
+            }
+          ],
+          "tiers": [
+            {
+              "active": true,
+              "created_at": "{{anyISODateTime}}",
+              "currency": "usd",
+              "description": null,
+              "expiry_at": null,
+              "id": "{{anyObjectId:tiers.seeded}}",
+              "monthly_price": 500,
+              "monthly_price_id": "{{anyObjectId}}",
+              "name": "Default Product",
+              "slug": "default-product",
+              "trial_days": 0,
+              "type": "paid",
+              "updated_at": "{{anyISODateTime}}",
+              "visibility": "public",
+              "welcome_page_url": "/welcome-paid",
+              "yearly_price": 5000,
+              "yearly_price_id": "{{anyObjectId}}"
+            }
+          ],
+          "unsubscribe_url": "http://127.0.0.1:2369/unsubscribe/?uuid={{anyUuid}}&key={{unsubscribeKey}}",
+          "updated_at": "{{anyISODateTime}}",
+          "uuid": "{{anyUuid}}"
+        }
+      ]
+    },
+    "headers": {
+      "content-version": "v6.72",
+      "location": "http://127.0.0.1:2369/ghost/api/admin/members/{{anyObjectId:members.created-comped}}/"
+    },
+    "status": 201
+  }
+}

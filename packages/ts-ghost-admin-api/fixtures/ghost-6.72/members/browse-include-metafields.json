@@ -1,0 +1,798 @@
+{
+  "request": {
+    "method": "GET",
+    "path": "/ghost/api/admin/members/",
+    "query": {
+      "include": "metafields",
+      "order": "email asc"
+    }
+  },
+  "response": {
+    "body": {
+      "members": [
+        {
+          "avatar_image": null,
+          "can_comment": true,
+          "commenting": {
+            "disabled": false,
+            "disabled_reason": null,
+            "disabled_until": null
+          },
+          "comped": false,
+          "created_at": "{{anyISODateTime}}",
+          "current_subscription": {
+            "cancel_at_period_end": true,
+            "cancellation_reason": null,
+            "current_period_end": "{{anyISODateTime}}",
+            "customer": {
+              "email": null,
+              "id": "cus_HR3tBmNhx4QsZ0",
+              "name": null
+            },
+            "default_payment_card_last4": "4242",
+            "discount_end": null,
+            "discount_start": null,
+            "id": "sub_HR3tLNgGAHsa7d",
+            "plan": {
+              "amount": 0,
+              "currency": "USD",
+              "id": "173e16a1fffa7d232b398e4a9b08d266a456ae8f3d23e5f11cc608ced6730ba0",
+              "interval": "year",
+              "nickname": "Complimentary"
+            },
+            "start_date": "{{anyISODateTime}}",
+            "status": "active",
+            "trial_end_at": null,
+            "trial_start_at": null
+          },
+          "email": "comped@test.com",
+          "email_count": 0,
+          "email_open_rate": null,
+          "email_opened_count": 0,
+          "email_suppression": {
+            "info": null,
+            "suppressed": false
+          },
+          "enable_comment_notifications": true,
+          "enable_updates_and_announcements": null,
+          "geolocation": null,
+          "id": "{{anyObjectId:members.seeded}}",
+          "labels": [],
+          "last_seen_at": null,
+          "name": "Vinz Clortho",
+          "newsletters": [
+            {
+              "description": null,
+              "id": "{{anyObjectId:newsletters.seeded}}",
+              "name": "Daily newsletter",
+              "status": "active"
+            },
+            {
+              "description": null,
+              "id": "{{anyObjectId}}",
+              "name": "Weekly newsletter",
+              "status": "active"
+            }
+          ],
+          "note": null,
+          "status": "paid",
+          "subscribed": true,
+          "subscriptions": [
+            {
+              "cancel_at_period_end": true,
+              "cancellation_reason": null,
+              "current_period_end": "{{anyISODateTime}}",
+              "customer": {
+                "email": "comped@test.com",
+                "id": "cus_HR3tBmNhx4QsZ0",
+                "name": "Vinz Clortho"
+              },
+              "default_payment_card_last4": "4242",
+              "discount_end": null,
+              "discount_start": null,
+              "id": "sub_HR3tLNgGAHsa7d",
+              "next_payment": {
+                "amount": 0,
+                "currency": "USD",
+                "discount": null,
+                "interval": "year",
+                "original_amount": 0
+              },
+              "offer": null,
+              "offer_redemptions": [],
+              "plan": {
+                "amount": 0,
+                "currency": "USD",
+                "id": "173e16a1fffa7d232b398e4a9b08d266a456ae8f3d23e5f11cc608ced6730ba0",
+                "interval": "year",
+                "nickname": "Complimentary"
+              },
+              "price": {
+                "amount": 12000,
+                "currency": "GBP",
+                "id": "173e16a1fffa7d232b398e4a9b08d266a456ae8f3d23e5f11cc608ced6730ba0",
+                "interval": "year",
+                "nickname": "Yearly",
+                "price_id": "{{anyObjectId}}",
+                "tier": {
+                  "id": "109c85c734fb9992e7bc30a26af66c22f5c94d8dc62e0a33cb797be902c06b2d",
+                  "name": "Default Product",
+                  "tier_id": "{{anyObjectId:tiers.seeded}}"
+                },
+                "type": "recurring"
+              },
+              "start_date": "{{anyISODateTime}}",
+              "status": "active",
+              "tier": {
+                "active": true,
+                "created_at": "{{anyISODateTime}}",
+                "currency": "usd",
+                "description": null,
+                "expiry_at": null,
+                "id": "{{anyObjectId:tiers.seeded}}",
+                "monthly_price": 500,
+                "monthly_price_id": "{{anyObjectId}}",
+                "name": "Default Product",
+                "slug": "default-product",
+                "trial_days": 0,
+                "type": "paid",
+                "updated_at": "{{anyISODateTime}}",
+                "visibility": "public",
+                "welcome_page_url": "/welcome-paid",
+                "yearly_price": 5000,
+                "yearly_price_id": "{{anyObjectId}}"
+              },
+              "trial_end_at": null,
+              "trial_start_at": null
+            }
+          ],
+          "unsubscribe_url": "http://127.0.0.1:2369/unsubscribe/?uuid={{anyUuid}}&key={{unsubscribeKey}}",
+          "updated_at": "{{anyISODateTime}}",
+          "uuid": "{{anyUuid}}"
+        },
+        {
+          "avatar_image": null,
+          "can_comment": true,
+          "commenting": {
+            "disabled": false,
+            "disabled_reason": null,
+            "disabled_until": null
+          },
+          "comped": false,
+          "created_at": "{{anyISODateTime}}",
+          "current_subscription": null,
+          "email": "member1@test.com",
+          "email_count": 0,
+          "email_open_rate": null,
+          "email_opened_count": 0,
+          "email_suppression": {
+            "info": null,
+            "suppressed": false
+          },
+          "enable_comment_notifications": true,
+          "enable_updates_and_announcements": null,
+          "geolocation": null,
+          "id": "{{anyObjectId}}",
+          "labels": [
+            {
+              "created_at": "{{anyISODateTime}}",
+              "id": "{{anyObjectId:labels.seeded}}",
+              "name": "Label 1",
+              "slug": "label-1",
+              "updated_at": "{{anyISODateTime}}"
+            }
+          ],
+          "last_seen_at": null,
+          "name": "Mr Egg",
+          "newsletters": [
+            {
+              "description": null,
+              "id": "{{anyObjectId:newsletters.seeded}}",
+              "name": "Daily newsletter",
+              "status": "active"
+            }
+          ],
+          "note": null,
+          "status": "free",
+          "subscribed": true,
+          "subscriptions": [],
+          "unsubscribe_url": "http://127.0.0.1:2369/unsubscribe/?uuid={{anyUuid}}&key={{unsubscribeKey}}",
+          "updated_at": "{{anyISODateTime}}",
+          "uuid": "{{anyUuid}}"
+        },
+        {
+          "avatar_image": null,
+          "can_comment": true,
+          "commenting": {
+            "disabled": false,
+            "disabled_reason": null,
+            "disabled_until": null
+          },
+          "comped": false,
+          "created_at": "{{anyISODateTime}}",
+          "current_subscription": null,
+          "email": "member2@test.com",
+          "email_count": 0,
+          "email_open_rate": 50,
+          "email_opened_count": 0,
+          "email_suppression": {
+            "info": null,
+            "suppressed": false
+          },
+          "enable_comment_notifications": true,
+          "enable_updates_and_announcements": null,
+          "geolocation": null,
+          "id": "{{anyObjectId}}",
+          "labels": [],
+          "last_seen_at": null,
+          "name": null,
+          "newsletters": [
+            {
+              "description": null,
+              "id": "{{anyObjectId:newsletters.seeded}}",
+              "name": "Daily newsletter",
+              "status": "active"
+            }
+          ],
+          "note": null,
+          "status": "free",
+          "subscribed": true,
+          "subscriptions": [],
+          "unsubscribe_url": "http://127.0.0.1:2369/unsubscribe/?uuid={{anyUuid}}&key={{unsubscribeKey}}",
+          "updated_at": "{{anyISODateTime}}",
+          "uuid": "{{anyUuid}}"
+        },
+        {
+          "avatar_image": null,
+          "can_comment": true,
+          "commenting": {
+            "disabled": false,
+            "disabled_reason": null,
+            "disabled_until": null
+          },
+          "comped": false,
+          "created_at": "{{anyISODateTime}}",
+          "current_subscription": {
+            "cancel_at_period_end": false,
+            "cancellation_reason": null,
+            "current_period_end": "{{anyISODateTime}}",
+            "customer": {
+              "email": null,
+              "id": "cus_HR3tBmNhx4QsZY",
+              "name": null
+            },
+            "default_payment_card_last4": "4242",
+            "discount_end": null,
+            "discount_start": null,
+            "id": "sub_HR3tLNgGAHsa7b",
+            "plan": {
+              "amount": 1000,
+              "currency": "USD",
+              "id": "173e16a1fffa7d232b398e4a9b08d266a456ae8f3d23e5f11cc608ced6730bb8",
+              "interval": "month",
+              "nickname": "Monthly"
+            },
+            "start_date": "{{anyISODateTime}}",
+            "status": "active",
+            "trial_end_at": null,
+            "trial_start_at": null
+          },
+          "email": "paid@test.com",
+          "email_count": 0,
+          "email_open_rate": 80,
+          "email_opened_count": 0,
+          "email_suppression": {
+            "info": null,
+            "suppressed": false
+          },
+          "enable_comment_notifications": true,
+          "enable_updates_and_announcements": null,
+          "geolocation": null,
+          "id": "{{anyObjectId}}",
+          "labels": [],
+          "last_seen_at": null,
+          "name": "Egon Spengler",
+          "newsletters": [
+            {
+              "description": null,
+              "id": "{{anyObjectId:newsletters.seeded}}",
+              "name": "Daily newsletter",
+              "status": "active"
+            }
+          ],
+          "note": null,
+          "status": "paid",
+          "subscribed": true,
+          "subscriptions": [
+            {
+              "cancel_at_period_end": false,
+              "cancellation_reason": null,
+              "current_period_end": "{{anyISODateTime}}",
+              "customer": {
+                "email": "paid@test.com",
+                "id": "cus_HR3tBmNhx4QsZY",
+                "name": "Egon Spengler"
+              },
+              "default_payment_card_last4": "4242",
+              "discount_end": null,
+              "discount_start": null,
+              "id": "sub_HR3tLNgGAHsa7b",
+              "next_payment": {
+                "amount": 1000,
+                "currency": "USD",
+                "discount": null,
+                "interval": "month",
+                "original_amount": 1000
+              },
+              "offer": null,
+              "offer_redemptions": [],
+              "plan": {
+                "amount": 1000,
+                "currency": "USD",
+                "id": "173e16a1fffa7d232b398e4a9b08d266a456ae8f3d23e5f11cc608ced6730bb8",
+                "interval": "month",
+                "nickname": "Monthly"
+              },
+              "price": {
+                "amount": 1200,
+                "currency": "GBP",
+                "id": "173e16a1fffa7d232b398e4a9b08d266a456ae8f3d23e5f11cc608ced6730bb8",
+                "interval": "month",
+                "nickname": "Monthly",
+                "price_id": "{{anyObjectId}}",
+                "tier": {
+                  "id": "109c85c734fb9992e7bc30a26af66c22f5c94d8dc62e0a33cb797be902c06b2d",
+                  "name": "Default Product",
+                  "tier_id": "{{anyObjectId:tiers.seeded}}"
+                },
+                "type": "recurring"
+              },
+              "start_date": "{{anyISODateTime}}",
+              "status": "active",
+              "tier": {
+                "active": true,
+                "created_at": "{{anyISODateTime}}",
+                "currency": "usd",
+                "description": null,
+                "expiry_at": null,
+                "id": "{{anyObjectId:tiers.seeded}}",
+                "monthly_price": 500,
+                "monthly_price_id": "{{anyObjectId}}",
+                "name": "Default Product",
+                "slug": "default-product",
+                "trial_days": 0,
+                "type": "paid",
+                "updated_at": "{{anyISODateTime}}",
+                "visibility": "public",
+                "welcome_page_url": "/welcome-paid",
+                "yearly_price": 5000,
+                "yearly_price_id": "{{anyObjectId}}"
+              },
+              "trial_end_at": null,
+              "trial_start_at": null
+            }
+          ],
+          "unsubscribe_url": "http://127.0.0.1:2369/unsubscribe/?uuid={{anyUuid}}&key={{unsubscribeKey}}",
+          "updated_at": "{{anyISODateTime}}",
+          "uuid": "{{anyUuid}}"
+        },
+        {
+          "avatar_image": null,
+          "can_comment": true,
+          "commenting": {
+            "disabled": false,
+            "disabled_reason": null,
+            "disabled_until": null
+          },
+          "comped": false,
+          "created_at": "{{anyISODateTime}}",
+          "current_subscription": {
+            "cancel_at_period_end": true,
+            "cancellation_reason": null,
+            "current_period_end": "{{anyISODateTime}}",
+            "customer": {
+              "email": null,
+              "id": "cus_HR3tBmNhx4QsZZ",
+              "name": null
+            },
+            "default_payment_card_last4": "4242",
+            "discount_end": null,
+            "discount_start": null,
+            "id": "sub_HR3tLNgGAHsa7c",
+            "plan": {
+              "amount": 1000,
+              "currency": "USD",
+              "id": "173e16a1fffa7d232b398e4a9b08d266a456ae8f3d23e5f11cc608ced6730bb9",
+              "interval": "month",
+              "nickname": "Monthly"
+            },
+            "start_date": "{{anyISODateTime}}",
+            "status": "trialing",
+            "trial_end_at": null,
+            "trial_start_at": null
+          },
+          "email": "trialing@test.com",
+          "email_count": 0,
+          "email_open_rate": null,
+          "email_opened_count": 0,
+          "email_suppression": {
+            "info": null,
+            "suppressed": false
+          },
+          "enable_comment_notifications": true,
+          "enable_updates_and_announcements": null,
+          "geolocation": null,
+          "id": "{{anyObjectId}}",
+          "labels": [],
+          "last_seen_at": null,
+          "name": "Ray Stantz",
+          "newsletters": [
+            {
+              "description": null,
+              "id": "{{anyObjectId}}",
+              "name": "Weekly newsletter",
+              "status": "active"
+            }
+          ],
+          "note": null,
+          "status": "paid",
+          "subscribed": true,
+          "subscriptions": [
+            {
+              "cancel_at_period_end": true,
+              "cancellation_reason": null,
+              "current_period_end": "{{anyISODateTime}}",
+              "customer": {
+                "email": "trialing@test.com",
+                "id": "cus_HR3tBmNhx4QsZZ",
+                "name": "Ray Stantz"
+              },
+              "default_payment_card_last4": "4242",
+              "discount_end": null,
+              "discount_start": null,
+              "id": "sub_HR3tLNgGAHsa7c",
+              "next_payment": {
+                "amount": 1000,
+                "currency": "USD",
+                "discount": null,
+                "interval": "month",
+                "original_amount": 1000
+              },
+              "offer": null,
+              "offer_redemptions": [],
+              "plan": {
+                "amount": 1000,
+                "currency": "USD",
+                "id": "173e16a1fffa7d232b398e4a9b08d266a456ae8f3d23e5f11cc608ced6730bb9",
+                "interval": "month",
+                "nickname": "Monthly"
+              },
+              "price": {
+                "amount": 15000,
+                "currency": "GBP",
+                "id": "173e16a1fffa7d232b398e4a9b08d266a456ae8f3d23e5f11cc608ced6730bb9",
+                "interval": "year",
+                "nickname": "Yearly",
+                "price_id": "{{anyObjectId}}",
+                "tier": {
+                  "id": "109c85c734fb9992e7bc30a26af66c22f5c94d8dc62e0a33cb797be902c06b2d",
+                  "name": "Default Product",
+                  "tier_id": "{{anyObjectId:tiers.seeded}}"
+                },
+                "type": "recurring"
+              },
+              "start_date": "{{anyISODateTime}}",
+              "status": "trialing",
+              "tier": {
+                "active": true,
+                "created_at": "{{anyISODateTime}}",
+                "currency": "usd",
+                "description": null,
+                "expiry_at": null,
+                "id": "{{anyObjectId:tiers.seeded}}",
+                "monthly_price": 500,
+                "monthly_price_id": "{{anyObjectId}}",
+                "name": "Default Product",
+                "slug": "default-product",
+                "trial_days": 0,
+                "type": "paid",
+                "updated_at": "{{anyISODateTime}}",
+                "visibility": "public",
+                "welcome_page_url": "/welcome-paid",
+                "yearly_price": 5000,
+                "yearly_price_id": "{{anyObjectId}}"
+              },
+              "trial_end_at": null,
+              "trial_start_at": null
+            }
+          ],
+          "unsubscribe_url": "http://127.0.0.1:2369/unsubscribe/?uuid={{anyUuid}}&key={{unsubscribeKey}}",
+          "updated_at": "{{anyISODateTime}}",
+          "uuid": "{{anyUuid}}"
+        },
+        {
+          "avatar_image": null,
+          "can_comment": true,
+          "commenting": {
+            "disabled": false,
+            "disabled_reason": null,
+            "disabled_until": null
+          },
+          "comped": false,
+          "created_at": "{{anyISODateTime}}",
+          "current_subscription": {
+            "cancel_at_period_end": false,
+            "cancellation_reason": null,
+            "current_period_end": "{{anyISODateTime}}",
+            "customer": {
+              "email": null,
+              "id": "cus_tsghostrecorder",
+              "name": null
+            },
+            "default_payment_card_last4": null,
+            "discount_end": null,
+            "discount_start": null,
+            "id": "sub_tsghostrecorder",
+            "plan": {
+              "amount": 900,
+              "currency": "USD",
+              "id": "price_tsghostnonickname",
+              "interval": "month",
+              "nickname": "month"
+            },
+            "start_date": "{{anyISODateTime}}",
+            "status": "active",
+            "trial_end_at": null,
+            "trial_start_at": null
+          },
+          "email": "ts-ghost-stripe@example.com",
+          "email_count": 0,
+          "email_open_rate": null,
+          "email_opened_count": 0,
+          "email_suppression": {
+            "info": null,
+            "suppressed": false
+          },
+          "enable_comment_notifications": true,
+          "enable_updates_and_announcements": null,
+          "geolocation": null,
+          "id": "{{anyObjectId}}",
+          "labels": [],
+          "last_seen_at": null,
+          "name": null,
+          "newsletters": [
+            {
+              "description": null,
+              "id": "{{anyObjectId}}",
+              "name": "Default Newsletter",
+              "status": "active"
+            },
+            {
+              "description": null,
+              "id": "{{anyObjectId}}",
+              "name": "Weekly newsletter",
+              "status": "active"
+            }
+          ],
+          "note": null,
+          "status": "paid",
+          "subscribed": true,
+          "subscriptions": [
+            {
+              "cancel_at_period_end": false,
+              "cancellation_reason": null,
+              "current_period_end": "{{anyISODateTime}}",
+              "customer": {
+                "email": "ts-ghost-stripe@example.com",
+                "id": "cus_tsghostrecorder",
+                "name": "ts-ghost stripe member"
+              },
+              "default_payment_card_last4": null,
+              "discount_end": null,
+              "discount_start": null,
+              "id": "sub_tsghostrecorder",
+              "next_payment": {
+                "amount": 900,
+                "currency": "USD",
+                "discount": null,
+                "interval": "month",
+                "original_amount": 900
+              },
+              "offer": null,
+              "offer_redemptions": [],
+              "plan": {
+                "amount": 900,
+                "currency": "USD",
+                "id": "price_tsghostnonickname",
+                "interval": "month",
+                "nickname": "month"
+              },
+              "price": {
+                "amount": 900,
+                "currency": "USD",
+                "id": "price_tsghostnonickname",
+                "interval": "month",
+                "nickname": null,
+                "price_id": "{{anyObjectId}}",
+                "tier": {
+                  "id": "109c85c734fb9992e7bc30a26af66c22f5c94d8dc62e0a33cb797be902c06b2d",
+                  "name": "Default Product",
+                  "tier_id": "{{anyObjectId:tiers.seeded}}"
+                },
+                "type": "recurring"
+              },
+              "start_date": "{{anyISODateTime}}",
+              "status": "active",
+              "tier": {
+                "active": true,
+                "created_at": "{{anyISODateTime}}",
+                "currency": "usd",
+                "description": null,
+                "expiry_at": null,
+                "id": "{{anyObjectId:tiers.seeded}}",
+                "monthly_price": 500,
+                "monthly_price_id": "{{anyObjectId}}",
+                "name": "Default Product",
+                "slug": "default-product",
+                "trial_days": 0,
+                "type": "paid",
+                "updated_at": "{{anyISODateTime}}",
+                "visibility": "public",
+                "welcome_page_url": "/welcome-paid",
+                "yearly_price": 5000,
+                "yearly_price_id": "{{anyObjectId}}"
+              },
+              "trial_end_at": null,
+              "trial_start_at": null
+            }
+          ],
+          "unsubscribe_url": "http://127.0.0.1:2369/unsubscribe/?uuid={{anyUuid}}&key={{unsubscribeKey}}",
+          "updated_at": "{{anyISODateTime}}",
+          "uuid": "{{anyUuid}}"
+        },
+        {
+          "avatar_image": null,
+          "can_comment": true,
+          "commenting": {
+            "disabled": false,
+            "disabled_reason": null,
+            "disabled_until": null
+          },
+          "comped": false,
+          "created_at": "{{anyISODateTime}}",
+          "current_subscription": null,
+          "email": "vip-paid@test.com",
+          "email_count": 0,
+          "email_open_rate": null,
+          "email_opened_count": 0,
+          "email_suppression": {
+            "info": null,
+            "suppressed": false
+          },
+          "enable_comment_notifications": true,
+          "enable_updates_and_announcements": null,
+          "geolocation": null,
+          "id": "{{anyObjectId}}",
+          "labels": [
+            {
+              "created_at": "{{anyISODateTime}}",
+              "id": "{{anyObjectId}}",
+              "name": "VIP",
+              "slug": "vip",
+              "updated_at": "{{anyISODateTime}}"
+            }
+          ],
+          "last_seen_at": null,
+          "name": "Peter Venkman",
+          "newsletters": [],
+          "note": null,
+          "status": "paid",
+          "subscribed": false,
+          "subscriptions": [],
+          "unsubscribe_url": "http://127.0.0.1:2369/unsubscribe/?uuid={{anyUuid}}&key={{unsubscribeKey}}",
+          "updated_at": "{{anyISODateTime}}",
+          "uuid": "{{anyUuid}}"
+        },
+        {
+          "avatar_image": null,
+          "can_comment": true,
+          "commenting": {
+            "disabled": false,
+            "disabled_reason": null,
+            "disabled_until": null
+          },
+          "comped": false,
+          "created_at": "{{anyISODateTime}}",
+          "current_subscription": null,
+          "email": "vip@test.com",
+          "email_count": 0,
+          "email_open_rate": null,
+          "email_opened_count": 0,
+          "email_suppression": {
+            "info": null,
+            "suppressed": false
+          },
+          "enable_comment_notifications": true,
+          "enable_updates_and_announcements": null,
+          "geolocation": null,
+          "id": "{{anyObjectId}}",
+          "labels": [
+            {
+              "created_at": "{{anyISODateTime}}",
+              "id": "{{anyObjectId}}",
+              "name": "VIP",
+              "slug": "vip",
+              "updated_at": "{{anyISODateTime}}"
+            }
+          ],
+          "last_seen_at": null,
+          "name": "Winston Zeddemore",
+          "newsletters": [
+            {
+              "description": null,
+              "id": "{{anyObjectId}}",
+              "name": "Weekly newsletter",
+              "status": "active"
+            }
+          ],
+          "note": null,
+          "status": "free",
+          "subscribed": true,
+          "subscriptions": [],
+          "unsubscribe_url": "http://127.0.0.1:2369/unsubscribe/?uuid={{anyUuid}}&key={{unsubscribeKey}}",
+          "updated_at": "{{anyISODateTime}}",
+          "uuid": "{{anyUuid}}"
+        },
+        {
+          "avatar_image": null,
+          "can_comment": true,
+          "commenting": {
+            "disabled": false,
+            "disabled_reason": null,
+            "disabled_until": null
+          },
+          "comped": false,
+          "created_at": "{{anyISODateTime}}",
+          "current_subscription": null,
+          "email": "with-product@test.com",
+          "email_count": 0,
+          "email_open_rate": null,
+          "email_opened_count": 0,
+          "email_suppression": {
+            "info": null,
+            "suppressed": false
+          },
+          "enable_comment_notifications": true,
+          "enable_updates_and_announcements": null,
+          "geolocation": null,
+          "id": "{{anyObjectId}}",
+          "labels": [],
+          "last_seen_at": null,
+          "name": "Dana Barrett",
+          "newsletters": [],
+          "note": null,
+          "status": "paid",
+          "subscribed": false,
+          "subscriptions": [],
+          "unsubscribe_url": "http://127.0.0.1:2369/unsubscribe/?uuid={{anyUuid}}&key={{unsubscribeKey}}",
+          "updated_at": "{{anyISODateTime}}",
+          "uuid": "{{anyUuid}}"
+        }
+      ],
+      "meta": {
+        "pagination": {
+          "limit": 15,
+          "next": null,
+          "page": 1,
+          "pages": 1,
+          "prev": null,
+          "total": 9
+        }
+      }
+    },
+    "headers": {
+      "content-version": "v6.72"
+    },
+    "status": 200
+  }
+}

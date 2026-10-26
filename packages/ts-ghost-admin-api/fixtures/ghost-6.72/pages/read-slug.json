@@ -162,7 +162,7 @@
               "created_at": "{{anyISODateTime}}",
               "currency": "usd",
               "description": null,
-              "id": "{{anyObjectId}}",
+              "id": "{{anyObjectId:tiers.seeded}}",
               "monthly_price": 500,
               "monthly_price_id": null,
               "name": "Default Product",
@@ -172,6 +172,24 @@
               "updated_at": "{{anyISODateTime}}",
               "visibility": "public",
               "welcome_page_url": "/welcome-paid",
+              "yearly_price": 5000,
+              "yearly_price_id": null
+            },
+            {
+              "active": false,
+              "created_at": "{{anyISODateTime}}",
+              "currency": "usd",
+              "description": null,
+              "id": "{{anyObjectId}}",
+              "monthly_price": 500,
+              "monthly_price_id": null,
+              "name": "product",
+              "slug": "gold",
+              "trial_days": 0,
+              "type": "paid",
+              "updated_at": "{{anyISODateTime}}",
+              "visibility": "public",
+              "welcome_page_url": null,
               "yearly_price": 5000,
               "yearly_price_id": null
             }

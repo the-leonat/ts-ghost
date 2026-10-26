@@ -15,9 +15,11 @@
 // client under test would bake that client's bugs in as expected behaviour.
 const fs = require("node:fs");
 const path = require("node:path");
-const { agentProvider, fixtureManager, matchers } = require("../../utils/e2e-framework");
+const DomainEvents = require("@tryghost/domain-events");
+const { agentProvider, fixtureManager, matchers, mockManager } = require("../../utils/e2e-framework");
+const { stripeMocker } = require("../../utils/e2e-framework-mock-manager");
 const { extractRouteSpec } = require("./ts-ghost-route-spec");
-const { planWalk, NONEXISTENT_ID } = require("./ts-ghost-walk");
+const { planWalk, variantsOf, NONEXISTENT_ID, READ_TARGETS } = require("./ts-ghost-walk");
 
 const OUT = process.env.RECORDER_OUT || "/out";
 const GHOST_MINOR = process.env.GHOST_MINOR;
@@ -84,12 +86,34 @@ const SETTING_MARKERS = {
 const CANONICAL_PORT = 2369;
 const sessionHost = new RegExp(`127\\.0\\.0\\.1:${process.env.server__port}\\b`, "g");
 
+// A tier the walk created is answered from Ghost's tier domain object, whose
+// timestamps keep their milliseconds, while Ghost's anyISODateTime pattern
+// expects the `.000Z` a database round trip leaves (Ghost's own tiers e2e test
+// falls back to anyISODate for these). Such a value is still an ISO date-time,
+// so it gets the same marker; the pattern is Ghost's, with any milliseconds.
+const unroundedDateTime = new RegExp(
+  `^(?:${marker("anyISODateTime").source.replace("\\.000Z", "\\.\\d{3}Z")})$`,
+);
+if (unroundedDateTime.source === marker("anyISODateTime").pattern.source) {
+  throw new Error("Ghost's anyISODateTime pattern changed; revisit unroundedDateTime");
+}
+
+// A member's unsubscribe URL is signed: its `key` is an HMAC of the member's
+// uuid under a secret Ghost generates afresh on every boot
+// (members_email_auth_secret). Only the key is markered; Ghost's own members
+// test matches the whole URL with anyString.
+const unsubscribeKey = /(\/unsubscribe\/\?uuid=[^&]+&key=)[a-f0-9]{64}(?![a-f0-9])/g;
+
 function normaliseString(value) {
   const whole = MARKERS.find(({ pattern }) => pattern.test(value));
   if (whole) {
     return whole.name === "anyObjectId" ? idMarker(value) : `{{${whole.name}}}`;
   }
+  if (unroundedDateTime.test(value)) {
+    return "{{anyISODateTime}}";
+  }
   return value
+    .replace(unsubscribeKey, "$1{{unsubscribeKey}}")
     .replace(sessionHost, `127.0.0.1:${CANONICAL_PORT}`)
     .replace(embeddedUuid, "{{anyUuid}}")
     .replace(embeddedId, idMarker);
@@ -122,6 +146,12 @@ function normalise(value) {
   return value;
 }
 
+// The name a created record is kept and aliased under: `posts.created`, or
+// `offers.created-trial` for a resource created in variants.
+function createdKey({ resource, variant }) {
+  return `${resource}.created${variant === undefined ? "" : `-${variant}`}`;
+}
+
 function requestKey(method, url) {
   const parsed = new URL(url, `http://127.0.0.1${API_ROOT}`);
   const query = Object.fromEntries(
@@ -133,10 +163,50 @@ function requestKey(method, url) {
 // The seeds the walk reads. `members:newsletters` brings the labels and needs
 // `newsletters` first; `posts` brings tags and pages, and published, draft,
 // scheduled and paid-only posts. `user:inactive` adds a user in a status other
-// than active, a shape variant of the user schema. No Stripe is involved.
+// than active, a shape variant of the user schema. `members:newsletters` also
+// brings the paid side with no Stripe involved: the free and the paid tier, the
+// paid tier's Stripe prices, and Stripe customers and subscriptions for the paid
+// members, all as literal rows of Ghost's seed source. `tiers:archived` adds an
+// archived paid tier. (`members:emails` would fill members' `email_recipients`
+// include, but it also gives seeded posts an email whose `from` and `source`
+// are null, which the posts schema rejects; it is left out until that is fixed.)
 // Every resource the walk reads must come back non-empty: the client check
 // fails on an empty collection (see src/client-check/evidence.ts).
-const SEEDS = ["users", "user:inactive", "posts", "newsletters", "members:newsletters"];
+const SEEDS = ["users", "user:inactive", "posts", "newsletters", "members:newsletters", "tiers:archived"];
+
+// The paid tier's Stripe product, a literal of Ghost's seed source
+// (DataGenerator.forKnex.stripe_products).
+const SEEDED_STRIPE_PRODUCT = "109c85c734fb9992e7bc30a26af66c22f5c94d8dc62e0a33cb797be902c06b2d";
+
+// A member subscribed through Ghost's own Stripe webhook ingestion, on a price
+// that has no nickname. Ghost names every price it creates itself, but a price
+// made in the Stripe dashboard often has none, and Ghost copies Stripe's price
+// as it is (members-api member-repository linkSubscription). That price state
+// lives on Stripe's side, so this is the one seed that needs the Stripe mock:
+// the price is put into the mock, and the mock's checkout webhook makes Ghost
+// create the member, customer and subscription. Ids are fixed here rather than
+// left to the mock's random ones, so they stay literal in the fixtures.
+async function subscribeThroughStripe() {
+  const price = {
+    id: "price_tsghostnonickname",
+    object: "price",
+    active: true,
+    product: SEEDED_STRIPE_PRODUCT,
+    nickname: null,
+    currency: "usd",
+    unit_amount: 900,
+    type: "recurring",
+    recurring: { interval: "month" },
+  };
+  stripeMocker.prices.push(price);
+  const customer = stripeMocker.createCustomer({
+    id: "cus_tsghostrecorder",
+    name: "ts-ghost stripe member",
+    email: "ts-ghost-stripe@example.com",
+  });
+  await stripeMocker.createSubscription({ customer, price, id: "sub_tsghostrecorder" });
+  await DomainEvents.allSettled();
+}
 
 describe("ts-ghost recorder", function () {
   let agent;
@@ -148,6 +218,14 @@ describe("ts-ghost recorder", function () {
     }
     agent = await agentProvider.getAdminAPIAgent();
     await fixtureManager.init(...SEEDS);
+    // Ghost's test settings say Stripe is connected (fake keys, no account), so
+    // creating a tier or an offer makes Ghost's event handlers call Stripe.
+    // The Stripe mock answers those calls in-process, and also cuts the
+    // network, so the recording reaches no outside service. Mail is mocked so
+    // the staff notifications member creation sends go nowhere either.
+    mockManager.mockStripe();
+    mockManager.mockMail();
+    await subscribeThroughStripe();
     await agent.loginAsOwner();
 
     // Authenticate as a custom integration, like a real consumer: the owner
@@ -166,6 +244,10 @@ describe("ts-ghost recorder", function () {
     const adminKey = integration.api_keys.find((key) => key.type === "admin");
     const [keyId, keySecret] = adminKey.secret.split(":");
     await agent.useToken(keyId, keySecret);
+  });
+
+  afterAll(async function () {
+    await mockManager.restore();
   });
 
   // The route spec describes the admin surface itself; the admin package's
@@ -194,10 +276,12 @@ describe("ts-ghost recorder", function () {
     let lastPage;
     const context = {
       // The seeded record a read targets: the lowest slug (or email) of its
-      // browse, so the choice does not depend on Ghost's default order.
+      // browse among those the walk's read target admits, so the choice does
+      // not depend on Ghost's default order.
       seeded(resource) {
-        const records = browsed[resource];
-        if (!records || records.length === 0) {
+        const admits = READ_TARGETS[resource] ?? (() => true);
+        const records = (browsed[resource] ?? []).filter(admits);
+        if (records.length === 0) {
           throw new Error(`No seeded ${resource} to read`);
         }
         const key = (record) => record.slug ?? record.email ?? record.id;
@@ -205,11 +289,14 @@ describe("ts-ghost recorder", function () {
         alias(record.id, `${resource}.seeded`);
         return record;
       },
-      created(resource) {
-        if (!created[resource]) {
-          throw new Error(`The walk created no ${resource}`);
+      // A record the walk created: of the given variant, or of the resource's
+      // first one (see WRITES in ./ts-ghost-walk).
+      created(resource, variant = variantsOf(resource)[0]) {
+        const record = created[createdKey({ resource, variant })];
+        if (!record) {
+          throw new Error(`The walk created no ${resource}${variant ? ` (${variant})` : ""}`);
         }
-        return created[resource];
+        return record;
       },
       get lastPage() {
         return lastPage;
@@ -223,6 +310,9 @@ describe("ts-ghost recorder", function () {
         request = request.body(typeof step.body === "function" ? step.body(context) : step.body);
       }
       const res = await request;
+      // Let Ghost's event handlers (Stripe sync, member events) finish before
+      // the next call, so no response depends on how far they got.
+      await DomainEvents.allSettled();
 
       const contentVersion = res.headers["content-version"];
       if (contentVersion !== `v${GHOST_MINOR}`) {
@@ -239,11 +329,12 @@ describe("ts-ghost recorder", function () {
         browsed[step.browse] = res.body[step.browse];
       }
       if (step.creates) {
-        created[step.creates] = res.body[step.creates][0];
-        alias(created[step.creates].id, `${step.creates}.created`);
+        const record = res.body[step.creates.resource][0];
+        created[createdKey(step.creates)] = record;
+        alias(record.id, createdKey(step.creates));
       }
       if (step.updates) {
-        created[step.updates] = res.body[step.updates][0];
+        created[createdKey(step.updates)] = res.body[step.updates.resource][0];
       }
       if (step.paginates) {
         const { pagination } = res.body.meta;

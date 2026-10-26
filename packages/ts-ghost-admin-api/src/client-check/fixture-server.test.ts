@@ -81,6 +81,7 @@ describe("fixture server", () => {
         atTZ: "{{anyISODateTimeWithTZ}}",
         hash: "{{publicHash}}",
         preview: "http://127.0.0.1:2369/p/{{anyUuid}}/",
+        unsubscribe: "http://127.0.0.1:2369/unsubscribe/?uuid={{anyUuid}}&key={{unsubscribeKey}}",
       }),
     ]);
 
@@ -92,6 +93,7 @@ describe("fixture server", () => {
     expect(body.atTZ).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.000\+\d{2}:\d{2}$/);
     expect(body.hash).toMatch(/^[a-z0-9]{30}$/);
     expect(body.preview).toBe(`http://127.0.0.1:2369/p/${body.uuid}/`);
+    expect(body.unsubscribe).toMatch(/\/unsubscribe\/\?uuid=[a-f0-9-]{36}&key=[a-f0-9]{64}$/);
   });
 
   test("leaves recorded content that merely uses braces alone", async () => {

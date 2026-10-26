@@ -1,11 +1,13 @@
 import { describe, expect, test } from "vitest";
 import { z } from "zod";
-import { baseNewsletterSchema, baseSiteSchema, baseTagsSchema } from "@ts-ghost/core-api";
+import { baseNewsletterSchema, baseOffersSchema, baseSiteSchema, baseTagsSchema } from "@ts-ghost/core-api";
 
 import { TSGhostAdminAPI } from "../admin-api";
 import { adminLabelsSchema } from "../schemas/labels";
+import { adminMembersSchema } from "../schemas/members";
 import { adminPagesSchema } from "../schemas/pages";
 import { adminPostsSchema } from "../schemas/posts";
+import { adminTiersSchema } from "../schemas/tiers";
 import { adminUsersSchema } from "../schemas/users";
 import { adminWebhookSchema } from "../schemas/webhooks";
 import { describeClient } from "./client-claims";
@@ -72,6 +74,9 @@ describe(`evidence in the fixtures recorded from pinned Ghost ${PINNED_GHOST.ref
       users: adminUsersSchema,
       webhooks: adminWebhookSchema,
       site: baseSiteSchema,
+      members: adminMembersSchema,
+      tiers: adminTiersSchema,
+      offers: baseOffersSchema,
     });
 
     const lines = Object.entries(report)
