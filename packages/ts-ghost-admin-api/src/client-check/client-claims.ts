@@ -25,9 +25,23 @@ function acceptsIdentity(resource: Composed, form: IdentityForm) {
   }
 }
 
-function includeKeys(resource: Composed): string[] {
-  const fetcher = resource.read?.({ id: "x" }) ?? resource.browse?.();
-  return fetcher ? (fetcher.include(EVERY_INCLUDE).getIncludes() as string[]) : [];
+/**
+ * The include keys the client accepts, split into those it sends and those it
+ * accepts but drops from the request (read back from the request it would make).
+ */
+function includeKeys(resource: Composed): Pick<ResourceClaim, "includes" | "ignoredIncludes"> {
+  // `browse` and `read` share the resource's include schema; only a browse
+  // fetcher exposes the query it would send.
+  const fetcher = resource.browse?.() ?? resource.read?.({ id: "x" });
+  if (!fetcher) return { includes: [], ignoredIncludes: [] };
+  const included = fetcher.include(EVERY_INCLUDE);
+  const accepted = included.getIncludes() as string[];
+  const query = included.getURLSearchParams?.() as URLSearchParams | undefined;
+  const sent = query ? (query.get("include")?.split(",") ?? []) : accepted;
+  return {
+    includes: accepted.filter((key) => sent.includes(key)),
+    ignoredIncludes: accepted.filter((key) => !sent.includes(key)),
+  };
 }
 
 /**
@@ -69,7 +83,9 @@ export function describeClient(api: TSGhostAdminAPI): ResourceClaim[] {
       identities: operations.includes("read")
         ? IDENTITY_FORMS.filter((form) => acceptsIdentity(composed, form))
         : [],
-      includes: operations.includes("browse") || operations.includes("read") ? includeKeys(composed) : [],
+      ...(operations.includes("browse") || operations.includes("read")
+        ? includeKeys(composed)
+        : { includes: [], ignoredIncludes: [] }),
       inputs: inputsOf(composed),
     };
   });

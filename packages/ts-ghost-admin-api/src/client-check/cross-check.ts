@@ -38,8 +38,10 @@ export type ResourceClaim = {
   operations: Operation[];
   /** Identity forms `read` accepts. */
   identities: IdentityForm[];
-  /** Include keys `browse` and `read` accept. */
+  /** Include keys `browse` and `read` accept and send. */
   includes: string[];
+  /** Include keys `browse` and `read` accept but do not send (kept so legacy calls compile). */
+  ignoredIncludes?: string[];
   /** JSON Schemas of the request bodies `add` and `edit` accept, as the client sends them. */
   inputs?: Partial<Record<InputOperation, JsonSchema>>;
 };
@@ -53,6 +55,8 @@ export type CrossCheckResult = {
   inputGaps: string[];
   /** Resources the client offers for which Ghost has no input schema to compare against. */
   inputsUncovered: string[];
+  /** Include keys the client accepts but never sends, so Ghost never sees them: reported, never failed. */
+  legacyClaims: string[];
 };
 
 type Request = { call: string; method: string; path: string; controllerMethod?: string; includes: boolean };
@@ -129,6 +133,7 @@ function shape(path: string) {
 
 export function crossCheck(claims: ResourceClaim[], spec: RouteSpec): CrossCheckResult {
   const failures: string[] = [];
+  const legacyClaims: string[] = [];
 
   for (const claim of claims) {
     for (const request of requestsOf(claim)) {
@@ -151,6 +156,11 @@ export function crossCheck(claims: ResourceClaim[], spec: RouteSpec): CrossCheck
         continue;
       }
       if (!request.includes) continue;
+      for (const include of claim.ignoredIncludes ?? []) {
+        legacyClaims.push(
+          `${claim.resource}.${request.controllerMethod}() accepts include "${include}" but does not send it`,
+        );
+      }
       const allowed =
         spec.controllers[controller.endpoint]?.methods[controller.method]?.allowedIncludes ?? [];
       const ghostMethod = `${controller.endpoint}.${controller.method}`;
@@ -196,7 +206,7 @@ export function crossCheck(claims: ResourceClaim[], spec: RouteSpec): CrossCheck
   );
   const uncovered = [...reachable].filter((resource) => resource !== "" && !covered.has(resource)).sort();
 
-  return { failures, uncovered, inputGaps, inputsUncovered: inputsUncovered.sort() };
+  return { failures, uncovered, inputGaps, inputsUncovered: inputsUncovered.sort(), legacyClaims };
 }
 
 /** Reads the committed route spec for a Ghost minor, e.g. `ghost-6.72`. */

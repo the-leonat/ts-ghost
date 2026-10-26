@@ -10,6 +10,7 @@ import {
   DebugOption,
   emailOrIdSchema,
   HTTPClientFactory,
+  ignoredInclude,
   slugOrIdSchema,
 } from "@ts-ghost/core-api";
 
@@ -143,15 +144,23 @@ export class TSGhostAdminAPI<Version extends `v5.${string}` | `v6.${string}` = a
   }
 
   get tiers() {
+    // Ghost's tiers controller takes no `include` option and always sends
+    // prices and benefits; these keys stay so existing calls compile, but the
+    // client does not send them.
     const tiersIncludeSchema = z.object({
-      monthly_price: z.literal(true).optional(),
-      yearly_price: z.literal(true).optional(),
-      benefits: z.literal(true).optional(),
+      /** @deprecated No-op: Ghost always sends a tier's monthly price, no include needed. */
+      monthly_price: ignoredInclude(),
+      /** @deprecated No-op: Ghost always sends a tier's yearly price, no include needed. */
+      yearly_price: ignoredInclude(),
+      /** @deprecated No-op: Ghost always sends a tier's benefits, no include needed. */
+      benefits: ignoredInclude(),
     });
     return new APIComposer(
       "tiers",
       {
-        schema: adminTiersSchema,
+        // Ghost's tiers endpoint sends benefits on every tier (a tier embedded
+        // in a member does not carry them, so `adminTiersSchema` keeps them optional).
+        schema: adminTiersSchema.required({ benefits: true }),
         // Ghost registers only GET /tiers/:id/ for tiers.
         identitySchema: z.object({ id: z.string() }),
         include: tiersIncludeSchema,

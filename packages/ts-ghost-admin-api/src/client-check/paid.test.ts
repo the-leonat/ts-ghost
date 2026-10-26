@@ -158,17 +158,41 @@ describe("client check: tiers", () => {
     });
   });
 
-  // The client offers these includes (a known defect of the route-spec
-  // cross-check); Ghost's tiers.browse has no include option and ignores them.
-  test("the price and benefit includes change nothing in what Ghost sends", async () => {
+  test("a free tier has benefits but no prices, and a paid tier has both, without asking for them", async () => {
+    const result = await check.api.tiers.browse(BY_SLUG).fetch();
+
+    assert(result.success);
+    expect(result.data.find((tier) => tier.slug === "free")).toMatchObject({
+      benefits: [],
+      monthly_price: null,
+      yearly_price: null,
+    });
+    expect(result.data.find((tier) => tier.slug === "default-product")).toMatchObject({
+      benefits: [],
+      monthly_price: 500,
+      yearly_price: 5000,
+    });
+  });
+
+  // The client still accepts these deprecated includes (a legacy claim of the
+  // route-spec cross-check); Ghost's tiers controller has no include option and
+  // drops the parameter (fixtures/ghost-6.72/tiers/browse-include-*), so the
+  // client no longer sends it.
+  test("the deprecated price and benefit includes are accepted but not sent", async () => {
     const plain = await check.api.tiers.browse(BY_SLUG).fetch();
     const included = await check.api.tiers
       .browse(BY_SLUG)
       .include({ monthly_price: true, yearly_price: true, benefits: true })
       .fetch();
+    const read = await check.api.tiers
+      .read({ id: fixtureId("tiers.seeded") })
+      .include({ monthly_price: true, yearly_price: true, benefits: true })
+      .fetch();
 
-    assert(plain.success && included.success);
+    assert(plain.success && included.success && read.success);
     expect(included.data).toEqual(plain.data);
+    const sentQueries = fetchMocker.mock.calls.map(([input]) => new URL(String(input)).searchParams);
+    expect(sentQueries.map((query) => query.has("include"))).toEqual([false, false, false]);
   });
 });
 

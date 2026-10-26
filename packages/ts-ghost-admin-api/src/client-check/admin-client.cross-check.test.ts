@@ -10,25 +10,32 @@ const api = new TSGhostAdminAPI(
   "1efedd9db174adee2d23d982:4b74dca0219bad629852191af326a45037346c2231240e0f7aec1f9371cc14e8",
   "v6.72",
 );
-const { failures, uncovered, inputGaps, inputsUncovered } = crossCheck(
+const { failures, uncovered, inputGaps, inputsUncovered, legacyClaims } = crossCheck(
   describeClient(api),
   loadRouteSpec(PINNED_GHOST.fixtureDir),
 );
+
+/**
+ * Include keys the client accepts only so legacy calls keep compiling, and
+ * never sends. Each is a deliberate, documented decision; any other include
+ * Ghost does not allow is sent, and fails the cross-check.
+ */
+const LEGACY_CLAIMS = [
+  // Ghost's tiers controller takes no `include` option at all and sends prices
+  // and benefits unasked (#12). The keys are deprecated: removing them would
+  // stop `.include({ monthly_price: true })` compiling for consumers.
+  ...(["browse", "read"] as const).flatMap((method) =>
+    ["monthly_price", "yearly_price", "benefits"].map(
+      (key) => `tiers.${method}() accepts include "${key}" but does not send it`,
+    ),
+  ),
+];
 
 /**
  * Claims the client makes that Ghost does not back, kept here as assertions
  * that they currently fail. Fixing one deletes its entry and its test.
  */
 const KNOWN_DEFECTS = {
-  // Ghost's tiers controller takes no `include` option at all and sends prices
-  // and benefits unasked; the query parameter is dropped. Removing these keys
-  // would stop `.include({ monthly_price: true })` compiling for consumers, so
-  // it is left for a decision of its own.
-  tiersIncludes: (["browse", "read"] as const).flatMap((method) =>
-    ["monthly_price", "yearly_price", "benefits"].map(
-      (key) => `tiers.${method}() offers include "${key}", but Ghost's tiers.${method} allows no includes`,
-    ),
-  ),
   // Ghost takes the newsletter as the `newsletter` query option (which `edit()`
   // also offers), not as a body key: its posts schemas do not declare it, and
   // Ghost's validator strips undeclared keys. The body key also backs the
@@ -55,8 +62,12 @@ describe(`route-spec cross-check: admin client against pinned Ghost ${PINNED_GHO
     expect(failures.filter((failure) => !known.includes(failure))).toEqual([]);
   });
 
-  test("known defect: tiers offer includes, but Ghost's tiers endpoint declares none", () => {
-    expect(failures).toEqual(expect.arrayContaining(KNOWN_DEFECTS.tiersIncludes));
+  test("the only includes the client accepts without sending are the documented legacy claims", () => {
+    expect(legacyClaims).toEqual(LEGACY_CLAIMS);
+  });
+
+  test("tiers send no include, so no tiers include fails", () => {
+    expect(failures.filter((failure) => failure.startsWith("tiers."))).toEqual([]);
   });
 
   test("known defect: posts send the newsletter in the body, where Ghost's posts schemas do not declare it", () => {

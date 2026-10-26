@@ -2,7 +2,7 @@ import createFetchMock from "vitest-fetch-mock";
 import { assert, describe, expect, test } from "vitest";
 import { z } from "zod";
 
-import { HTTPClient, type HTTPClientOptions } from "../helpers";
+import { HTTPClient, ignoredInclude, type HTTPClientOptions } from "../helpers";
 import { BrowseFetcher } from "./browse-fetcher";
 
 const fetchMocker = createFetchMock(vi);
@@ -109,6 +109,22 @@ describe("BrowseFetcher", () => {
         count: 1,
       },
     ]);
+  });
+
+  test("accepts an include key marked ignoredInclude() but does not send it", () => {
+    const browseFetcher = new BrowseFetcher(
+      "posts",
+      {
+        schema: simplifiedSchema,
+        output: simplifiedSchema,
+        include: z.object({ count: z.literal(true).optional(), legacy: ignoredInclude() }),
+      },
+      {},
+      httpClient,
+    ).include({ count: true, legacy: true });
+
+    expect(browseFetcher.getIncludes()).toEqual(["count", "legacy"]);
+    expect(browseFetcher.getURLSearchParams()?.get("include")).toBe("count");
   });
 
   test("should return a BrowseFetcher instance with Admin API", async () => {

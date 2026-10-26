@@ -11,6 +11,16 @@ const api = new TSGhostAdminAPI(
 const claims = describeClient(api);
 const claimOf = (resource: string) => claims.find((claim) => claim.resource === resource);
 
+describe("client claims: includes", () => {
+  test("separates the include keys the client sends from those it accepts but does not send", () => {
+    expect(claimOf("posts")).toMatchObject({ includes: ["authors", "tags", "tiers"], ignoredIncludes: [] });
+    expect(claimOf("tiers")).toMatchObject({
+      includes: [],
+      ignoredIncludes: ["monthly_price", "yearly_price", "benefits"],
+    });
+  });
+});
+
 describe("client claims: request bodies", () => {
   test("describes the body add() accepts as JSON Schema, with its required keys", () => {
     const add = claimOf("tags")?.inputs?.add;

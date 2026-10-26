@@ -82,6 +82,23 @@ describe("route-spec cross-check", () => {
     ]);
   });
 
+  test("reports an include the client accepts but does not send as a legacy claim, never a failure", () => {
+    const tiers: ResourceClaim = {
+      resource: "tiers",
+      operations: ["browse", "read"],
+      identities: ["id"],
+      includes: [],
+      ignoredIncludes: ["benefits"],
+    };
+
+    const result = crossCheck([tiers], spec);
+    expect(result.failures).toEqual([]);
+    expect(result.legacyClaims).toEqual([
+      'tiers.browse() accepts include "benefits" but does not send it',
+      'tiers.read() accepts include "benefits" but does not send it',
+    ]);
+  });
+
   test("names the includes Ghost does allow when rejecting one", () => {
     const withCount: ResourceClaim = { ...posts, operations: ["browse"], includes: ["tags", "count.posts"] };
 

@@ -1,4 +1,5 @@
 import { describe, expectTypeOf, test } from "vitest";
+import type { InferFetcherDataShape } from "@ts-ghost/core-api";
 
 import { TSGhostAdminAPI } from "./admin-api";
 
@@ -45,5 +46,41 @@ describe("labels", () => {
     if (counted.success) {
       expectTypeOf(counted.data[0].count).toEqualTypeOf<{ members: number } | undefined>();
     }
+  });
+});
+
+// Ghost's tiers controller takes no `include` option and always sends prices
+// and benefits (recorded in fixtures/ghost-6.72/tiers): a free tier omits its
+// prices, every tier carries its benefits.
+describe("tiers", () => {
+  test("prices and benefits are typed without asking for them", async () => {
+    const browsed = await api.tiers.browse().fetch();
+    if (browsed.success) {
+      expectTypeOf(browsed.data[0].benefits).toEqualTypeOf<string[]>();
+      expectTypeOf(browsed.data[0].monthly_price).toEqualTypeOf<number | null>();
+      expectTypeOf(browsed.data[0].yearly_price).toEqualTypeOf<number | null>();
+    }
+    const read = await api.tiers.read({ id: "x" }).fetch();
+    if (read.success) {
+      expectTypeOf(read.data.benefits).toEqualTypeOf<string[]>();
+      expectTypeOf(read.data.monthly_price).toEqualTypeOf<number | null>();
+    }
+  });
+
+  test("the deprecated price and benefit includes still compile and change no type", () => {
+    const browse = api.tiers.browse().include({ monthly_price: true, yearly_price: true, benefits: true });
+    const read = api.tiers
+      .read({ id: "x" })
+      .include({ monthly_price: true, yearly_price: true, benefits: true });
+    expectTypeOf(browse.fetch).toBeFunction();
+    expectTypeOf(read.fetch).toBeFunction();
+    expectTypeOf<InferFetcherDataShape<typeof browse>>().toEqualTypeOf<
+      InferFetcherDataShape<ReturnType<typeof api.tiers.browse>>
+    >();
+    expectTypeOf<InferFetcherDataShape<typeof read>>().toEqualTypeOf<
+      InferFetcherDataShape<ReturnType<typeof api.tiers.read>>
+    >();
+    // @ts-expect-error tiers offer no other include
+    api.tiers.browse().include({ members: true });
   });
 });

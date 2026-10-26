@@ -179,8 +179,9 @@ const BROWSE_VARIANTS = {
     { name: "include-email-recipients", params: { include: "email_recipients" } },
     { name: "include-metafields", params: { include: "metafields" } },
   ],
-  // The includes the client offers for tiers. Ghost's tiers.browse has no
-  // include option, so this records what it sends regardless.
+  // The deprecated includes the client still accepts for tiers (but no longer
+  // sends). Ghost's tiers.browse has no include option; this records that it
+  // sends the same regardless.
   tiers: [
     {
       name: "include-monthly-price-yearly-price-benefits",
