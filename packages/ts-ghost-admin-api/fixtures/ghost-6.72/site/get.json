@@ -1,0 +1,29 @@
+{
+  "request": {
+    "method": "GET",
+    "path": "/ghost/api/admin/site/",
+    "query": {}
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "content-version": "v6.72"
+    },
+    "body": {
+      "site": {
+        "title": "Ghost",
+        "description": "Thoughts, stories and ideas",
+        "logo": null,
+        "icon": null,
+        "cover_image": "https://static.ghost.org/v5.0.0/images/publication-cover.jpg",
+        "accent_color": "#FF1A75",
+        "locale": "en",
+        "timezone": "Etc/UTC",
+        "url": "http://127.0.0.1:2369/",
+        "version": "6.72",
+        "allow_external_signup": true,
+        "site_uuid": "{{anyUuid}}"
+      }
+    }
+  }
+}

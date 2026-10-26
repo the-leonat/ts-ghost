@@ -1,0 +1,42 @@
+# 2. Check the admin client against fixtures recorded in-process from a containerised Ghost on MySQL
+
+- Status: accepted
+- Date: 2026-10-26
+- Context: spec the-leonat/ts-ghost#1 ("Solution", "Implementation Decisions", "Testing Decisions"), ticket #2
+
+## Context
+
+Ghost versions the product, not the response shape, and adds fields in minor releases. The admin client's schemas are written by hand, and its existing tests feed hand-written bodies through a fetch mock that queues responses by call order and never looks at the request. Those tests cannot tell when the client has fallen behind Ghost, and they cannot catch a client that builds a path Ghost does not have.
+
+## Decision
+
+### Two checks over one committed artefact
+
+A **fixture** is a request-to-response transcript recorded from a real Ghost: method, path and query (parameters sorted) on the request side; status, a selected header subset (`content-version`, `location`) and body on the response side. Fixtures are committed in the admin package under a Ghost-minor-keyed path, `packages/ts-ghost-admin-api/fixtures/ghost-<minor>/`, one file per call. Supporting a second Ghost version later is a sibling directory.
+
+- **The client check** (`packages/ts-ghost-admin-api/src/client-check/`) stubs global fetch with the fixtures and drives the real client through its public API. Requests are matched on method, path and sorted query, and matching **fails closed**: an unmatched request rejects, and the test fails naming the request it received and the nearest recorded key. It needs no Ghost, no database and no container, and runs in the ordinary `pnpm test`.
+- **The drift check** (later ticket) re-runs the recorder against the newest Ghost release and diffs the result against what is committed.
+
+Volatile values are stored as markers, `{{<matcher>}}`, named after Ghost's own e2e matchers (`anyUuid`, `anyISODateTime`, …) and detected with those matchers' patterns, so a re-recording differs only when a shape changed. Only genuinely non-deterministic values are markered; seeded ids and most of a body stay literal. The per-worker port in URLs is rewritten to Ghost's canonical test port 2369, as Ghost's own snapshot setup does. The client check substitutes a fixed sample per marker.
+
+### The recorder runs in-process, inside Ghost's own e2e-api suite
+
+The recorder (`recorder/ts-ghost-recorder.test.js`) is a file in Ghost's `test/e2e-api/admin/`, run through Ghost's database test configuration (`vitest.config.db.ts`, project `e2e-api`). That configuration reserves a port block (its setup throws without one), builds one migrated template database per run and restores each worker from it. Hand-rolling a runner would mean re-deriving all of that every release. In-process is also the only way to use Ghost's seed catalogue directly and, later, its interception-based Stripe mock, which must share the process.
+
+The recorder talks to Ghost through Ghost's own test agent, never through this library, so the client cannot define its own expected behaviour. It authenticates as a custom integration created through the integrations endpoint after an owner login, like a real consumer.
+
+### It runs containerised, against MySQL 8
+
+- **Containers only.** The recorder image (`recorder/Dockerfile`) holds a shallow Ghost checkout at the pinned tag and its filtered install. Nothing from Ghost is installed or executed on the host: Ghost's install runs third-party lifecycle scripts, and a bind-mounted `node_modules` is slow on Docker Desktop. Only the fixture output directory is bind-mounted.
+- **MySQL 8, not SQLite.** MySQL 8 is the only database Ghost supports in production. The engines differ observably through Ghost's ORM (tied sort order, date precision and format, filter case sensitivity, aggregate types), and the fixtures exist to record what a real Ghost returns. A mixed SQLite/MySQL setup would surface engine differences as false drift.
+- **Ghost's own compose definition.** MySQL comes from Ghost's `compose.dev.yaml` plus its `e2e/compose.e2e.tmpfs.yaml` overlay, copied out of the same pinned checkout in the image, so the database always matches the release being recorded. The recorder container joins that compose network. Local runs and the drift job use the same image and the same composition.
+
+Everything that needs a container lives in `recorder/`. `recorder/record.sh` builds the image, starts MySQL, records, and tears MySQL down.
+
+## Consequences
+
+- Recording needs Docker and about 2.3 GB of image. A rebuild at an unchanged tag reuses the clone and install layers and takes seconds.
+- Ghost's compose file fixes the container name (`ghost-dev-mysql`) and publishes host port 3306, so recording cannot run beside a Ghost dev database or a host MySQL on 3306.
+- Every recording runs with all writable labs flags on, because Ghost's seeding always enables them.
+- The image is architecture-specific; CI must build it on the runner.
+- The existing call-order fetch-mock tests in core-api are left as they are. New client checks use the fixture server.
