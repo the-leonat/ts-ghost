@@ -1,0 +1,55 @@
+{
+  "request": {
+    "method": "GET",
+    "path": "/ghost/api/admin/users/email/contributor@ghost.org/",
+    "query": {}
+  },
+  "response": {
+    "body": {
+      "users": [
+        {
+          "accessibility": "{\"nightShift\":\"system\"}",
+          "bio": "bio",
+          "bluesky": null,
+          "comment_notifications": true,
+          "cover_image": null,
+          "created_at": "{{anyISODateTime}}",
+          "donation_notifications": true,
+          "email": "contributor@ghost.org",
+          "facebook": null,
+          "free_member_signup_notification": true,
+          "gift_subscription_notifications": true,
+          "id": "6193c6bae792de832cd08146",
+          "instagram": null,
+          "last_seen": null,
+          "linkedin": null,
+          "location": "location",
+          "mastodon": null,
+          "mention_notifications": true,
+          "meta_description": null,
+          "meta_title": null,
+          "milestone_notifications": true,
+          "name": "Contributor",
+          "paid_subscription_canceled_notification": false,
+          "paid_subscription_started_notification": true,
+          "profile_image": null,
+          "recommendation_notifications": true,
+          "slug": "contributor",
+          "status": "active",
+          "threads": null,
+          "tiktok": null,
+          "tour": null,
+          "twitter": null,
+          "updated_at": "{{anyISODateTime}}",
+          "url": "http://127.0.0.1:2369/author/contributor/",
+          "website": null,
+          "youtube": null
+        }
+      ]
+    },
+    "headers": {
+      "content-version": "v6.72"
+    },
+    "status": 200
+  }
+}

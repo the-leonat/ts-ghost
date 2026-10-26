@@ -1,0 +1,212 @@
+{
+  "request": {
+    "method": "GET",
+    "path": "/ghost/api/admin/tags/",
+    "query": {
+      "include": "count.posts",
+      "order": "slug asc"
+    }
+  },
+  "response": {
+    "body": {
+      "meta": {
+        "pagination": {
+          "limit": 15,
+          "next": null,
+          "page": 1,
+          "pages": 1,
+          "prev": null,
+          "total": 7
+        }
+      },
+      "tags": [
+        {
+          "accent_color": null,
+          "canonical_url": null,
+          "codeinjection_foot": null,
+          "codeinjection_head": null,
+          "count": {
+            "posts": 2
+          },
+          "created_at": "{{anyISODateTime}}",
+          "description": "description",
+          "feature_image": null,
+          "id": "9451f5fca366002ebd5dbea6",
+          "meta_description": null,
+          "meta_title": null,
+          "name": "bacon",
+          "og_description": null,
+          "og_image": null,
+          "og_title": null,
+          "slug": "bacon",
+          "twitter_description": null,
+          "twitter_image": null,
+          "twitter_title": null,
+          "updated_at": "{{anyISODateTime}}",
+          "url": "http://127.0.0.1:2369/tag/bacon/",
+          "visibility": "public"
+        },
+        {
+          "accent_color": null,
+          "canonical_url": null,
+          "codeinjection_foot": null,
+          "codeinjection_head": null,
+          "count": {
+            "posts": 1
+          },
+          "created_at": "{{anyISODateTime}}",
+          "description": "description",
+          "feature_image": null,
+          "id": "618ba1fdbe2896088840a675",
+          "meta_description": null,
+          "meta_title": null,
+          "name": "chorizo",
+          "og_description": null,
+          "og_image": null,
+          "og_title": null,
+          "slug": "chorizo",
+          "twitter_description": null,
+          "twitter_image": null,
+          "twitter_title": null,
+          "updated_at": "{{anyISODateTime}}",
+          "url": "http://127.0.0.1:2369/tag/chorizo/",
+          "visibility": "public"
+        },
+        {
+          "accent_color": null,
+          "canonical_url": null,
+          "codeinjection_foot": null,
+          "codeinjection_head": null,
+          "count": {
+            "posts": 7
+          },
+          "created_at": "{{anyISODateTime}}",
+          "description": null,
+          "feature_image": null,
+          "id": "{{anyObjectId}}",
+          "meta_description": null,
+          "meta_title": null,
+          "name": "Getting Started",
+          "og_description": null,
+          "og_image": null,
+          "og_title": null,
+          "slug": "getting-started",
+          "twitter_description": null,
+          "twitter_image": null,
+          "twitter_title": null,
+          "updated_at": "{{anyISODateTime}}",
+          "url": "http://127.0.0.1:2369/tag/getting-started/",
+          "visibility": "public"
+        },
+        {
+          "accent_color": null,
+          "canonical_url": null,
+          "codeinjection_foot": null,
+          "codeinjection_head": null,
+          "count": {
+            "posts": 0
+          },
+          "created_at": "{{anyISODateTime}}",
+          "description": "description",
+          "feature_image": null,
+          "id": "6193c6dfe792de832cd08149",
+          "meta_description": null,
+          "meta_title": null,
+          "name": "injection",
+          "og_description": null,
+          "og_image": null,
+          "og_title": null,
+          "slug": "injection",
+          "twitter_description": null,
+          "twitter_image": null,
+          "twitter_title": null,
+          "updated_at": "{{anyISODateTime}}",
+          "url": "http://127.0.0.1:2369/tag/injection/",
+          "visibility": "public"
+        },
+        {
+          "accent_color": null,
+          "canonical_url": null,
+          "codeinjection_foot": null,
+          "codeinjection_head": null,
+          "count": {
+            "posts": 2
+          },
+          "created_at": "{{anyISODateTime}}",
+          "description": "description",
+          "feature_image": "https://example.com/super_photo.jpg",
+          "id": "618ba1febe2896088840a6db",
+          "meta_description": null,
+          "meta_title": null,
+          "name": "kitchen sink",
+          "og_description": null,
+          "og_image": null,
+          "og_title": null,
+          "slug": "kitchen-sink",
+          "twitter_description": null,
+          "twitter_image": null,
+          "twitter_title": null,
+          "updated_at": "{{anyISODateTime}}",
+          "url": "http://127.0.0.1:2369/tag/kitchen-sink/",
+          "visibility": "public"
+        },
+        {
+          "accent_color": null,
+          "canonical_url": null,
+          "codeinjection_foot": null,
+          "codeinjection_head": null,
+          "count": {
+            "posts": 1
+          },
+          "created_at": "{{anyISODateTime}}",
+          "description": "description",
+          "feature_image": null,
+          "id": "6193c6d5e792de832cd08148",
+          "meta_description": null,
+          "meta_title": null,
+          "name": "pollo",
+          "og_description": null,
+          "og_image": null,
+          "og_title": null,
+          "slug": "pollo",
+          "twitter_description": null,
+          "twitter_image": null,
+          "twitter_title": null,
+          "updated_at": "{{anyISODateTime}}",
+          "url": "http://127.0.0.1:2369/tag/pollo/",
+          "visibility": "public"
+        },
+        {
+          "accent_color": null,
+          "canonical_url": null,
+          "codeinjection_foot": null,
+          "codeinjection_head": null,
+          "count": {
+            "posts": 2
+          },
+          "created_at": "{{anyISODateTime}}",
+          "description": "A tag with all image types for testing URL transformations",
+          "feature_image": "http://127.0.0.1:2369/content/images/tag-feature.jpg",
+          "id": "6193c6dfe792de832cd08150",
+          "meta_description": null,
+          "meta_title": null,
+          "name": "Tag with images",
+          "og_description": null,
+          "og_image": "http://127.0.0.1:2369/content/images/tag-og.jpg",
+          "og_title": null,
+          "slug": "tag-with-images",
+          "twitter_description": null,
+          "twitter_image": "http://127.0.0.1:2369/content/images/tag-twitter.jpg",
+          "twitter_title": null,
+          "updated_at": "{{anyISODateTime}}",
+          "url": "http://127.0.0.1:2369/tag/tag-with-images/",
+          "visibility": "public"
+        }
+      ]
+    },
+    "headers": {
+      "content-version": "v6.72"
+    },
+    "status": 200
+  }
+}

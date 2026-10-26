@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import type { FetchMock } from "vitest-fetch-mock";
@@ -35,18 +36,39 @@ const MARKER_SAMPLES: Record<string, string> = {
   anyUuid: "00000000-0000-4000-8000-000000000000",
   anyISODateTime: "2000-01-01T00:00:00.000Z",
   anyISODateTimeWithTZ: "2000-01-01T00:00:00.000+00:00",
+  anyObjectId: "aaaaaaaaaaaaaaaaaaaaaaaa",
+  publicHash: "000000000000000000000000000000",
 };
 
-const MARKER = /^\{\{(\w+)\}\}$/;
+/**
+ * The id a named id marker, `{{anyObjectId:<name>}}`, stands for: one fresh
+ * object id the recorder followed from a response into later requests (e.g.
+ * `posts.created`, `labels.seeded`). Fixed per name, distinct between names.
+ */
+export function fixtureId(name: string) {
+  return createHash("sha256").update(name).digest("hex").slice(0, 24);
+}
+
+/**
+ * A marker, whole or embedded in a longer string: `{{anyUuid}}`,
+ * `{{anyObjectId:posts.created}}`. Only marker names are matched, because
+ * recorded content has braces of its own (a post's `{{post_class}}`).
+ */
+const MARKER = /\{\{(any[A-Z]\w*|publicHash)(?::([\w.-]+))?\}\}/g;
+
+function resolveString(value: string) {
+  return value.replace(MARKER, (marker, name: string, idName: string | undefined) => {
+    if (name === "anyObjectId" && idName !== undefined) return fixtureId(idName);
+    const sample = MARKER_SAMPLES[name];
+    if (sample === undefined || idName !== undefined) {
+      throw new Error(`Fixture uses unknown marker ${marker}`);
+    }
+    return sample;
+  });
+}
 
 function resolveMarkers(value: unknown): unknown {
-  if (typeof value === "string") {
-    const marker = MARKER.exec(value)?.[1];
-    if (marker === undefined) return value;
-    const sample = MARKER_SAMPLES[marker];
-    if (sample === undefined) throw new Error(`Fixture uses unknown marker ${value}`);
-    return sample;
-  }
+  if (typeof value === "string") return resolveString(value);
   if (Array.isArray(value)) return value.map(resolveMarkers);
   if (value !== null && typeof value === "object") {
     return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, resolveMarkers(v)]));
@@ -79,7 +101,8 @@ function requestKey(method: string, pathname: string, query: Iterable<[string, s
 }
 
 function fixtureKey({ request }: Fixture) {
-  return requestKey(request.method, request.path, Object.entries(request.query));
+  const query = Object.entries(request.query).map(([k, v]): [string, string] => [k, resolveString(v)]);
+  return requestKey(request.method, resolveString(request.path), query);
 }
 
 function editDistance(a: string, b: string) {
@@ -139,9 +162,12 @@ export function serveFixtures(fetchMocker: FetchMock, fixtures: Fixture[] | stri
       throw error;
     }
     const { status, headers, body } = fixture.response;
+    const resolvedHeaders = resolveMarkers(headers) as Record<string, string>;
+    // A 204 is recorded with a null body, and a Response for it must have none.
+    if (body === null) return new Response(null, { status, headers: resolvedHeaders });
     return new Response(JSON.stringify(resolveMarkers(body)), {
       status,
-      headers: { "content-type": "application/json", ...headers },
+      headers: { "content-type": "application/json", ...resolvedHeaders },
     });
   });
 

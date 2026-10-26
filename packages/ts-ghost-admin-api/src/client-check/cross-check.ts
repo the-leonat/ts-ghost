@@ -19,6 +19,8 @@ export type RouteSpec = {
     controller: { endpoint: string; method: string } | null;
   }>;
   controllers: Record<string, { methods: Record<string, { allowedIncludes: string[] | null }> }>;
+  /** Ghost's JSON Schemas for request bodies, by action (e.g. `webhooks-edit`). */
+  adminApiSchemas: Record<string, unknown>;
 };
 
 /** `fetch` is a plain GET of the resource root (site, settings). */

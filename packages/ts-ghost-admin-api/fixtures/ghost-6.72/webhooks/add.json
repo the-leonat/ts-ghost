@@ -1,0 +1,31 @@
+{
+  "request": {
+    "method": "POST",
+    "path": "/ghost/api/admin/webhooks/",
+    "query": {}
+  },
+  "response": {
+    "body": {
+      "webhooks": [
+        {
+          "api_version": "v6.72",
+          "created_at": "{{anyISODateTime}}",
+          "event": "post.added",
+          "id": "{{anyObjectId:webhooks.created}}",
+          "integration_id": "{{anyObjectId:integration}}",
+          "last_triggered_at": null,
+          "last_triggered_error": null,
+          "last_triggered_status": null,
+          "name": "ts-ghost recorder webhook",
+          "secret": "ts-ghost-initial-secret",
+          "target_url": "https://example.com/ts-ghost/webhook",
+          "updated_at": "{{anyISODateTime}}"
+        }
+      ]
+    },
+    "headers": {
+      "content-version": "v6.72"
+    },
+    "status": 201
+  }
+}

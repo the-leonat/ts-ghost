@@ -1,0 +1,54 @@
+{
+  "request": {
+    "method": "GET",
+    "path": "/ghost/api/admin/tags/",
+    "query": {
+      "limit": "2",
+      "order": "slug asc",
+      "page": "4"
+    }
+  },
+  "response": {
+    "body": {
+      "meta": {
+        "pagination": {
+          "limit": 2,
+          "next": null,
+          "page": 4,
+          "pages": 4,
+          "prev": 3,
+          "total": 7
+        }
+      },
+      "tags": [
+        {
+          "accent_color": null,
+          "canonical_url": null,
+          "codeinjection_foot": null,
+          "codeinjection_head": null,
+          "created_at": "{{anyISODateTime}}",
+          "description": "A tag with all image types for testing URL transformations",
+          "feature_image": "http://127.0.0.1:2369/content/images/tag-feature.jpg",
+          "id": "6193c6dfe792de832cd08150",
+          "meta_description": null,
+          "meta_title": null,
+          "name": "Tag with images",
+          "og_description": null,
+          "og_image": "http://127.0.0.1:2369/content/images/tag-og.jpg",
+          "og_title": null,
+          "slug": "tag-with-images",
+          "twitter_description": null,
+          "twitter_image": "http://127.0.0.1:2369/content/images/tag-twitter.jpg",
+          "twitter_title": null,
+          "updated_at": "{{anyISODateTime}}",
+          "url": "http://127.0.0.1:2369/tag/tag-with-images/",
+          "visibility": "public"
+        }
+      ]
+    },
+    "headers": {
+      "content-version": "v6.72"
+    },
+    "status": 200
+  }
+}

@@ -3,7 +3,8 @@ import { z } from "zod";
 export const adminNewsletterCreateSchema = z.object({
   name: z.string(),
   description: z.string().max(3000).optional(),
-  sender_name: z.string(),
+  // Ghost accepts a newsletter with no sender name (recorded: newsletters/add).
+  sender_name: z.string().nullish(),
   sender_email: z.email().nullish(),
   sender_reply_to: z.string().optional(),
   status: z.union([z.literal("active"), z.literal("archived")]).optional(),

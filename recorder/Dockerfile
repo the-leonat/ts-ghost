@@ -57,5 +57,6 @@ ENV database__connection__host=mysql \
 # provisioning. Copied after the install layers so editing it rebuilds in seconds.
 COPY ts-ghost-recorder.test.js test/e2e-api/admin/ts-ghost-recorder.test.js
 COPY route-spec.js test/e2e-api/admin/ts-ghost-route-spec.js
+COPY walk.js test/e2e-api/admin/ts-ghost-walk.js
 ENV RECORDER_OUT=/out
 CMD ["pnpm", "exec", "vitest", "run", "-c", "vitest.config.db.ts", "--project", "e2e-api", "test/e2e-api/admin/ts-ghost-recorder.test.js"]

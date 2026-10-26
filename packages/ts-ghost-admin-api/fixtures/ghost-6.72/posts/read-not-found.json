@@ -1,0 +1,28 @@
+{
+  "request": {
+    "method": "GET",
+    "path": "/ghost/api/admin/posts/000000000000000000000000/",
+    "query": {}
+  },
+  "response": {
+    "body": {
+      "errors": [
+        {
+          "code": null,
+          "context": "Post not found.",
+          "details": null,
+          "ghostErrorCode": null,
+          "help": null,
+          "id": "{{anyUuid}}",
+          "message": "Resource not found error, cannot read post.",
+          "property": null,
+          "type": "NotFoundError"
+        }
+      ]
+    },
+    "headers": {
+      "content-version": "v6.72"
+    },
+    "status": 404
+  }
+}

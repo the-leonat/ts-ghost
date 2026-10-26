@@ -1,0 +1,14 @@
+{
+  "request": {
+    "method": "DELETE",
+    "path": "/ghost/api/admin/pages/{{anyObjectId:pages.created}}/",
+    "query": {}
+  },
+  "response": {
+    "body": null,
+    "headers": {
+      "content-version": "v6.72"
+    },
+    "status": 204
+  }
+}

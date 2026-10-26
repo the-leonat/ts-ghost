@@ -1,0 +1,40 @@
+{
+  "request": {
+    "method": "GET",
+    "path": "/ghost/api/admin/tags/{{anyObjectId:tags.created}}/",
+    "query": {}
+  },
+  "response": {
+    "body": {
+      "tags": [
+        {
+          "accent_color": null,
+          "canonical_url": null,
+          "codeinjection_foot": null,
+          "codeinjection_head": null,
+          "created_at": "{{anyISODateTime}}",
+          "description": null,
+          "feature_image": null,
+          "id": "{{anyObjectId:tags.created}}",
+          "meta_description": null,
+          "meta_title": null,
+          "name": "ts-ghost recorder tag, edited",
+          "og_description": null,
+          "og_image": null,
+          "og_title": null,
+          "slug": "ts-ghost-recorder-tag",
+          "twitter_description": null,
+          "twitter_image": null,
+          "twitter_title": null,
+          "updated_at": "{{anyISODateTime}}",
+          "url": "http://127.0.0.1:2369/tag/ts-ghost-recorder-tag/",
+          "visibility": "public"
+        }
+      ]
+    },
+    "headers": {
+      "content-version": "v6.72"
+    },
+    "status": 200
+  }
+}

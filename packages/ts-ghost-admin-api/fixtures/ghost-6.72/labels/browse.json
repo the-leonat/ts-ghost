@@ -1,0 +1,43 @@
+{
+  "request": {
+    "method": "GET",
+    "path": "/ghost/api/admin/labels/",
+    "query": {
+      "order": "slug asc"
+    }
+  },
+  "response": {
+    "body": {
+      "labels": [
+        {
+          "created_at": "{{anyISODateTime}}",
+          "id": "{{anyObjectId:labels.seeded}}",
+          "name": "Label 1",
+          "slug": "label-1",
+          "updated_at": "{{anyISODateTime}}"
+        },
+        {
+          "created_at": "{{anyISODateTime}}",
+          "id": "{{anyObjectId}}",
+          "name": "VIP",
+          "slug": "vip",
+          "updated_at": "{{anyISODateTime}}"
+        }
+      ],
+      "meta": {
+        "pagination": {
+          "limit": 15,
+          "next": null,
+          "page": 1,
+          "pages": 1,
+          "prev": null,
+          "total": 2
+        }
+      }
+    },
+    "headers": {
+      "content-version": "v6.72"
+    },
+    "status": 200
+  }
+}

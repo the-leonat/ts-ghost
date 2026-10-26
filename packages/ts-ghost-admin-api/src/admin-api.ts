@@ -32,7 +32,14 @@ export class TSGhostAdminAPI<Version extends `v5.${string}` | `v6.${string}` = a
     protected readonly url: string,
     protected readonly key: string,
     protected readonly version: Version,
-    protected readonly options?: DebugOption,
+    protected readonly options?: DebugOption & {
+      /**
+       * Request options applied to every request the client makes, mutations
+       * included (e.g. `{ redirect: "manual" }`). Per-call options passed to
+       * `fetch()` win over them; headers are merged, never replaced.
+       */
+      defaultRequestOptions?: RequestInit;
+    },
   ) {
     const apiCredentials = adminAPICredentialsSchema.parse({
       key,
@@ -45,6 +52,16 @@ export class TSGhostAdminAPI<Version extends `v5.${string}` | `v6.${string}` = a
       endpoint: "admin",
     });
   }
+
+  /**
+   * The version the Ghost server reported (its `content-version` header, e.g.
+   * `v6.72`) on the latest response to this client; `undefined` before any.
+   * Informational only: the client's behaviour does not depend on it.
+   */
+  getServerVersion(): string | undefined {
+    return this.httpClientFactory.serverVersion;
+  }
+
   get posts() {
     const postsIncludeSchema = z.object({
       authors: z.literal(true).optional(),
@@ -232,7 +249,13 @@ export class TSGhostAdminAPI<Version extends `v5.${string}` | `v6.${string}` = a
         output: z.array(
           z.object({
             key: z.string(),
-            value: z.string().nullable().or(z.number().nullable()).or(z.boolean().nullable()),
+            // List-valued settings (e.g. `all_blocked_email_domains`) arrive as arrays.
+            value: z
+              .string()
+              .nullable()
+              .or(z.number().nullable())
+              .or(z.boolean().nullable())
+              .or(z.array(z.string())),
           }),
         ),
       },

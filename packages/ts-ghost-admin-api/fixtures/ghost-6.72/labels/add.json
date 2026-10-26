@@ -1,0 +1,25 @@
+{
+  "request": {
+    "method": "POST",
+    "path": "/ghost/api/admin/labels/",
+    "query": {}
+  },
+  "response": {
+    "body": {
+      "labels": [
+        {
+          "created_at": "{{anyISODateTime}}",
+          "id": "{{anyObjectId:labels.created}}",
+          "name": "ts-ghost recorder label",
+          "slug": "ts-ghost-recorder-label",
+          "updated_at": "{{anyISODateTime}}"
+        }
+      ]
+    },
+    "headers": {
+      "content-version": "v6.72",
+      "location": "http://127.0.0.1:2369/ghost/api/admin/labels/{{anyObjectId:labels.created}}/"
+    },
+    "status": 201
+  }
+}

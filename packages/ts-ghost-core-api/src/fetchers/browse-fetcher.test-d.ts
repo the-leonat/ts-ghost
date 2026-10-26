@@ -121,6 +121,7 @@ describe("BrowseFetcher type narrowing", () => {
             message: string;
           }[];
           status: number;
+          body?: string | undefined;
         }
     >();
 
@@ -156,6 +157,7 @@ describe("BrowseFetcher type narrowing", () => {
             message: string;
           }[];
           status: number;
+          body?: string | undefined;
         }
     >();
 
@@ -191,6 +193,7 @@ describe("BrowseFetcher type narrowing", () => {
             message: string;
           }[];
           status: number;
+          body?: string | undefined;
         }
     >();
 
@@ -228,6 +231,7 @@ describe("BrowseFetcher type narrowing", () => {
             message: string;
           }[];
           status: number;
+          body?: string | undefined;
         }
     >();
 
@@ -265,6 +269,7 @@ describe("BrowseFetcher type narrowing", () => {
             message: string;
           }[];
           status: number;
+          body?: string | undefined;
         }
     >();
 
@@ -302,6 +307,7 @@ describe("BrowseFetcher type narrowing", () => {
             message: string;
           }[];
           status: number;
+          body?: string | undefined;
         }
     >();
   });
