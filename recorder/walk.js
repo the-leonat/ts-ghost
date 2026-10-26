@@ -154,10 +154,12 @@ const UNSEEDED = ["offers"];
 
 /**
  * Which seeded record a read targets, where the first by slug (or email) would
- * not show the shape that matters: a paid member with an active subscription,
- * and an active paid tier. The recorder picks the first match.
+ * not show the shape that matters: a post sent as a newsletter, a paid member
+ * with an active subscription, and an active paid tier. The recorder picks the
+ * first match.
  */
 const READ_TARGETS = {
+  posts: (post) => post.email !== null && post.email !== undefined,
   members: (member) =>
     member.status === "paid" &&
     member.subscriptions.some((subscription) => subscription.status === "active"),

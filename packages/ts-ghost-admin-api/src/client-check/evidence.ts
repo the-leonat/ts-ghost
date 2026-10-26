@@ -38,10 +38,38 @@ export function emptyReads(fixtures: Fixture[], resources: string[]): string[] {
       if (Array.isArray(collection)) return collection.length === 0;
       return collection === undefined || collection === null;
     })
-    .map(({ request }) => {
-      const query = new URLSearchParams(request.query).toString();
-      return `${request.method} ${request.path}${query ? `?${query}` : ""}`;
-    });
+    .map(label);
+}
+
+/** A fixture's request as `"GET <path>?<query>"`. */
+function label({ request }: Fixture) {
+  const query = new URLSearchParams(request.query).toString();
+  return `${request.method} ${request.path}${query ? `?${query}` : ""}`;
+}
+
+/** The records a fixture's body holds under its resource's key. */
+function recordsOf(fixture: Fixture): unknown[] {
+  const collection = (fixture.response.body as Record<string, unknown> | null)?.[resourceOf(fixture)];
+  return Array.isArray(collection) ? collection : collection === undefined ? [] : [collection];
+}
+
+/**
+ * Recorded reads with an `include` whose included relation no record fills,
+ * as `"GET <path>?<query>: <relation>"`. A relation sent empty on every record
+ * validates against any element schema, so the include is modelled on faith.
+ */
+export function unfilledIncludes(fixtures: Fixture[]): string[] {
+  return fixtures
+    .filter((fixture) => isRead(fixture) && fixture.request.query.include !== undefined)
+    .flatMap((fixture) =>
+      fixture.request.query.include
+        .split(",")
+        .filter(
+          (relation) =>
+            !recordsOf(fixture).some((record) => valuesAt(record, relation.split(".")).some(isFilled)),
+        )
+        .map((relation) => `${label(fixture)}: ${relation}`),
+    );
 }
 
 type SchemaNode = { _zod: { def: Record<string, any> } };
@@ -97,10 +125,7 @@ export function unbackedFields(
     Object.entries(schemas).map(([resource, schema]) => {
       const records = fixtures
         .filter((fixture) => isSuccess(fixture) && resourceOf(fixture) === resource)
-        .flatMap((fixture) => {
-          const collection = (fixture.response.body as Record<string, unknown> | null)?.[resource];
-          return Array.isArray(collection) ? collection : collection === undefined ? [] : [collection];
-        });
+        .flatMap(recordsOf);
       const unbacked = fieldPaths(schema).filter(
         (path) => !records.some((record) => valuesAt(record, splitPath(path)).some(isFilled)),
       );

@@ -46,10 +46,24 @@
             "trial_start_at": null
           },
           "email": "comped@test.com",
-          "email_count": 0,
+          "email_count": 1,
           "email_open_rate": null,
-          "email_opened_count": 0,
-          "email_recipients": [],
+          "email_opened_count": 1,
+          "email_recipients": [
+            {
+              "batch_id": "{{anyObjectId}}",
+              "delivered_at": "{{anyISODateTime}}",
+              "email_id": "{{anyObjectId}}",
+              "failed_at": null,
+              "id": "{{anyObjectId}}",
+              "member_email": "comped@test.com",
+              "member_id": "{{anyObjectId:members.seeded}}",
+              "member_name": "Mr Egg",
+              "member_uuid": "{{anyUuid}}",
+              "opened_at": "{{anyISODateTime}}",
+              "processed_at": "{{anyISODateTime}}"
+            }
+          ],
           "email_suppression": {
             "info": null,
             "suppressed": false
@@ -163,10 +177,24 @@
           "created_at": "{{anyISODateTime}}",
           "current_subscription": null,
           "email": "member1@test.com",
-          "email_count": 0,
+          "email_count": 1,
           "email_open_rate": null,
           "email_opened_count": 0,
-          "email_recipients": [],
+          "email_recipients": [
+            {
+              "batch_id": "{{anyObjectId}}",
+              "delivered_at": null,
+              "email_id": "{{anyObjectId}}",
+              "failed_at": null,
+              "id": "{{anyObjectId}}",
+              "member_email": "member1@test.com",
+              "member_id": "{{anyObjectId}}",
+              "member_name": "Mr Egg",
+              "member_uuid": "{{anyUuid}}",
+              "opened_at": null,
+              "processed_at": "{{anyISODateTime}}"
+            }
+          ],
           "email_suppression": {
             "info": null,
             "suppressed": false
@@ -214,10 +242,24 @@
           "created_at": "{{anyISODateTime}}",
           "current_subscription": null,
           "email": "member2@test.com",
-          "email_count": 0,
+          "email_count": 1,
           "email_open_rate": 50,
           "email_opened_count": 0,
-          "email_recipients": [],
+          "email_recipients": [
+            {
+              "batch_id": "{{anyObjectId}}",
+              "delivered_at": null,
+              "email_id": "{{anyObjectId}}",
+              "failed_at": null,
+              "id": "{{anyObjectId}}",
+              "member_email": "member2@test.com",
+              "member_id": "{{anyObjectId}}",
+              "member_name": null,
+              "member_uuid": "{{anyUuid}}",
+              "opened_at": null,
+              "processed_at": "{{anyISODateTime}}"
+            }
+          ],
           "email_suppression": {
             "info": null,
             "suppressed": false
@@ -281,10 +323,24 @@
             "trial_start_at": null
           },
           "email": "paid@test.com",
-          "email_count": 0,
+          "email_count": 1,
           "email_open_rate": 80,
           "email_opened_count": 0,
-          "email_recipients": [],
+          "email_recipients": [
+            {
+              "batch_id": "{{anyObjectId}}",
+              "delivered_at": null,
+              "email_id": "{{anyObjectId}}",
+              "failed_at": null,
+              "id": "{{anyObjectId}}",
+              "member_email": "paid@test.com",
+              "member_id": "{{anyObjectId}}",
+              "member_name": "Mr Egg",
+              "member_uuid": "{{anyUuid}}",
+              "opened_at": null,
+              "processed_at": "{{anyISODateTime}}"
+            }
+          ],
           "email_suppression": {
             "info": null,
             "suppressed": false
@@ -416,10 +472,24 @@
             "trial_start_at": null
           },
           "email": "trialing@test.com",
-          "email_count": 0,
+          "email_count": 1,
           "email_open_rate": null,
           "email_opened_count": 0,
-          "email_recipients": [],
+          "email_recipients": [
+            {
+              "batch_id": "{{anyObjectId}}",
+              "delivered_at": null,
+              "email_id": "{{anyObjectId}}",
+              "failed_at": null,
+              "id": "{{anyObjectId}}",
+              "member_email": "trialing@test.com",
+              "member_id": "{{anyObjectId}}",
+              "member_name": "Mr Egg",
+              "member_uuid": "{{anyUuid}}",
+              "opened_at": null,
+              "processed_at": "{{anyISODateTime}}"
+            }
+          ],
           "email_suppression": {
             "info": null,
             "suppressed": false

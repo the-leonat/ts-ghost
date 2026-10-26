@@ -62,8 +62,14 @@ describe("client check: members", () => {
 
     assert(plain.success && included.success);
     expect(plain.data.every((member) => member.email_recipients === undefined)).toBe(true);
-    // The recorded Ghost has sent no emails, so every member's list is empty.
-    expect(included.data.map((member) => member.email_recipients)).toEqual(plain.data.map(() => []));
+    // Ghost's `members:emails` seed sent one newsletter to five seeded members.
+    const recipients = included.data.flatMap((member) => member.email_recipients);
+    expect(recipients).toHaveLength(5);
+    expect(new Set(recipients.map((recipient) => recipient.email_id)).size).toBe(1);
+    const member2 = included.data.find((member) => member.email === "member2@test.com");
+    expect(member2?.email_recipients).toEqual([
+      expect.objectContaining({ member_email: "member2@test.com", member_name: null, delivered_at: null }),
+    ]);
   });
 
   test("metafields can be included; Ghost leaves the key out for a member who has none", async () => {

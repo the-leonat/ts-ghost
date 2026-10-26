@@ -52,9 +52,9 @@
             "trial_start_at": null
           },
           "email": "comped@test.com",
-          "email_count": 0,
+          "email_count": 1,
           "email_open_rate": null,
-          "email_opened_count": 0,
+          "email_opened_count": 1,
           "email_suppression": {
             "info": null,
             "suppressed": false

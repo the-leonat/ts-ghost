@@ -102,7 +102,8 @@ export const adminMemberEmailRecipientSchema = z.object({
  * - `geolocation`, `note`, `last_seen_at`: always null. `geolocation` is
  *   GeoJS's answer as a JSON string, kept opaque.
  * - `email_suppression.info`: always null; no member is suppressed.
- * - `email_recipients`: always empty; the seed sends no emails.
+ * - `email_recipients[].failed_at`: always null; Ghost's `members:emails`
+ *   seed leaves its failed recipients out. The other fields are recorded.
  * - `metafields`: never sent; no member has any (not modelled, see the include schema).
  * - `subscriptions[].cancellation_reason` (free text) and `.offer`: always null.
  * - `subscriptions[].status`: always `active`; `default_payment_card_last4`
@@ -149,7 +150,8 @@ export const adminMembersSchema = baseMembersSchema.merge(
       .meta({ description: "The tiers the member has access to (include: tiers)" })
       .optional(),
     // Includable (`include=email_recipients`), sent only when included. Typed
-    // from Ghost's `email_recipients` table: no fixture holds a recipient.
+    // from Ghost's `email_recipients` table and checked against the recipients
+    // of Ghost's `members:emails` seed.
     email_recipients: z
       .array(adminMemberEmailRecipientSchema)
       .meta({ description: "The emails sent to the member (include: email_recipients)" })

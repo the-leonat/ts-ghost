@@ -46,9 +46,9 @@
             "trial_start_at": null
           },
           "email": "comped@test.com",
-          "email_count": 0,
+          "email_count": 1,
           "email_open_rate": null,
-          "email_opened_count": 0,
+          "email_opened_count": 1,
           "email_suppression": {
             "info": null,
             "suppressed": false
@@ -162,7 +162,7 @@
           "created_at": "{{anyISODateTime}}",
           "current_subscription": null,
           "email": "member1@test.com",
-          "email_count": 0,
+          "email_count": 1,
           "email_open_rate": null,
           "email_opened_count": 0,
           "email_suppression": {
@@ -212,7 +212,7 @@
           "created_at": "{{anyISODateTime}}",
           "current_subscription": null,
           "email": "member2@test.com",
-          "email_count": 0,
+          "email_count": 1,
           "email_open_rate": 50,
           "email_opened_count": 0,
           "email_suppression": {
@@ -278,7 +278,7 @@
             "trial_start_at": null
           },
           "email": "paid@test.com",
-          "email_count": 0,
+          "email_count": 1,
           "email_open_rate": 80,
           "email_opened_count": 0,
           "email_suppression": {
@@ -412,7 +412,7 @@
             "trial_start_at": null
           },
           "email": "trialing@test.com",
-          "email_count": 0,
+          "email_count": 1,
           "email_open_rate": null,
           "email_opened_count": 0,
           "email_suppression": {

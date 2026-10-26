@@ -167,12 +167,20 @@ function requestKey(method, url) {
 // brings the paid side with no Stripe involved: the free and the paid tier, the
 // paid tier's Stripe prices, and Stripe customers and subscriptions for the paid
 // members, all as literal rows of Ghost's seed source. `tiers:archived` adds an
-// archived paid tier. (`members:emails` would fill members' `email_recipients`
-// include, but it also gives seeded posts an email whose `from` and `source`
-// are null, which the posts schema rejects; it is left out until that is fixed.)
+// archived paid tier. `members:emails` sends two seeded posts as newsletters
+// (one submitted, one failed), with no from, reply-to or source, and fills
+// members' `email_recipients` include; it needs the members seeded first.
 // Every resource the walk reads must come back non-empty: the client check
 // fails on an empty collection (see src/client-check/evidence.ts).
-const SEEDS = ["users", "user:inactive", "posts", "newsletters", "members:newsletters", "tiers:archived"];
+const SEEDS = [
+  "users",
+  "user:inactive",
+  "posts",
+  "newsletters",
+  "members:newsletters",
+  "members:emails",
+  "tiers:archived",
+];
 
 // The paid tier's Stripe product, a literal of Ghost's seed source
 // (DataGenerator.forKnex.stripe_products).

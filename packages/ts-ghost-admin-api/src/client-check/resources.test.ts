@@ -19,6 +19,19 @@ describe("client check: posts", () => {
     expect(result.data.map((post) => post.visibility)).toContain("paid");
   });
 
+  // Ghost's `members:emails` seed sends two posts as newsletters with no from,
+  // reply-to or source, as an email created before those were recorded has.
+  test("browse returns posts sent as newsletters, an email without from, reply-to or source", async () => {
+    const result = await check.api.posts.browse(BY_SLUG).fetch();
+
+    assert(result.success);
+    const emails = result.data.flatMap((post) => (post.email ? [post.email] : []));
+    expect(emails.map((email) => email.status).sort()).toEqual(["failed", "submitted"]);
+    for (const email of emails) {
+      expect(email).toMatchObject({ from: null, reply_to: null, source: null });
+    }
+  });
+
   test("browse with authors and tags included", async () => {
     const result = await check.api.posts.browse(BY_SLUG).include({ authors: true, tags: true }).fetch();
 
@@ -34,12 +47,15 @@ describe("client check: posts", () => {
     expect(result.data.some((post) => post.html !== null && post.html !== "")).toBe(true);
   });
 
-  test("read by id and by slug return the same seeded post", async () => {
-    const byId = await check.api.posts.read({ id: fixtureId("posts.seeded") }).fetch();
-    const bySlug = await check.api.posts.read({ slug: "design" }).fetch();
+  test("read by id and by slug return the same seeded post, one sent as a newsletter", async () => {
+    // The emailed post's id is a literal of Ghost's seed source, so it stays literal.
+    const id = "618ba1ffbe2896088840a6e1";
+    const byId = await check.api.posts.read({ id }).fetch();
+    const bySlug = await check.api.posts.read({ slug: "ghostly-kitchen-sink" }).fetch();
 
     assert(byId.success && bySlug.success);
-    expect(byId.data.id).toBe(fixtureId("posts.seeded"));
+    expect(byId.data.id).toBe(id);
+    expect(byId.data.email).toMatchObject({ status: "failed", from: null, source: null });
     expect(bySlug.data).toEqual(byId.data);
   });
 

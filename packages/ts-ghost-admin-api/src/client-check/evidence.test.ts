@@ -11,7 +11,7 @@ import { adminTiersSchema } from "../schemas/tiers";
 import { adminUsersSchema } from "../schemas/users";
 import { adminWebhookSchema } from "../schemas/webhooks";
 import { describeClient } from "./client-claims";
-import { emptyReads, unbackedFields } from "./evidence";
+import { emptyReads, unbackedFields, unfilledIncludes } from "./evidence";
 import { loadFixtures, PINNED_GHOST, type Fixture } from "./fixture-server";
 import { ADMIN_KEY } from "./harness";
 
@@ -31,6 +31,30 @@ describe("evidence guards", () => {
     ];
 
     expect(emptyReads(fixtures, ["tags", "posts", "users"])).toEqual(["GET /ghost/api/admin/tags/"]);
+  });
+
+  test("an included relation no record of a recorded read fills is flagged, dotted ones too", () => {
+    const included = (path: string, include: string, body: unknown): Fixture => ({
+      ...fixture("GET", path, 200, body),
+      request: { method: "GET", path: `/ghost/api/admin/${path}`, query: { include } },
+    });
+    const fixtures = [
+      included("members/", "email_recipients,tiers", {
+        members: [
+          { email_recipients: [], tiers: [{ id: "1" }] },
+          { email_recipients: [{ id: "2" }], tiers: [] },
+        ],
+      }),
+      included("members/", "metafields", { members: [{ metafields: [] }, { metafields: null }] }),
+      included("tags/", "count.posts", { tags: [{ count: { posts: 0 } }] }),
+      included("labels/", "count.members", { labels: [{ count: {} }] }),
+      fixture("GET", "posts/", 200, { posts: [{ tags: [] }] }),
+    ];
+
+    expect(unfilledIncludes(fixtures)).toEqual([
+      "GET /ghost/api/admin/members/?include=metafields: metafields",
+      "GET /ghost/api/admin/labels/?include=count.members: count.members",
+    ]);
   });
 
   test("a modelled field no successful fixture fills is reported, nested and in arrays too", () => {
@@ -62,6 +86,16 @@ describe(`evidence in the fixtures recorded from pinned Ghost ${PINNED_GHOST.ref
 
   test("every recorded read of a resource the client models has at least one record", () => {
     expect(emptyReads(fixtures, modelled)).toEqual([]);
+  });
+
+  // Known gaps, each a relation Ghost sends empty for every seeded record: no
+  // seed gives a member metafields, and tiers.browse has no include option, so
+  // `benefits` comes back only as the tiers have them (none of the seeded do).
+  test("every included relation is filled by some record, apart from the known gaps", () => {
+    expect(unfilledIncludes(fixtures)).toEqual([
+      "GET /ghost/api/admin/members/?include=metafields&order=email+asc: metafields",
+      "GET /ghost/api/admin/tiers/?include=monthly_price%2Cyearly_price%2Cbenefits&order=slug+asc: benefits",
+    ]);
   });
 
   test("modelled fields no fixture fills are reported, never failed", () => {
