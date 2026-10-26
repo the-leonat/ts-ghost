@@ -3,6 +3,7 @@ import { z } from "zod";
 import { baseNewsletterSchema, baseSiteSchema, baseTagsSchema } from "@ts-ghost/core-api";
 
 import { TSGhostAdminAPI } from "../admin-api";
+import { adminLabelsSchema } from "../schemas/labels";
 import { adminPagesSchema } from "../schemas/pages";
 import { adminPostsSchema } from "../schemas/posts";
 import { adminUsersSchema } from "../schemas/users";
@@ -66,6 +67,7 @@ describe(`evidence in the fixtures recorded from pinned Ghost ${PINNED_GHOST.ref
       posts: adminPostsSchema,
       pages: adminPagesSchema,
       tags: baseTagsSchema,
+      labels: adminLabelsSchema,
       newsletters: baseNewsletterSchema,
       users: adminUsersSchema,
       webhooks: adminWebhookSchema,

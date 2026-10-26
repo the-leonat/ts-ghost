@@ -65,6 +65,7 @@ const BROWSE_VARIANTS = {
     { name: "formats-html-plaintext", params: { formats: "html,plaintext" } },
   ],
   tags: [{ name: "include-count-posts", params: { include: "count.posts" } }],
+  labels: [{ name: "include-count-members", params: { include: "count.members" } }],
 };
 
 /** Resources whose records have a unique slug to order a browse by. */

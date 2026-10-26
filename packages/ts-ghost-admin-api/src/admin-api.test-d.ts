@@ -27,5 +27,23 @@ describe("read identity forms follow the routes Ghost registers", () => {
     expectTypeOf(api.posts.read).parameter(0).toEqualTypeOf<{ slug: string } | { id: string }>();
     expectTypeOf(api.pages.read).parameter(0).toEqualTypeOf<{ slug: string } | { id: string }>();
     expectTypeOf(api.tags.read).parameter(0).toEqualTypeOf<{ slug: string } | { id: string }>();
+    expectTypeOf(api.labels.read).parameter(0).toEqualTypeOf<{ slug: string } | { id: string }>();
+  });
+});
+
+describe("labels", () => {
+  test("the member count is the one include labels offer", () => {
+    api.labels.browse().include({ "count.members": true });
+    api.labels.read({ slug: "vip" }).include({ "count.members": true });
+    // @ts-expect-error labels offer no post count
+    api.labels.browse().include({ "count.posts": true });
+  });
+
+  // Like tags' `count.posts`, a dotted include does not make `count` required.
+  test("a label's member count is typed", async () => {
+    const counted = await api.labels.browse().include({ "count.members": true }).fetch();
+    if (counted.success) {
+      expectTypeOf(counted.data[0].count).toEqualTypeOf<{ members: number } | undefined>();
+    }
   });
 });

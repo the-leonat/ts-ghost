@@ -39,7 +39,18 @@ describe(`route-spec cross-check: admin client against pinned Ghost ${PINNED_GHO
   });
 
   test("resources the client does not cover are reported, not failed", () => {
-    expect(uncovered).toContain("labels");
+    expect(uncovered).toContain("actions");
     expect(uncovered).not.toContain("posts");
+  });
+
+  test("labels are covered, and their member-count include is one Ghost's labels endpoint allows", () => {
+    expect(uncovered).not.toContain("labels");
+    expect(describeClient(api).find((claim) => claim.resource === "labels")).toEqual({
+      resource: "labels",
+      operations: ["browse", "read", "add", "edit", "delete"],
+      identities: ["id", "slug"],
+      includes: ["count.members"],
+    });
+    expect(failures.filter((failure) => failure.startsWith("labels."))).toEqual([]);
   });
 });

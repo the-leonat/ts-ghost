@@ -14,6 +14,7 @@ import {
 } from "@ts-ghost/core-api";
 
 import { adminTiersCreateSchema, adminTiersSchema } from "./schemas";
+import { adminLabelsCreateSchema, adminLabelsSchema, adminLabelsUpdateSchema } from "./schemas/labels";
 import { adminMembersCreateSchema, adminMembersSchema } from "./schemas/members";
 import { adminNewsletterCreateSchema } from "./schemas/newsletters";
 import { adminOffersCreateSchema, adminOffersUpdateSchema } from "./schemas/offers";
@@ -206,6 +207,23 @@ export class TSGhostAdminAPI<Version extends `v5.${string}` | `v6.${string}` = a
         include: tagsIncludeSchema,
         createSchema: adminTagsCreateSchema,
         updateSchema: adminTagsUpdateSchema,
+      },
+      this.httpClientFactory,
+    ).access(["browse", "read", "add", "edit", "delete"]);
+  }
+
+  get labels() {
+    const labelsIncludeSchema = z.object({
+      "count.members": z.literal(true).optional(),
+    });
+    return new APIComposer(
+      "labels",
+      {
+        schema: adminLabelsSchema,
+        identitySchema: slugOrIdSchema,
+        include: labelsIncludeSchema,
+        createSchema: adminLabelsCreateSchema,
+        updateSchema: adminLabelsUpdateSchema,
       },
       this.httpClientFactory,
     ).access(["browse", "read", "add", "edit", "delete"]);

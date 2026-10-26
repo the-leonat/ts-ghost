@@ -104,6 +104,7 @@ export type APIResource =
   | "users"
   | "newsletters"
   | "webhooks"
+  | "labels"
   | "themes"
   | "files"
   | "images";

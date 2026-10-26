@@ -123,6 +123,52 @@ describe("client check: tags", () => {
   });
 });
 
+describe("client check: labels", () => {
+  const check = useClientCheck();
+
+  test("browse returns the seeded labels", async () => {
+    const result = await check.api.labels.browse(BY_SLUG).fetch();
+
+    assert(result.success);
+    expect(result.data.map((label) => label.slug)).toEqual(["label-1", "vip"]);
+  });
+
+  test("browse with the member count included", async () => {
+    const result = await check.api.labels.browse(BY_SLUG).include({ "count.members": true }).fetch();
+
+    assert(result.success);
+    expect(result.data.map((label) => label.slug)).toEqual(["label-1", "vip"]);
+    expect(result.data.every((label) => typeof label.count?.members === "number")).toBe(true);
+    expect(result.data.some((label) => (label.count?.members ?? 0) > 0)).toBe(true);
+  });
+
+  test("read by id and by slug return the same seeded label", async () => {
+    const byId = await check.api.labels.read({ id: fixtureId("labels.seeded") }).fetch();
+    const bySlug = await check.api.labels.read({ slug: "label-1" }).fetch();
+
+    assert(byId.success && bySlug.success);
+    expect(byId.data).toMatchObject({ id: fixtureId("labels.seeded"), name: "Label 1" });
+    expect(bySlug.data).toEqual(byId.data);
+  });
+
+  test("add, edit, read and delete a label the walk created", async () => {
+    const added = await check.api.labels.add({ name: "ts-ghost recorder label" });
+    assert(added.success);
+    expect(added.data).toMatchObject({ id: fixtureId("labels.created"), slug: "ts-ghost-recorder-label" });
+
+    const edited = await check.api.labels.edit(added.data.id, { name: "ts-ghost recorder label, edited" });
+    assert(edited.success);
+    expect(edited.data.name).toBe("ts-ghost recorder label, edited");
+
+    const read = await check.api.labels.read({ id: added.data.id }).fetch();
+    assert(read.success);
+    expect(read.data.name).toBe("ts-ghost recorder label, edited");
+
+    // Ghost answers the delete with 204 and no body.
+    expect(await check.api.labels.delete(added.data.id)).toEqual({ success: true });
+  });
+});
+
 describe("client check: newsletters", () => {
   const check = useClientCheck();
 
