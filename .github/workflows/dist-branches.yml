@@ -1,0 +1,63 @@
+name: 🌿 Dist branches
+
+# Builds each package and force-pushes its publishable contents to an orphan
+# branch (dist/core-api, dist/admin-api, dist/content-api), so downstream apps
+# can install by git reference. See docs/adr/0001-dist-branches-for-git-consumption.md.
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "packages/ts-ghost-core-api/**"
+      - "packages/ts-ghost-content-api/**"
+      - "packages/ts-ghost-admin-api/**"
+      - "scripts/dist-branches/**"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - ".github/workflows/dist-branches.yml"
+  workflow_dispatch:
+
+concurrency: ${{ github.workflow }}
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    name: Build and publish dist branches
+    # Fork-only: upstream publishes to npm instead.
+    if: github.repository == 'the-leonat/ts-ghost'
+    runs-on: ubuntu-latest
+    steps:
+      - name: ⬇️ Checkout Repo
+        uses: actions/checkout@v6
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: ⎔ Setup Node.js 22
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22.x
+          check-latest: true
+          cache: "pnpm"
+
+      - name: 📥 Install Dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: 🪪 Configure git identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      # Builds, publishes to a throwaway local repository and scratch-installs from it,
+      # proving the core dependency resolves from the repository and not the registry.
+      - name: 🧪 Verify dist branches
+        run: pnpm dist:test
+
+      - name: 🚀 Publish dist branches
+        run: >
+          pnpm dist:publish
+          --remote origin
+          --repo-url "git+https://github.com/${{ github.repository }}.git"
