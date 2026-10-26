@@ -134,7 +134,8 @@ export class TSGhostAdminAPI<Version extends `v5.${string}` | `v6.${string}` = a
       "tiers",
       {
         schema: adminTiersSchema,
-        identitySchema: slugOrIdSchema,
+        // Ghost registers only GET /tiers/:id/ for tiers.
+        identitySchema: z.object({ id: z.string() }),
         include: tiersIncludeSchema,
         createSchema: adminTiersCreateSchema,
       },
@@ -148,7 +149,8 @@ export class TSGhostAdminAPI<Version extends `v5.${string}` | `v6.${string}` = a
       "newsletters",
       {
         schema: baseNewsletterSchema,
-        identitySchema: slugOrIdSchema,
+        // Ghost registers only GET /newsletters/:id/ for newsletters.
+        identitySchema: z.object({ id: z.string() }),
         include: newslettersIncludeSchema,
         createSchema: adminNewsletterCreateSchema,
         createOptionsSchema: z.object({
@@ -165,7 +167,8 @@ export class TSGhostAdminAPI<Version extends `v5.${string}` | `v6.${string}` = a
       "offers",
       {
         schema: baseOffersSchema,
-        identitySchema: slugOrIdSchema,
+        // Ghost registers only GET /offers/:id/ for offers.
+        identitySchema: z.object({ id: z.string() }),
         include: offersIncludeSchema,
         createSchema: adminOffersCreateSchema,
         updateSchema: adminOffersUpdateSchema,

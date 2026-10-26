@@ -15,6 +15,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 const { agentProvider, fixtureManager, matchers } = require("../../utils/e2e-framework");
+const { extractRouteSpec } = require("./ts-ghost-route-spec");
 
 const OUT = process.env.RECORDER_OUT || "/out";
 const GHOST_MINOR = process.env.GHOST_MINOR;
@@ -92,6 +93,19 @@ describe("ts-ghost recorder", function () {
     const adminKey = res.body.integrations[0].api_keys.find((key) => key.type === "admin");
     const [keyId, keySecret] = adminKey.secret.split(":");
     await agent.useToken(keyId, keySecret);
+  });
+
+  // The route spec describes the admin surface itself; the admin package's
+  // offline cross-check compares the client's claims against it.
+  it("extracts the route spec", function () {
+    const spec = extractRouteSpec({ matchers });
+    if (spec.ghostVersion.split(".").slice(0, 2).join(".") !== GHOST_MINOR) {
+      throw new Error(
+        `Ghost is ${spec.ghostVersion}, but the route spec is being written for ${GHOST_MINOR}`,
+      );
+    }
+    fs.mkdirSync(OUT, { recursive: true });
+    fs.writeFileSync(path.join(OUT, "route-spec.json"), `${JSON.stringify(spec, null, 2)}\n`);
   });
 
   for (const call of CALLS) {

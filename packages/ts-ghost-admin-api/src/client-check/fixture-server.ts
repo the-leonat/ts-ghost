@@ -41,16 +41,19 @@ function resolveMarkers(value: unknown): unknown {
   return value;
 }
 
-function listJsonFiles(dir: string): string[] {
+/** The route spec sits beside the fixtures but is not one (see `cross-check.ts`). */
+export const ROUTE_SPEC_FILE = "route-spec.json";
+
+function listFixtureFiles(dir: string): string[] {
   return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
     const full = path.join(dir, entry.name);
-    if (entry.isDirectory()) return listJsonFiles(full);
-    return entry.name.endsWith(".json") ? [full] : [];
+    if (entry.isDirectory()) return listFixtureFiles(full);
+    return entry.name.endsWith(".json") && entry.name !== ROUTE_SPEC_FILE ? [full] : [];
   });
 }
 
 export function loadFixtures(ghostMinorDir: string): Fixture[] {
-  return listJsonFiles(path.join(FIXTURES_ROOT, ghostMinorDir)).map(
+  return listFixtureFiles(path.join(FIXTURES_ROOT, ghostMinorDir)).map(
     (file) => JSON.parse(readFileSync(file, "utf8")) as Fixture,
   );
 }
