@@ -13917,6 +13917,1543 @@
       ]
     }
   },
+  "adminApiSchemaDefinitions": {
+    "comment_bans": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "$id": "comment_bans",
+      "title": "comment_bans",
+      "description": "Base comment_bans definitions",
+      "definitions": {
+        "comment_ban": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "reason": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 2000
+            },
+            "expires_at": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "date-time"
+            }
+          },
+          "required": [
+            "reason"
+          ]
+        }
+      }
+    },
+    "images": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "$id": "images",
+      "title": "images",
+      "description": "Base images definitions",
+      "definitions": {
+        "image": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "purpose": {
+              "type": "string",
+              "enum": [
+                "image",
+                "profile_image",
+                "icon"
+              ],
+              "default": "image"
+            },
+            "ref": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 2000
+            }
+          }
+        }
+      }
+    },
+    "labels": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "$id": "labels",
+      "title": "labels",
+      "description": "Base labels definitions",
+      "definitions": {
+        "label": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 191,
+              "pattern": "^([^,]|$)"
+            },
+            "slug": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 191
+            }
+          }
+        }
+      }
+    },
+    "media": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "$id": "media",
+      "title": "media",
+      "description": "Base media definitions",
+      "definitions": {
+        "image": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "ref": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 2000
+            }
+          }
+        }
+      }
+    },
+    "members": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "$id": "members",
+      "title": "members",
+      "description": "Base members definitions",
+      "definitions": {
+        "member": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "name": {
+              "type": "string",
+              "maxLength": 191,
+              "pattern": "^([^,]|$)"
+            },
+            "email": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 191,
+              "pattern": "^([^,]|$)"
+            },
+            "note": {
+              "type": "string",
+              "minLength": 0,
+              "maxLength": 2000
+            },
+            "subscribed": {
+              "type": "boolean"
+            },
+            "comped": {
+              "type": "boolean"
+            },
+            "stripe_customer_id": {
+              "type": "string"
+            },
+            "subscriptions": {
+              "type": "array"
+            },
+            "labels": {
+              "$ref": "#/definitions/member-labels"
+            },
+            "products": {
+              "$ref": "#/definitions/member-products"
+            },
+            "tiers": {
+              "$ref": "#/definitions/member-products"
+            },
+            "newsletters": {
+              "$ref": "#/definitions/member-newsletters"
+            },
+            "can_comment": {
+              "type": "boolean"
+            },
+            "metafields": {
+              "description": "Metafield values, keyed by namespace then field key.",
+              "$comment": "Intentionally unconstrained. Only the site's field definitions know what a given key accepts, so the shape is validated there; constraining it here would split validation across two layers that could disagree. The declaration exists so the property is not stripped as an unknown one."
+            },
+            "comment_ban": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "reason": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 2000
+                    },
+                    "expires_at": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "format": "date-time"
+                    }
+                  },
+                  "required": [
+                    "reason"
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        },
+        "member-products": {
+          "description": "Products of the member",
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "maxLength": 24
+                  },
+                  "name": {
+                    "type": "string",
+                    "maxLength": 191
+                  },
+                  "slug": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 191
+                  }
+                },
+                "anyOf": [
+                  {
+                    "required": [
+                      "id"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "name"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "slug"
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "string",
+                "maxLength": 191
+              }
+            ]
+          }
+        },
+        "member-newsletters": {
+          "description": "Newsletters of the member",
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "maxLength": 24
+                  },
+                  "name": {
+                    "type": "string",
+                    "maxLength": 191
+                  }
+                },
+                "anyOf": [
+                  {
+                    "required": [
+                      "id"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "name"
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "string",
+                "maxLength": 191
+              }
+            ]
+          }
+        },
+        "member-labels": {
+          "description": "Labels of the member",
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "maxLength": 24
+                  },
+                  "name": {
+                    "type": "string",
+                    "maxLength": 191
+                  },
+                  "slug": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 191
+                  }
+                },
+                "anyOf": [
+                  {
+                    "required": [
+                      "id"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "name"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "slug"
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "string",
+                "maxLength": 191
+              }
+            ]
+          }
+        }
+      }
+    },
+    "pages": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "$id": "pages",
+      "title": "pages",
+      "description": "Base pages definitions",
+      "definitions": {
+        "page": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "title": {
+              "type": "string",
+              "maxLength": 2000
+            },
+            "slug": {
+              "type": "string",
+              "maxLength": 191
+            },
+            "mobiledoc": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "json-string",
+              "maxLength": 1000000000
+            },
+            "lexical": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "json-string",
+              "maxLength": 1000000000
+            },
+            "html": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 1000000000
+            },
+            "feature_image": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uri-reference",
+              "maxLength": 2000
+            },
+            "feature_image_alt": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 65535
+            },
+            "feature_image_caption": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 65535
+            },
+            "featured": {
+              "type": "boolean"
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "published",
+                "draft",
+                "scheduled"
+              ]
+            },
+            "locale": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 6
+            },
+            "visibility": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "visibility_filter": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "tiers": {
+              "$ref": "#/definitions/page-products"
+            },
+            "meta_title": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 300
+            },
+            "meta_description": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 500
+            },
+            "updated_at": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "date-time"
+            },
+            "published_at": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "date-time"
+            },
+            "custom_excerpt": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 300
+            },
+            "codeinjection_head": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 65535
+            },
+            "codeinjection_foot": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 65535
+            },
+            "og_image": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uri-reference",
+              "maxLength": 2000
+            },
+            "og_title": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 300
+            },
+            "og_description": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 500
+            },
+            "twitter_image": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uri-reference",
+              "maxLength": 2000
+            },
+            "twitter_title": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 300
+            },
+            "twitter_description": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 500
+            },
+            "custom_template": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 100
+            },
+            "canonical_url": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uri-reference",
+              "maxLength": 2000
+            },
+            "show_title_and_feature_image": {
+              "type": "boolean"
+            },
+            "authors": {
+              "$ref": "#/definitions/page-authors"
+            },
+            "tags": {
+              "$ref": "#/definitions/page-tags"
+            }
+          }
+        },
+        "page-products": {
+          "description": "Products of the post",
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "maxLength": 24
+                  },
+                  "name": {
+                    "type": "string",
+                    "maxLength": 191
+                  },
+                  "slug": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 191
+                  }
+                },
+                "anyOf": [
+                  {
+                    "required": [
+                      "id"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "name"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "slug"
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "string",
+                "maxLength": 191
+              }
+            ]
+          }
+        },
+        "page-authors": {
+          "description": "Authors of the page",
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "maxLength": 24
+                  },
+                  "slug": {
+                    "type": "string",
+                    "maxLength": 191
+                  },
+                  "email": {
+                    "type": "string",
+                    "maxLength": 191
+                  }
+                },
+                "anyOf": [
+                  {
+                    "required": [
+                      "id"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "slug"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "email"
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "string",
+                "maxLength": 191
+              }
+            ]
+          }
+        },
+        "page-tags": {
+          "description": "Tags of the page",
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "maxLength": 24
+                  },
+                  "name": {
+                    "type": "string",
+                    "maxLength": 191
+                  },
+                  "slug": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 191
+                  }
+                },
+                "anyOf": [
+                  {
+                    "required": [
+                      "id"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "name"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "slug"
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "string",
+                "maxLength": 191
+              }
+            ]
+          }
+        }
+      }
+    },
+    "posts": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "$id": "posts",
+      "title": "posts",
+      "description": "Base posts definitions",
+      "definitions": {
+        "post": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "title": {
+              "type": "string",
+              "maxLength": 2000
+            },
+            "slug": {
+              "type": "string",
+              "maxLength": 191
+            },
+            "mobiledoc": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "json-string",
+              "maxLength": 1000000000
+            },
+            "lexical": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "json-string",
+              "maxLength": 1000000000
+            },
+            "html": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 1000000000
+            },
+            "feature_image": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uri-reference",
+              "maxLength": 2000
+            },
+            "feature_image_alt": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 65535
+            },
+            "feature_image_caption": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 65535
+            },
+            "featured": {
+              "type": "boolean"
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "published",
+                "draft",
+                "scheduled",
+                "sent"
+              ]
+            },
+            "locale": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 6
+            },
+            "visibility": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "visibility_filter": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "tiers": {
+              "$ref": "#/definitions/post-products"
+            },
+            "meta_title": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 300
+            },
+            "meta_description": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 500
+            },
+            "updated_at": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "date-time"
+            },
+            "published_at": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "date-time"
+            },
+            "custom_excerpt": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 300
+            },
+            "codeinjection_head": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 65535
+            },
+            "codeinjection_foot": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 65535
+            },
+            "og_image": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uri-reference",
+              "maxLength": 2000
+            },
+            "og_title": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 300
+            },
+            "og_description": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 500
+            },
+            "twitter_image": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uri-reference",
+              "maxLength": 2000
+            },
+            "twitter_title": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 300
+            },
+            "twitter_description": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 500
+            },
+            "email_subject": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 300
+            },
+            "custom_template": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 100
+            },
+            "canonical_url": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uri-reference",
+              "maxLength": 2000
+            },
+            "email_only": {
+              "type": "boolean"
+            },
+            "authors": {
+              "$ref": "#/definitions/post-authors"
+            },
+            "tags": {
+              "$ref": "#/definitions/post-tags"
+            },
+            "collections": {
+              "$ref": "#/definitions/post-collections"
+            }
+          }
+        },
+        "post-products": {
+          "description": "Products of the post",
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "maxLength": 24
+                  },
+                  "name": {
+                    "type": "string",
+                    "maxLength": 191
+                  },
+                  "slug": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 191
+                  }
+                },
+                "anyOf": [
+                  {
+                    "required": [
+                      "id"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "name"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "slug"
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "string",
+                "maxLength": 191
+              }
+            ]
+          }
+        },
+        "post-authors": {
+          "description": "Authors of the post",
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "maxLength": 24
+                  },
+                  "slug": {
+                    "type": "string",
+                    "maxLength": 191
+                  },
+                  "email": {
+                    "type": "string",
+                    "maxLength": 191
+                  }
+                },
+                "anyOf": [
+                  {
+                    "required": [
+                      "id"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "slug"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "email"
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "string",
+                "maxLength": 191
+              }
+            ]
+          }
+        },
+        "post-tags": {
+          "description": "Tags of the post",
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "maxLength": 24
+                  },
+                  "name": {
+                    "type": "string",
+                    "maxLength": 191
+                  },
+                  "slug": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 191
+                  }
+                },
+                "anyOf": [
+                  {
+                    "required": [
+                      "id"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "name"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "slug"
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "string",
+                "maxLength": 191
+              }
+            ]
+          }
+        },
+        "post-collections": {
+          "description": "Collections of the post",
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "maxLength": 24
+                  }
+                },
+                "required": [
+                  "id"
+                ]
+              },
+              {
+                "type": "string",
+                "maxLength": 24
+              }
+            ]
+          }
+        }
+      }
+    },
+    "products": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "$id": "products",
+      "title": "products",
+      "description": "Base products definitions",
+      "definitions": {
+        "product": {
+          "description": "A Ghost Product",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "name": {
+              "type": "string",
+              "maxLength": 191
+            },
+            "slug": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 191
+            },
+            "welcome_page_url": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 2000
+            },
+            "active": {
+              "type": "boolean"
+            },
+            "stripe_prices": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": "producs#/definitions/stripe_price"
+              }
+            },
+            "benefits": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": "producs#/definitions/product-benefit"
+              }
+            }
+          }
+        },
+        "stripe_price": {
+          "description": "A Stripe Price associated with a Product",
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "maxLength": 24
+            },
+            "stripe_product_id": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 255
+            },
+            "stripe_price_id": {
+              "type": "string",
+              "maxLength": 255
+            },
+            "nickname": {
+              "type": "string",
+              "maxLength": 50
+            },
+            "currency": {
+              "type": "string",
+              "maxLength": 3
+            },
+            "amount": {
+              "type": "number"
+            },
+            "active": {
+              "type": "boolean",
+              "default": true
+            },
+            "type": {
+              "type": "string",
+              "enum": [
+                "recurring",
+                "one_time"
+              ]
+            },
+            "interval": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "enum": [
+                "year",
+                "month",
+                "week",
+                "day"
+              ]
+            }
+          }
+        },
+        "product-benefit": {
+          "description": "A Benefit associated with a Product",
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "maxLength": 24
+            },
+            "name": {
+              "type": "string",
+              "maxLength": 191
+            },
+            "slug": {
+              "type": "string",
+              "maxLength": 191
+            }
+          },
+          "anyOf": [
+            {
+              "required": [
+                "id"
+              ]
+            },
+            {
+              "required": [
+                "name"
+              ]
+            },
+            {
+              "required": [
+                "slug"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "snippets": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "$id": "snippets",
+      "title": "snippets",
+      "description": "Base snippets definitions",
+      "definitions": {
+        "snippet": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 191
+            },
+            "mobiledoc": {
+              "type": "string",
+              "format": "json-string",
+              "maxLength": 1000000000
+            },
+            "lexical": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "json-string",
+              "maxLength": 1000000000
+            }
+          }
+        }
+      }
+    },
+    "tags": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "$id": "tags",
+      "title": "tags",
+      "description": "Base tags definitions",
+      "definitions": {
+        "tag": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 191,
+              "pattern": "^([^,]|$)"
+            },
+            "slug": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 191
+            },
+            "description": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 500
+            },
+            "feature_image": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uri-reference",
+              "maxLength": 2000
+            },
+            "visibility": {
+              "type": "string",
+              "enum": [
+                "public",
+                "internal"
+              ]
+            },
+            "meta_title": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 300
+            },
+            "meta_description": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 500
+            },
+            "og_image": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uri-reference",
+              "maxLength": 2000
+            },
+            "og_title": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 300
+            },
+            "og_description": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 500
+            },
+            "twitter_image": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uri-reference",
+              "maxLength": 2000
+            },
+            "twitter_title": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 300
+            },
+            "twitter_description": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 500
+            },
+            "codeinjection_head": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 65535
+            },
+            "codeinjection_foot": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 65535
+            },
+            "canonical_url": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uri-reference",
+              "maxLength": 2000
+            },
+            "accent_color": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 50
+            }
+          }
+        }
+      }
+    },
+    "tiers": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "$id": "tiers",
+      "title": "tiers",
+      "description": "Base Tier definitions",
+      "definitions": {
+        "tier": {
+          "description": "A Ghost Tier",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "name": {
+              "type": "string",
+              "maxLength": 191
+            },
+            "description": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 191
+            },
+            "slug": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 191
+            },
+            "welcome_page_url": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 2000
+            },
+            "active": {
+              "type": "boolean"
+            },
+            "visibility": {
+              "type": "string",
+              "enum": [
+                "public",
+                "none"
+              ]
+            },
+            "currency": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "monthly_price": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "yearly_price": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "trial_days": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "benefits": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "webhooks": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "$id": "webhooks",
+      "title": "webhooks",
+      "description": "Base webhooks definitions",
+      "definitions": {
+        "webhook": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "event": {
+              "type": "string",
+              "maxLength": 50,
+              "isLowercase": true
+            },
+            "target_url": {
+              "type": "string",
+              "format": "uri-reference",
+              "maxLength": 2000
+            },
+            "name": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 191
+            },
+            "secret": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 191
+            },
+            "api_version": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 50
+            },
+            "integration_id": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 24
+            }
+          }
+        }
+      }
+    }
+  },
   "matcherPatterns": {
     "anyContentLength": "/\\d+/",
     "anyContentVersion": "/v\\d+\\.\\d+/",

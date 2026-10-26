@@ -8,6 +8,9 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 
 import { FIXTURES_ROOT, ROUTE_SPEC_FILE } from "./fixture-server";
+import { checkInput, type InputOperation, type JsonSchema } from "./input-check";
+
+export type { InputOperation, JsonSchema } from "./input-check";
 
 /** The part of the recorded route spec the cross-check reads. */
 export type RouteSpec = {
@@ -21,6 +24,8 @@ export type RouteSpec = {
   controllers: Record<string, { methods: Record<string, { allowedIncludes: string[] | null }> }>;
   /** Ghost's JSON Schemas for request bodies, by action (e.g. `webhooks-edit`). */
   adminApiSchemas: Record<string, unknown>;
+  /** The definition documents those schemas reference (`posts#/definitions/post`), by name. */
+  adminApiSchemaDefinitions: Record<string, unknown>;
 };
 
 /** `fetch` is a plain GET of the resource root (site, settings). */
@@ -35,6 +40,8 @@ export type ResourceClaim = {
   identities: IdentityForm[];
   /** Include keys `browse` and `read` accept. */
   includes: string[];
+  /** JSON Schemas of the request bodies `add` and `edit` accept, as the client sends them. */
+  inputs?: Partial<Record<InputOperation, JsonSchema>>;
 };
 
 export type CrossCheckResult = {
@@ -42,6 +49,10 @@ export type CrossCheckResult = {
   failures: string[];
   /** Integration-reachable resources the client does not cover: reported, never failed. */
   uncovered: string[];
+  /** What Ghost's input schemas accept and the client's bodies do not model: reported, never failed. */
+  inputGaps: string[];
+  /** Resources the client offers for which Ghost has no input schema to compare against. */
+  inputsUncovered: string[];
 };
 
 type Request = { call: string; method: string; path: string; controllerMethod?: string; includes: boolean };
@@ -153,13 +164,39 @@ export function crossCheck(claims: ResourceClaim[], spec: RouteSpec): CrossCheck
     }
   }
 
+  const inputGaps: string[] = [];
+  const inputsUncovered: string[] = [];
+  for (const claim of claims) {
+    const operations = (["add", "edit"] as const).filter((op) => claim.operations.includes(op));
+    const ghostActions = operations
+      .map((op) => `${claim.resource}-${op}`)
+      .filter((name) => name in spec.adminApiSchemas);
+    const anyGhostSchema = ["add", "edit"].some((op) => `${claim.resource}-${op}` in spec.adminApiSchemas);
+    if (!anyGhostSchema) inputsUncovered.push(claim.resource);
+    for (const op of operations) {
+      const actionName = `${claim.resource}-${op}`;
+      const library = claim.inputs?.[op];
+      if (!ghostActions.includes(actionName) || library === undefined) continue;
+      const result = checkInput(
+        `${claim.resource}.${op}()`,
+        claim.resource,
+        library,
+        actionName,
+        spec.adminApiSchemas[actionName] as JsonSchema,
+        spec.adminApiSchemaDefinitions,
+      );
+      failures.push(...result.failures);
+      inputGaps.push(...result.gaps);
+    }
+  }
+
   const covered = new Set(claims.map((claim) => claim.resource));
   const reachable = new Set(
     spec.routes.filter((r) => r.integrationToken === "allowed").map((r) => r.path.split("/")[1] ?? ""),
   );
   const uncovered = [...reachable].filter((resource) => resource !== "" && !covered.has(resource)).sort();
 
-  return { failures, uncovered };
+  return { failures, uncovered, inputGaps, inputsUncovered: inputsUncovered.sort() };
 }
 
 /** Reads the committed route spec for a Ghost minor, e.g. `ghost-6.72`. */

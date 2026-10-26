@@ -260,6 +260,14 @@ function extractRouteSpec({ matchers }) {
         .sort()
         .map((name) => [name, adminApiSchema.get(name)]),
     ),
+    // The definition documents the input schemas reference (`posts#/definitions/post`),
+    // by name: Ghost validates each action against the definition named by its
+    // prefix (`posts-add` -> `posts`).
+    adminApiSchemaDefinitions: Object.fromEntries(
+      [...new Set(adminApiSchema.list().map((name) => name.split("-")[0]))]
+        .sort()
+        .map((name) => [name, adminApiSchema.get(name)]),
+    ),
     matcherPatterns: Object.fromEntries(
       Object.entries(matchers)
         .filter(([, value]) => value && typeof value === "object" && value.sample instanceof RegExp)

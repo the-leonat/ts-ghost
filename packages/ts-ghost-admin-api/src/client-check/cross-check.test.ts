@@ -12,6 +12,7 @@ const route = (method: string, path: string, endpoint: string, controllerMethod:
 const spec: RouteSpec = {
   ghostVersion: "6.72.0",
   adminApiSchemas: {},
+  adminApiSchemaDefinitions: {},
   routes: [
     route("GET", "/posts", "posts", "browse"),
     route("GET", "/posts/:id", "posts", "read"),

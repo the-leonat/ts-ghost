@@ -14,6 +14,21 @@ function isZodObject(schema: z4.$ZodType): schema is ZodObjectV4<any> {
   return (schema as ZodObjectV4<any>).partial !== undefined;
 }
 
+/** The request-body schemas a composed resource's `add` and `edit` parse with. */
+export type InputSchemas = { add?: z4.$ZodType; edit?: z4.$ZodType };
+
+const exposedInputSchemas = new WeakMap<object, InputSchemas>();
+
+/**
+ * The request-body schemas behind a resource returned by `APIComposer.access()`,
+ * for the operations it exposes: `add` parses with the create schema, `edit`
+ * with the update schema (or the create schema made partial when there is
+ * none). `undefined` for anything `access()` did not return.
+ */
+export function inputSchemasOf(resource: object): InputSchemas | undefined {
+  return exposedInputSchemas.get(resource);
+}
+
 /**
  * API Composer contains all methods, pick and choose.
  */
@@ -116,10 +131,7 @@ export class APIComposer<
     data: IsAny<UpdateSchema> extends true ? Partial<z4.input<CreateSchema>> : z4.input<UpdateSchema>,
     options?: z4.infer<UpdateOptions>,
   ) {
-    let updateSchema: z4.$ZodObject | undefined = this.config.updateSchema;
-    if (!this.config.updateSchema && this.config.createSchema && isZodObject(this.config.createSchema)) {
-      updateSchema = this.config.createSchema.partial();
-    }
+    const updateSchema = this.effectiveUpdateSchema();
     if (!updateSchema) {
       throw new Error("No updateSchema defined");
     }
@@ -150,6 +162,14 @@ export class APIComposer<
     return fetcher.submit();
   }
 
+  private effectiveUpdateSchema(): z4.$ZodObject | undefined {
+    if (this.config.updateSchema) return this.config.updateSchema;
+    if (this.config.createSchema && isZodObject(this.config.createSchema)) {
+      return this.config.createSchema.partial();
+    }
+    return undefined;
+  }
+
   public access<const Keys extends keyof this>(keys: Keys[]) {
     const d: {
       [Property in keyof this]?: this[Property];
@@ -157,6 +177,12 @@ export class APIComposer<
     keys.forEach((key) => {
       d[key] = (this[key] as Function).bind(this);
     });
+    const inputs: InputSchemas = {};
+    const add = this.config.createSchema;
+    const edit = this.effectiveUpdateSchema();
+    if (keys.includes("add" as Keys) && add) inputs.add = add;
+    if (keys.includes("edit" as Keys) && edit) inputs.edit = edit;
+    exposedInputSchemas.set(d, inputs);
     return d as Pick<this, Keys>;
   }
 }

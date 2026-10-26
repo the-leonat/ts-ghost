@@ -1,8 +1,6 @@
 import { assert, describe, expect, test } from "vitest";
 
-import { adminWebhookUpdateSchema } from "../schemas/webhooks";
-import { loadRouteSpec } from "./cross-check";
-import { fixtureId, PINNED_GHOST } from "./fixture-server";
+import { fixtureId } from "./fixture-server";
 import { sentBody, useClientCheck } from "./harness";
 
 describe("client check: webhooks", () => {
@@ -33,16 +31,6 @@ describe("client check: webhooks", () => {
     expect(sentBody(0)).toEqual({ webhooks: [{ secret: "ts-ghost-rotated-secret" }] });
     assert(result.success);
     expect(result.data.secret).toBe("ts-ghost-rotated-secret");
-  });
-
-  test("the update accepts exactly the fields Ghost's webhooks.edit input schema allows", () => {
-    const editSchema = loadRouteSpec(PINNED_GHOST.fixtureDir).adminApiSchemas["webhooks-edit"] as {
-      properties: { webhooks: { items: { properties: Record<string, unknown> } } };
-    };
-
-    expect(Object.keys(adminWebhookUpdateSchema.shape).sort()).toEqual(
-      Object.keys(editSchema.properties.webhooks.items.properties).sort(),
-    );
   });
 
   test("delete removes it", async () => {

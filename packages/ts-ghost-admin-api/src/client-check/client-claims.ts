@@ -1,7 +1,8 @@
-import { BasicFetcher } from "@ts-ghost/core-api";
+import { z } from "zod";
+import { BasicFetcher, inputSchemasOf } from "@ts-ghost/core-api";
 
 import { TSGhostAdminAPI } from "../admin-api";
-import type { IdentityForm, Operation, ResourceClaim } from "./cross-check";
+import type { IdentityForm, JsonSchema, Operation, ResourceClaim } from "./cross-check";
 
 const COMPOSER_OPERATIONS = ["browse", "read", "add", "edit", "delete"] as const;
 const IDENTITY_FORMS: IdentityForm[] = ["id", "slug", "email"];
@@ -30,9 +31,25 @@ function includeKeys(resource: Composed): string[] {
 }
 
 /**
+ * The request bodies `add`/`edit` accept, as JSON Schema of what a caller may
+ * pass. Values the schema transforms before sending (dates) come out
+ * unconstrained, so their types are not compared.
+ */
+function inputsOf(resource: object): ResourceClaim["inputs"] {
+  const schemas = inputSchemasOf(resource) ?? {};
+  return Object.fromEntries(
+    Object.entries(schemas).map(([op, schema]) => [
+      op,
+      z.toJSONSchema(schema as z.ZodType, { io: "input", unrepresentable: "any" }) as JsonSchema,
+    ]),
+  );
+}
+
+/**
  * What the admin client claims about Ghost, read through its public API only:
- * the operations each resource exposes, the identity forms `read` accepts and
- * the include keys `browse`/`read` accept. Nothing is requested.
+ * the operations each resource exposes, the identity forms `read` accepts, the
+ * include keys `browse`/`read` accept and the request bodies `add`/`edit`
+ * accept. Nothing is requested.
  */
 export function describeClient(api: TSGhostAdminAPI): ResourceClaim[] {
   const resources = Object.entries(Object.getOwnPropertyDescriptors(TSGhostAdminAPI.prototype))
@@ -53,6 +70,7 @@ export function describeClient(api: TSGhostAdminAPI): ResourceClaim[] {
         ? IDENTITY_FORMS.filter((form) => acceptsIdentity(composed, form))
         : [],
       includes: operations.includes("browse") || operations.includes("read") ? includeKeys(composed) : [],
+      inputs: inputsOf(composed),
     };
   });
 }
