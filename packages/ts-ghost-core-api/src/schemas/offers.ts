@@ -44,10 +44,22 @@ export const baseOffersSchema = z.object({
     .number()
     .meta({ description: "Number of times the offer has been redeemed" })
     .nullish(),
+  redemption_type: z.union([z.literal("signup"), z.literal("retention")]).meta({
+    description:
+      "signup or retention - a signup offer applies to a tier on sign-up, a retention offer is shown to a member who cancels",
+  }),
   tier: z
     .object({
       id: z.string(),
       name: z.string().nullish(),
     })
-    .meta({ description: "Tier on which offer is applied" }),
+    .nullable()
+    .meta({
+      description: "Tier on which offer is applied. Always set on a signup offer, null on a retention offer",
+    }),
+  created_at: z.string().meta({ description: "When the offer was created, as an ISO 8601 date-time" }),
+  last_redeemed: z
+    .string()
+    .nullable()
+    .meta({ description: "When the offer was last redeemed, as an ISO 8601 date-time; null if never" }),
 });

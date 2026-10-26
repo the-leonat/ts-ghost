@@ -3,13 +3,13 @@
  * on a Stripe subscription, comped), tiers and offers. Several of these shapes
  * fail the current schemas; each such failure is kept as a "known defect"
  * assertion that it currently fails, titled with the defect. Fixing one
- * (#7 offers, #8 members) deletes its assertion and turns it into a passing check.
+ * (#8 members) deletes its assertion and turns it into a passing check.
  */
 import { assert, describe, expect, test } from "vitest";
 
 import { adminMembersSchema } from "../schemas/members";
 import { fixtureId, loadFixtures, PINNED_GHOST, type Fixture } from "./fixture-server";
-import { useClientCheck } from "./harness";
+import { fetchMocker, sentBody, useClientCheck } from "./harness";
 
 const BY_SLUG = { order: "slug asc" } as const;
 const BY_EMAIL = { order: "email asc" } as const;
@@ -175,59 +175,79 @@ describe("client check: tiers", () => {
 describe("client check: offers", () => {
   const check = useClientCheck();
 
-  test("known defect: a retention offer fails to parse, tier is typed as required but Ghost sends null", async () => {
-    expect(
-      await rejectedPaths(check.api.offers.read({ id: fixtureId("offers.created-retention") }).fetch()),
-    ).toContain("data.tier");
-    expect(await rejectedPaths(check.api.offers.browse().fetch())).toEqual(
-      expect.arrayContaining([expect.stringMatching(/^data\.\d+\.tier$/)]),
-    );
+  test("a retention offer reads back with no tier and its retention redemption type", async () => {
+    const result = await check.api.offers.read({ id: fixtureId("offers.created-retention") }).fetch();
+
+    assert(result.success);
+    expect(result.data).toMatchObject({
+      code: "ts-ghost-retention",
+      type: "percent",
+      redemption_type: "retention",
+      tier: null,
+    });
   });
 
-  test("known defect: a trial offer cannot be created, the create schema has no trial variant", async () => {
-    const paths = await rejectedPaths(
-      check.api.offers.add({
-        name: "ts-ghost trial offer",
-        code: "ts-ghost-trial",
-        // @ts-expect-error the create schema has no trial type
-        type: "trial",
-        cadence: "year",
-        amount: 14,
-        // @ts-expect-error nor a trial duration
-        duration: "trial",
-        currency: "USD",
-        tier: { id: fixtureId("tiers.seeded") },
-      }),
-    );
-    expect(paths).toContain("type");
+  test("browse returns the retention and the trial offer", async () => {
+    const result = await check.api.offers.browse().fetch();
+
+    assert(result.success);
+    expect(result.data.map((offer) => [offer.code, offer.redemption_type, offer.tier?.id ?? null])).toEqual([
+      ["ts-ghost-retention", "retention", null],
+      ["ts-ghost-trial", "signup", fixtureId("tiers.seeded")],
+    ]);
   });
 
-  test("known defect: an offer's redemption_type, created_at and last_redeemed are dropped", async () => {
+  test("add creates a trial offer of a number of trial days on a tier", async () => {
+    const trial = {
+      name: "ts-ghost trial offer",
+      code: "ts-ghost-trial",
+      type: "trial",
+      cadence: "year",
+      amount: 14,
+      duration: "trial",
+      currency: "USD",
+      tier: { id: fixtureId("tiers.seeded") },
+    } as const;
+
+    const result = await check.api.offers.add(trial);
+
+    expect(sentBody(0)).toEqual({ offers: [trial] });
+    assert(result.success);
+    expect(result.data).toMatchObject({
+      id: fixtureId("offers.created-trial"),
+      type: "trial",
+      duration: "trial",
+      amount: 14,
+      redemption_type: "signup",
+      tier: { id: fixtureId("tiers.seeded") },
+    });
+  });
+
+  test("a trial offer must have a trial duration, and other offers cannot have one", async () => {
+    const base = { name: "n", code: "c", cadence: "year", amount: 14, tier: { id: "t" } } as const;
+    await expect(
+      // @ts-expect-error a trial offer's duration is "trial"
+      check.api.offers.add({ ...base, type: "trial", duration: "once" }),
+    ).rejects.toThrow();
+    await expect(
+      // @ts-expect-error only a trial offer has a trial duration
+      check.api.offers.add({ ...base, type: "percent", duration: "trial" }),
+    ).rejects.toThrow();
+    expect(fetchMocker.mock.calls).toHaveLength(0);
+  });
+
+  test("a trial offer reads back with its tier, redemption type, creation time and last redemption", async () => {
     const result = await check.api.offers.read({ id: fixtureId("offers.created-trial") }).fetch();
 
     assert(result.success);
     expect(result.data).toMatchObject({
       type: "trial",
       duration: "trial",
+      amount: 14,
+      redemption_type: "signup",
       tier: { id: fixtureId("tiers.seeded"), name: "Default Product" },
+      created_at: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/),
+      last_redeemed: null,
     });
-    const [sent] = (
-      recorded("GET /ghost/api/admin/offers/{{anyObjectId:offers.created-trial}}/?").response.body as {
-        offers: Record<string, unknown>[];
-      }
-    ).offers;
-    expect(sent).toMatchObject({ redemption_type: "signup", last_redeemed: null });
-    expect(result.data).not.toHaveProperty("redemption_type");
-    expect(result.data).not.toHaveProperty("created_at");
-    expect(result.data).not.toHaveProperty("last_redeemed");
-  });
-
-  test("Ghost sends a retention offer with no tier and a retention redemption type", () => {
-    const [retention] = (
-      recorded("GET /ghost/api/admin/offers/{{anyObjectId:offers.created-retention}}/?").response.body as {
-        offers: Record<string, unknown>[];
-      }
-    ).offers;
-    expect(retention).toMatchObject({ redemption_type: "retention", tier: null, type: "percent" });
   });
 });
