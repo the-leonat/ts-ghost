@@ -49,6 +49,55 @@ describe("labels", () => {
   });
 });
 
+describe("members", () => {
+  test("tiers, email recipients and metafields are the includes members offer", () => {
+    api.members.browse().include({ tiers: true, email_recipients: true, metafields: true });
+    api.members.read({ id: "x" }).include({ tiers: true });
+    // @ts-expect-error labels are always sent and cannot be included
+    api.members.browse().include({ labels: true });
+    // @ts-expect-error newsletters are always sent and cannot be included
+    api.members.browse().include({ newsletters: true });
+    // @ts-expect-error subscriptions are always sent and cannot be included
+    api.members.read({ id: "x" }).include({ subscriptions: true });
+  });
+
+  test("includable relations are optional on a plain read and required when included", async () => {
+    const plain = await api.members.browse().fetch();
+    const included = await api.members.browse().include({ tiers: true, email_recipients: true }).fetch();
+    const read = await api.members.read({ id: "x" }).include({ tiers: true }).fetch();
+    if (plain.success && included.success && read.success) {
+      expectTypeOf(plain.data[0].tiers).toBeNullable();
+      expectTypeOf(plain.data[0].email_recipients).toBeNullable();
+      expectTypeOf(included.data[0].tiers).not.toBeNullable();
+      expectTypeOf(included.data[0].email_recipients).not.toBeNullable();
+      expectTypeOf(read.data.tiers[0].slug).toEqualTypeOf<string>();
+      expectTypeOf(read.data.tiers[0].type).toEqualTypeOf<"free" | "paid">();
+      expectTypeOf(plain.data[0].labels).not.toBeNullable();
+      expectTypeOf(plain.data[0].subscriptions).not.toBeNullable();
+      expectTypeOf(plain.data[0].newsletters).not.toBeNullable();
+    }
+  });
+
+  test("a member update takes no include option: Ghost's members.edit accepts only the id", () => {
+    // @ts-expect-error edit has no include option
+    void api.members.edit("x", { name: "n" }, { include: "tiers" });
+  });
+
+  test("values from Stripe and Gravatar are typed as Ghost stores them", async () => {
+    const plain = await api.members.browse().fetch();
+    if (plain.success) {
+      const [subscription] = plain.data[0].subscriptions;
+      expectTypeOf(subscription.price.nickname).toEqualTypeOf<string | null>();
+      expectTypeOf(subscription.price.interval).toEqualTypeOf<string | null>();
+      expectTypeOf(subscription.customer.email).toEqualTypeOf<string | null>();
+      expectTypeOf(subscription.current_period_end).toEqualTypeOf<string | null>();
+      expectTypeOf(plain.data[0].avatar_image).toEqualTypeOf<string | null>();
+      // Opaque: Ghost stores GeoJS's answer as a JSON string.
+      expectTypeOf(plain.data[0].geolocation).toEqualTypeOf<string | null | undefined>();
+    }
+  });
+});
+
 // Ghost's tiers controller takes no `include` option and always sends prices
 // and benefits (recorded in fixtures/ghost-6.72/tiers): a free tier omits its
 // prices, every tier carries its benefits.

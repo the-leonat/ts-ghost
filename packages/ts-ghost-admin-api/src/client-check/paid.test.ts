@@ -7,12 +7,10 @@
  */
 import { assert, describe, expect, test } from "vitest";
 
-import { adminMembersSchema } from "../schemas/members";
 import { fixtureId, loadFixtures, PINNED_GHOST, type Fixture } from "./fixture-server";
 import { fetchMocker, sentBody, useClientCheck } from "./harness";
 
 const BY_SLUG = { order: "slug asc" } as const;
-const BY_EMAIL = { order: "email asc" } as const;
 
 /** The issue paths of the validation error a call rejected with, as `a.0.b`. */
 async function rejectedPaths(call: Promise<unknown>): Promise<string[]> {
@@ -42,50 +40,6 @@ function recordedMembers(name: string) {
 
 describe("client check: members", () => {
   const check = useClientCheck();
-
-  test("known defect: a member without an avatar fails to parse, avatar_image is typed as a string but Ghost sends null", async () => {
-    expect(await rejectedPaths(check.api.members.browse(BY_EMAIL).fetch())).toContain("data.0.avatar_image");
-    expect(
-      await rejectedPaths(check.api.members.read({ id: fixtureId("members.seeded") }).fetch()),
-    ).toContain("data.avatar_image");
-    expect(
-      await rejectedPaths(
-        check.api.members.add({ email: "ts-ghost-recorder@example.com", name: "ts-ghost recorder member" }),
-      ),
-    ).toContain("data.avatar_image");
-  });
-
-  test("known defect: a subscription on a Stripe price without a nickname fails to parse, price.nickname is typed as a string", () => {
-    const members = recordedMembers("GET /ghost/api/admin/members/?order=email+asc");
-    const member = members.find((candidate) => candidate.email === "ts-ghost-stripe@example.com");
-    assert(member !== undefined);
-    expect(member.subscriptions[0].price.nickname).toBeNull();
-
-    const result = adminMembersSchema.safeParse(member);
-    assert(!result.success);
-    expect(result.error.issues.map((issue) => issue.path.join("."))).toContain(
-      "subscriptions.0.price.nickname",
-    );
-  });
-
-  test("known defect: a comped member's stand-in subscription fails to parse, current_period_end is typed as a string but Ghost sends null", async () => {
-    const paths = await rejectedPaths(
-      check.api.members.read({ id: fixtureId("members.created-comped") }).fetch(),
-    );
-    expect(paths).toContain("data.subscriptions.0.current_period_end");
-  });
-
-  test("known defect: a member's tiers cannot be requested or typed, the members include schema is empty and the schema has no tiers", () => {
-    const included = recordedMembers("GET /ghost/api/admin/members/?include=tiers&order=email+asc");
-    const plain = recordedMembers("GET /ghost/api/admin/members/?order=email+asc");
-    // A browse sends tiers only when asked for them (a read by id sends them either way).
-    expect(included.find((member) => member.id === "{{anyObjectId:members.seeded}}")?.tiers).toEqual([
-      expect.objectContaining({ slug: "default-product", type: "paid" }),
-    ]);
-    expect(plain.some((member) => "tiers" in member)).toBe(false);
-
-    expect(Object.keys(adminMembersSchema.shape)).not.toContain("tiers");
-  });
 
   test("the seeded members hold paid members with Stripe subscriptions on the seeded tier", () => {
     const members = recordedMembers("GET /ghost/api/admin/members/?order=email+asc");

@@ -110,6 +110,17 @@ describe(`route-spec cross-check: admin client against pinned Ghost ${PINNED_GHO
     expect(failures.filter((failure) => failure.startsWith("labels."))).toEqual([]);
   });
 
+  test("members offer exactly the includes Ghost's members endpoint allows, bar the deprecated products alias", () => {
+    expect(describeClient(api).find((claim) => claim.resource === "members")?.includes).toEqual([
+      "tiers",
+      "email_recipients",
+      "metafields",
+    ]);
+    expect(
+      failures.filter((failure) => failure.startsWith("members.") && failure.includes("include")),
+    ).toEqual([]);
+  });
+
   test("label bodies are checked against Ghost's labels input schemas and model every key they accept", () => {
     expect(inputsUncovered).not.toContain("labels");
     expect(inputGaps.filter((gap) => gap.startsWith("labels.") && gap.includes("does not model"))).toEqual(

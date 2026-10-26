@@ -16,7 +16,7 @@ import {
 
 import { adminTiersCreateSchema, adminTiersSchema } from "./schemas";
 import { adminLabelsCreateSchema, adminLabelsSchema, adminLabelsUpdateSchema } from "./schemas/labels";
-import { adminMembersCreateSchema, adminMembersSchema } from "./schemas/members";
+import { adminMembersCreateSchema, adminMembersIncludeSchema, adminMembersSchema } from "./schemas/members";
 import { adminNewsletterCreateSchema } from "./schemas/newsletters";
 import { adminOffersCreateSchema, adminOffersUpdateSchema } from "./schemas/offers";
 import { adminPagesCreateSchema, adminPagesSchema, adminPagesUpdateSchema } from "./schemas/pages";
@@ -128,7 +128,7 @@ export class TSGhostAdminAPI<Version extends `v5.${string}` | `v6.${string}` = a
       {
         schema: adminMembersSchema,
         identitySchema: z.object({ id: z.string() }),
-        include: z.object({}),
+        include: adminMembersIncludeSchema,
         createSchema: adminMembersCreateSchema,
         createOptionsSchema: z.object({
           send_email: z.boolean().optional(),
