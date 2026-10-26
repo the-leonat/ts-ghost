@@ -139,3 +139,13 @@ pnpm version-packages # Apply changesets and bump versions
 - Unit tests run against mocked fetch responses
 - Integration tests require a real Ghost instance with specific test data (CI uses `astro-starter.digitalpress.blog`)
 - Tests include type checking via `vitest --typecheck`
+
+## Agent skills
+
+### Issue tracker
+
+Issues and specs live in GitHub Issues on the fork `the-leonat/ts-ghost` (always pass `-R the-leonat/ts-ghost`). See `docs/agents/issue-tracker.md`.
+
+### Domain docs
+
+Single-context: one `GLOSSARY.md` and `docs/adr/` at the repo root. See `docs/agents/domain.md`.
