@@ -1,4 +1,4 @@
-import { TSGhostAdminAPI } from "@ts-ghost/admin-api";
+import { GHOST_LATEST, TSGhostAdminAPI } from "@ts-ghost/admin-api";
 
 import { ADMIN_API_PATH } from "../ghost/admin-api.ts";
 import type { SchemaTarget } from "../ghost/pin.ts";
@@ -99,7 +99,7 @@ function recorder() {
 const TARGET_CLIENT = {
   v5: ["v5.130", {}],
   "v6-compat": ["v6.0", {}],
-  "v6-latest": ["v6.72", { schema: "latest" }],
+  "v6-latest": [`v${GHOST_LATEST}`, { schema: "latest" }],
 } as const;
 
 /** Every request the public admin client of `target` makes, found by calling each method against a recording fetch. */

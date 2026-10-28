@@ -1,12 +1,12 @@
 import { describe, expectTypeOf, test } from "vitest";
-import type { InferFetcherDataShape } from "@ts-ghost/core-api";
+import { GHOST_LATEST, type InferFetcherDataShape } from "@ts-ghost/core-api";
 
 import { TSGhostAdminAPI } from "./admin-api";
 
 const key = "1efedd9db174adee2d23d982:4b74dca0219bad629852191af326a45037346c2231240e0f7aec1f9371cc14e8";
 const v5 = new TSGhostAdminAPI("https://ghost.org", key, "v5.130");
 const compat = new TSGhostAdminAPI("https://ghost.org", key, "v6.0");
-const latest = new TSGhostAdminAPI("https://ghost.org", key, "v6.72", { schema: "latest" });
+const latest = new TSGhostAdminAPI("https://ghost.org", key, `v${GHOST_LATEST}`, { schema: "latest" });
 type Client = typeof v5 | typeof compat | typeof latest;
 
 type OfferOf<A extends Client> = InferFetcherDataShape<ReturnType<A["offers"]["read"]>>;

@@ -70,7 +70,7 @@ describe("schema targets", () => {
   });
 
   test('{ schema: "latest" } selects v6-latest: every field the pin sends is required', async () => {
-    const api = new TSGhostAdminAPI(url, key, "v6.72", { schema: "latest" });
+    const api = new TSGhostAdminAPI(url, key, `v${GHOST_LATEST}`, { schema: "latest" });
     stubFetch([ghost672, ghost60]);
     expect(await read(api)).toMatchObject({ success: true });
     expect(await read(api)).toMatchObject({
@@ -116,7 +116,7 @@ describe("a v6-latest client on another Ghost minor", () => {
   });
 
   test("warns once per client when Ghost's content-version differs from the pin, and still succeeds", async () => {
-    const api = new TSGhostAdminAPI(url, key, "v6.80", { schema: "latest", strict: true });
+    const api = new TSGhostAdminAPI(url, key, `v${GHOST_LATEST}`, { schema: "latest", strict: true });
     respondAs("v6.80");
     const read = await api.newsletters.read({ id: "n1" }).fetch();
     expect(read, JSON.stringify(read)).toMatchObject({ success: true });
@@ -127,7 +127,9 @@ describe("a v6-latest client on another Ghost minor", () => {
 
   test("stays quiet on the pinned minor, and on a v6-compat client", async () => {
     respondAs(`v${GHOST_LATEST}`);
-    await new TSGhostAdminAPI(url, key, "v6.72", { schema: "latest" }).newsletters.browse().fetch();
+    await new TSGhostAdminAPI(url, key, `v${GHOST_LATEST}`, { schema: "latest" }).newsletters
+      .browse()
+      .fetch();
     respondAs("v6.80");
     await new TSGhostAdminAPI(url, key, "v6.80").newsletters.browse().fetch();
     expect(warn).not.toHaveBeenCalled();

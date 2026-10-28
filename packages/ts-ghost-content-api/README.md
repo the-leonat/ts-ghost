@@ -32,16 +32,16 @@ All the available options from the Ghost Content API are available here, filteri
 
 This client works with Ghost 5 and Ghost 6. The version you pass picks the schema target it parses responses with:
 
-| Version you pass                     | Schema target         | Parses responses as                                         |
-| ------------------------------------ | --------------------- | ----------------------------------------------------------- |
-| `"v5.x"`, e.g. `"v5.130"`            | `v5`                  | the last Ghost 5 (5.130) sends them                         |
-| `"v6.x"`, e.g. `"v6.0"`              | `v6-compat` (default) | any Ghost 6 sends them: fields added after 6.0 are optional |
-| `"v6.x"` with `{ schema: "latest" }` | `v6-latest`           | Ghost 6.72 sends them: every field it sends is required     |
+| Version you pass                      | Schema target         | Parses responses as                                         |
+| ------------------------------------- | --------------------- | ----------------------------------------------------------- |
+| `"v5.x"`, e.g. `"v5.130"`             | `v5`                  | the last Ghost 5 (5.130) sends them                         |
+| `"v6.x"`, e.g. `"v6.0"`               | `v6-compat` (default) | any Ghost 6 sends them: fields added after 6.0 are optional |
+| `"v6.72"` with `{ schema: "latest" }` | `v6-latest`           | Ghost 6.72 sends them: every field it sends is required     |
 
-The version is also sent to Ghost as `Accept-Version`. Optional (`field?:`) and nullable (`| null`) are separate: optional means some Ghost version leaves the field out, nullable means Ghost sends `null` for it. Use `v6-latest` when you run that Ghost and want exact types; it follows the Ghost version this client is tested against, so it changes when the client moves to a newer Ghost.
+The version is also sent to Ghost as `Accept-Version`. Optional (`field?:`) and nullable (`| null`) are separate: optional means some Ghost version leaves the field out, nullable means Ghost sends `null` for it. Use `v6-latest` when you run that Ghost and want exact types; it follows the Ghost version this client is tested against, so it changes when the client moves to a newer Ghost. With `{ schema: "latest" }` the version must be exactly `` `v${GHOST_LATEST}` `` (today `"v6.72"`): any other version, or a non-literal `string`, is a type error naming the expected one, so a client upgrade that moves the pin shows you where to check.
 
 ```ts
-const api = new TSGhostContentAPI(url, key, "v6.0", { schema: "latest" });
+const api = new TSGhostContentAPI(url, key, "v6.72", { schema: "latest" }); // Ghost 6.72
 ```
 
 The Content API's fields are the same in every target so far; the option is there so both clients select targets alike. Like the admin client, a v6-latest client warns once when Ghost's `content-version` names another minor than 6.72.
@@ -638,7 +638,7 @@ const api = new TSGhostContentAPI(url, key, "v6.0", {
 });
 ```
 
-By default a key Ghost sends that the schema doesn't declare passes through to `result.data`, untyped. With `strict: true` such a key instead fails the result with one `{ type: "ResponseSchemaError", message }` error per key, naming its path (e.g. `posts[0].new_key`). `strict: { ignore: [...] }` is strict mode that still lets the listed paths through, `[]` matching any index.
+By default a key Ghost sends that the schema doesn't declare passes through to `result.data`, untyped. With `strict: true` such a key instead fails the result with one `{ type: "ResponseSchemaError", kind: "undeclared", path, message }` error per key, where `path` is in Ghost's terms (e.g. `posts[0].new_key`); a value the schema rejects gets `kind: "mismatch"`. `strict: { ignore: [...] }` is strict mode that still lets the listed paths through, `[]` matching any index.
 
 <ContentNavigation
 previous={{ title: "Output Modifiers", href: "/docs/content-api/output-modifiers" }}

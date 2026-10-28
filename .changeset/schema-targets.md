@@ -4,10 +4,11 @@
 "@ts-ghost/content-api": major
 ---
 
-Three schema targets, picked by the version you pass: `"v5.x"` parses as the last Ghost 5 (`v5`), `"v6.x"` as any Ghost 6 (`v6-compat`, the default), and `"v6.x"` with `{ schema: "latest" }` as Ghost 6.72 (`v6-latest`). Types and runtime schemas follow the target, and strict mode checks against it (#43).
+Three schema targets, picked by the version you pass: `"v5.x"` parses as the last Ghost 5 (`v5`), `"v6.x"` as any Ghost 6 (`v6-compat`, the default), and `"v6.72"` with `{ schema: "latest" }` as Ghost 6.72 (`v6-latest`). Types and runtime schemas follow the target, and strict mode checks against it (#43).
 
 - **Presence and nullability are separate.** Optional (`?`) means some Ghost version leaves the field out; nullable means Ghost sends `null`. v6-compat makes fields Ghost added after 6.0 (or removed since) optional; v6-latest requires every field 6.72 sends and drops removed ones; v5 has no Ghost 6 field. When each field appeared or went is in core-api's `GHOST_FIELDS` (`since`/`until`), maintained by the drift job.
 - **Targets differ in response types only.** Every target keeps the inputs Ghost drops as `@deprecated` (`locale`, `mobiledoc`, a post's body `newsletter`, members' `geolocation`, edit's `stripe_customer_id`, the tiers price and benefit includes); they are never sent.
+- **`{ schema: "latest" }` takes exactly `` `v${GHOST_LATEST}` ``** (today `"v6.72"`, exported as the `LatestVersion` type): another version, a Ghost 5 version or a non-literal `string` is a type error naming the expected one. When a client release moves the pin, the compiler points at every v6-latest client to re-check.
 - **A v6-latest client warns once** (`console.warn`) when Ghost's `content-version` names another minor than 6.72; it never fails a request.
 - **Types per target**: `Post<T>`, `Page<T>`, `Member<T>`, `Author<T>`, `User<T>` and `Newsletter<T>` take a target (default `"v6-compat"`); `adminPostsSchemaFor(target)` and the other `*SchemaFor` factories, and `adminResponseSchemas(target)`, give the runtime schemas. The existing `adminPostsSchema`, `baseOffersSchema`, … are the v6-compat ones.
 
@@ -18,4 +19,4 @@ Breaking type changes. Presence follows what Ghost 5.130 to 6.72 send (checked l
 - Optional with the reason in their description: fields only some reads carry, e.g. a post's `email`, `newsletter`, `count` (default includes) and `mobiledoc` (default formats), a member's `attribution` (not on browse), a comped member's stand-in subscription dates, an offer's `tier.name` (not in add's response).
 - Added: an email recipient's `email` (Ghost before 6.38), a staff user's `gift_subscription_purchase_notification` (6.28–6.38) and `gift_subscription_redemption_notification` (6.28), a member's `custom_fields` (6.53–6.61).
 
-core-api: `HTTPClientOptions.onResponse` sees every response before it is read.
+core-api: `HTTPClientOptions.onResponse` sees every response before it is read; the `LatestVersion` and `VersionFor` types give a client's version parameter.

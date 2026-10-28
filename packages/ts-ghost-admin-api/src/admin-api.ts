@@ -15,6 +15,7 @@ import {
   type SchemaOption,
   type SchemaTargetOf,
   type StrictOption,
+  type VersionFor,
 } from "@ts-ghost/core-api";
 
 import { adminTiersCreateSchema, adminTiersSchema } from "./schemas";
@@ -45,9 +46,6 @@ export type AdminAPIOptions = DebugOption &
     strict?: StrictOption;
   };
 
-/** Ghost 5 has one schema target, so `schema` is a Ghost 6 option. */
-type OptionsFor<Version> = [Version] extends [`v5.${string}`] ? { schema?: "compat" } : {};
-
 /**
  * The Admin API client. Its schema target follows `version` and `options.schema`: "v5.x" parses as the last
  * Ghost 5, "v6.x" as any Ghost 6 (v6-compat), and "v6.x" with `{ schema: "latest" }` as the pinned Ghost 6.
@@ -63,8 +61,9 @@ export class TSGhostAdminAPI<
   constructor(
     protected readonly url: string,
     protected readonly key: string,
-    protected readonly version: Version,
-    protected readonly options?: Options & OptionsFor<Version>,
+    // With `{ schema: "latest" }` only `v${GHOST_LATEST}`, e.g. "v6.72", type-checks.
+    protected readonly version: VersionFor<Version, Options>,
+    protected readonly options?: Options,
   ) {
     this.target = schemaTarget(version, options) as SchemaTargetOf<Version, Options>;
     const apiCredentials = adminAPICredentialsSchema.parse({

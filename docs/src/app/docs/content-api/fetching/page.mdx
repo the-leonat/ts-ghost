@@ -51,7 +51,7 @@ const api = new TSGhostContentAPI(url, key, "v6.0", {
 });
 ```
 
-By default a key Ghost sends that the schema doesn't declare passes through to `result.data`, untyped. With `strict: true` such a key instead fails the result with one `{ type: "ResponseSchemaError", message }` error per key, naming its path (e.g. `posts[0].new_key`). `strict: { ignore: [...] }` is strict mode that still lets the listed paths through, `[]` matching any index.
+By default a key Ghost sends that the schema doesn't declare passes through to `result.data`, untyped. With `strict: true` such a key instead fails the result with one `{ type: "ResponseSchemaError", kind: "undeclared", path, message }` error per key, where `path` is in Ghost's terms (e.g. `posts[0].new_key`); a value the schema rejects gets `kind: "mismatch"`. `strict: { ignore: [...] }` is strict mode that still lets the listed paths through, `[]` matching any index.
 
 <ContentNavigation
   previous={{ title: "Output Modifiers", href: "/docs/content-api/output-modifiers" }}

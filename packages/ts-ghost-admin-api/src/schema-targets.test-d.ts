@@ -1,5 +1,5 @@
 import { describe, expectTypeOf, test } from "vitest";
-import type { InferFetcherDataShape } from "@ts-ghost/core-api";
+import { GHOST_LATEST, type InferFetcherDataShape } from "@ts-ghost/core-api";
 
 import { TSGhostAdminAPI } from "./admin-api";
 import type { Member, Post } from "./schemas";
@@ -7,7 +7,7 @@ import type { Member, Post } from "./schemas";
 const key = "1efedd9db174adee2d23d982:4b74dca0219bad629852191af326a45037346c2231240e0f7aec1f9371cc14e8";
 const v5 = new TSGhostAdminAPI("https://ghost.org", key, "v5.130");
 const compat = new TSGhostAdminAPI("https://ghost.org", key, "v6.0");
-const latest = new TSGhostAdminAPI("https://ghost.org", key, "v6.72", { schema: "latest" });
+const latest = new TSGhostAdminAPI("https://ghost.org", key, `v${GHOST_LATEST}`, { schema: "latest" });
 // The clients are only read as types here.
 void [v5, compat, latest];
 
@@ -99,8 +99,30 @@ describe("offers per target", () => {
 });
 
 describe("selection", () => {
-  test("latest is a Ghost 6 option only", () => {
+  test('{ schema: "latest" } takes exactly the version of GHOST_LATEST', () => {
+    expectTypeOf(latest.target).toEqualTypeOf<"v6-latest">();
+    expectTypeOf(
+      new TSGhostAdminAPI("https://ghost.org", key, `v${GHOST_LATEST}`, { schema: "latest", strict: true })
+        .target,
+    ).toEqualTypeOf<"v6-latest">();
+  });
+
+  test('{ schema: "latest" } with another version is a type error naming the expected one', () => {
+    // @ts-expect-error Argument of type '"v6.2"' is not assignable to parameter of type '"v6.72"' (GHOST_LATEST)
+    new TSGhostAdminAPI("https://ghost.org", key, "v6.2", { schema: "latest" });
+    // @ts-expect-error a later minor is not the pinned one either
+    new TSGhostAdminAPI("https://ghost.org", key, "v6.999", { schema: "latest" });
     // @ts-expect-error Ghost 5 has one schema target
     new TSGhostAdminAPI("https://ghost.org", key, "v5.130", { schema: "latest" });
+    const version: string = `v${GHOST_LATEST}`;
+    // @ts-expect-error a non-literal version can't be checked, so it is refused
+    new TSGhostAdminAPI("https://ghost.org", key, version as `v6.${string}`, { schema: "latest" });
+  });
+
+  test("without latest, any Ghost 5 or 6 version is accepted", () => {
+    expectTypeOf(new TSGhostAdminAPI("https://ghost.org", key, "v6.2").target).toEqualTypeOf<"v6-compat">();
+    expectTypeOf(
+      new TSGhostAdminAPI("https://ghost.org", key, "v6.2", { schema: "compat" }).target,
+    ).toEqualTypeOf<"v6-compat">();
   });
 });

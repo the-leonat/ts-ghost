@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import { GHOST_LATEST } from "@ts-ghost/core-api";
 
 import { TSGhostContentAPI } from "./content-api";
 
@@ -16,9 +17,9 @@ describe("content-api", () => {
     const key = "59d4bf56c73c04a18c867dc3ba";
     expect(new TSGhostContentAPI("https://ghost.org", key, "v5.130").target).toBe("v5");
     expect(api.target).toBe("v6-compat");
-    expect(new TSGhostContentAPI("https://ghost.org", key, "v6.72", { schema: "latest" }).target).toBe(
-      "v6-latest",
-    );
+    expect(
+      new TSGhostContentAPI("https://ghost.org", key, `v${GHOST_LATEST}`, { schema: "latest" }).target,
+    ).toBe("v6-latest");
     // @ts-expect-error Ghost 5 has one schema target
     expect(() => new TSGhostContentAPI("https://ghost.org", key, "v5.130", { schema: "latest" })).toThrow(
       /Ghost 6 version/,

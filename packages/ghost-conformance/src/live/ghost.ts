@@ -1,5 +1,5 @@
 import { inject, type ProvidedContext, type TestContext } from "vitest";
-import { GHOST_FIELDS, TSGhostAdminAPI } from "@ts-ghost/admin-api";
+import { GHOST_FIELDS, GHOST_LATEST, TSGhostAdminAPI } from "@ts-ghost/admin-api";
 
 import { lacks, type GhostBehaviour } from "../ghost/behaviours.ts";
 import { clientOptions, clientVersion, versionAtLeast } from "../ghost/pin.ts";
@@ -23,7 +23,8 @@ export function adminApi(
 ) {
   const apiKey = key === "integration" ? ghost.integrationKey : ghost.staffToken;
   const options = clientOptions(ghost.leg.target) as { schema: "latest" };
-  return new TSGhostAdminAPI(ghost.url, apiKey, clientVersion(ghost.version) as `v6.${string}`, {
+  // Typed as the pin's version; GHOST_LEG_VERSION may run another Ghost.
+  return new TSGhostAdminAPI(ghost.url, apiKey, clientVersion(ghost.version) as `v${typeof GHOST_LATEST}`, {
     ...options,
     strict,
   });

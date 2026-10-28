@@ -10,6 +10,7 @@ import {
   type SchemaOption,
   type SchemaTargetOf,
   type StrictOption,
+  type VersionFor,
 } from "@ts-ghost/core-api";
 
 import { authorsIncludeSchema, authorsSchema } from "./authors/schemas";
@@ -30,9 +31,6 @@ export type ContentAPIOptions = DebugOption &
      * `{ ignore: ["posts[].new_key"] }` lets the listed paths through, `[]` matching any index. */
     strict?: StrictOption;
   };
-
-/** Ghost 5 has one schema target, so `schema` is a Ghost 6 option. */
-type OptionsFor<Version> = [Version] extends [`v5.${string}`] ? { schema?: "compat" } : {};
 
 export enum BrowseEndpointType {
   authors = "authors",
@@ -58,8 +56,9 @@ export class TSGhostContentAPI<
   constructor(
     protected readonly url: string,
     protected readonly key: string,
-    protected readonly version: Version,
-    protected readonly options?: Options & OptionsFor<Version>,
+    // With `{ schema: "latest" }` only `v${GHOST_LATEST}`, e.g. "v6.72", type-checks.
+    protected readonly version: VersionFor<Version, Options>,
+    protected readonly options?: Options,
   ) {
     this.target = schemaTarget(version, options) as SchemaTargetOf<Version, Options>;
     const apiCredentials = contentAPICredentialsSchema.parse({
