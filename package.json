@@ -1,0 +1,35 @@
+{
+  "name": "@ts-ghost/content-api",
+  "author": "Philippe L'ATTENTION <https://github.com/PhilDL>",
+  "license": "MIT",
+  "access": "public",
+  "private": false,
+  "description": "TypeScript library for the Ghost Content API with Input and Output type-safety.",
+  "keywords": [
+    "ghost",
+    "blog",
+    "typescript",
+    "client",
+    "api",
+    "content-api",
+    "zod"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/PhilDL/ts-ghost/tree/main/packages/ts-ghost-content-api"
+  },
+  "version": "5.0.0",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist/**"
+  ],
+  "dependencies": {
+    "zod": "4.3.5",
+    "@ts-ghost/core-api": "git+https://github.com/the-leonat/ts-ghost.git#dist/core-api"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
