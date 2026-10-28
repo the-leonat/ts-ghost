@@ -69,11 +69,6 @@ export class TSGhostAdminAPI<Version extends `v5.${string}` | `v6.${string}` = a
     });
   }
 
-  /** The server's `content-version` from the latest response; `undefined` before any. */
-  getServerVersion(): string | undefined {
-    return this.httpClientFactory.serverVersion;
-  }
-
   get posts() {
     const postsIncludeSchema = z.object({
       authors: z.literal(true).optional(),

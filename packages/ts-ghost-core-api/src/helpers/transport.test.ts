@@ -179,38 +179,4 @@ describe("transport", () => {
       expect(result.body).toBeUndefined();
     });
   });
-
-  describe("the server's reported version", () => {
-    test("is unknown before any response", () => {
-      expect(new HTTPClientFactory(credentials).serverVersion).toBeUndefined();
-    });
-
-    test("is the content-version of the latest response through any of the factory's clients", async () => {
-      const factory = new HTTPClientFactory(credentials);
-      const api = tags(factory);
-
-      await api.browse().fetch();
-      expect(factory.serverVersion).toBe("v6.72");
-
-      fetchMocker.mockImplementationOnce(async () => noContent({ "content-version": "v6.73" }));
-      await api.delete("1");
-      expect(factory.serverVersion).toBe("v6.73");
-
-      fetchMocker.mockResponseOnce(JSON.stringify({ errors: [{ type: "E", message: "m" }] }), {
-        status: 500,
-        headers: { "content-version": "v6.74" },
-      });
-      await api.read({ id: "1" }).fetch();
-      expect(factory.serverVersion).toBe("v6.74");
-    });
-
-    test("is kept when a response does not report one", async () => {
-      const factory = new HTTPClientFactory(credentials);
-      await tags(factory).browse().fetch();
-      fetchMocker.mockResponseOnce(JSON.stringify({ tags: [] }));
-      await tags(factory).browse().fetch();
-
-      expect(factory.serverVersion).toBe("v6.72");
-    });
-  });
 });

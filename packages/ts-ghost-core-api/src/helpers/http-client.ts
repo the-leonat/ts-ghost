@@ -16,21 +16,13 @@ export type HTTPClientOptions = {
   version: APICredentials["version"];
   url: APICredentials["url"];
   endpoint: "content" | "admin";
-  /**
-   * Request options applied to every request this client makes, set once at
-   * construction (e.g. `{ redirect: "manual" }`). Per-call options win over
-   * them, and their headers are merged like per-call headers.
-   */
+  /** Request options for every request, e.g. `{ redirect: "manual" }`; per-call options win, headers merge. */
   defaultRequestOptions?: RequestInit;
   /** Fail results carrying keys the schema doesn't declare; by default they pass through. */
   strict?: StrictOption;
 } & DebugOption;
 
-/**
- * Merges caller-supplied headers over generated ones. A caller header replaces
- * the generated header of the same name, compared case-insensitively; every
- * other generated header, authentication included, is kept.
- */
+/** Merges caller headers over generated ones; a caller header replaces a same-named one, case-insensitively. */
 function mergeHeaders(generated: Record<string, string>, ...supplied: (HeadersInit | undefined)[]) {
   const merged: Record<string, string> = { ...generated };
   for (const init of supplied) {
@@ -90,23 +82,10 @@ export interface IHTTPClientFactory {
 }
 
 export class HTTPClientFactory implements IHTTPClientFactory {
-  private _serverVersion: string | undefined;
-
   constructor(private config: HTTPClientOptions) {}
 
-  /**
-   * The version the server reported (its `content-version` header) on the latest
-   * response to any client this factory created; `undefined` before one arrives.
-   * Informational only: nothing in the client depends on it.
-   */
-  get serverVersion() {
-    return this._serverVersion;
-  }
-
   public create() {
-    return new HTTPClient(this.config, (version) => {
-      this._serverVersion = version;
-    });
+    return new HTTPClient(this.config);
   }
 }
 
@@ -115,10 +94,7 @@ export class HTTPClient<const Options extends HTTPClientOptions = any> implement
   private _jwtExpiresAt: number | undefined;
   protected _baseURL: URL | undefined = undefined;
 
-  constructor(
-    protected config: Options,
-    private onServerVersion?: (version: string) => void,
-  ) {
+  constructor(protected config: Options) {
     let prefixPath = new URL(config.url).pathname;
     if (prefixPath.slice(-1) === "/") {
       prefixPath = prefixPath.slice(0, -1);
@@ -137,12 +113,6 @@ export class HTTPClient<const Options extends HTTPClientOptions = any> implement
 
   get jwt() {
     return this._jwt;
-  }
-
-  private observe(response: Response) {
-    const version = response.headers.get("content-version");
-    if (version !== null) this.onServerVersion?.(version);
-    return response;
   }
 
   public async generateJWT(key: string) {
@@ -218,7 +188,7 @@ export class HTTPClient<const Options extends HTTPClientOptions = any> implement
     const headers = await this.genHeaders();
     debug("url", url.toString(), "headers", headers, "options", options);
     try {
-      result = await this.observe(await fetch(url.toString(), this.requestInit(options, headers))).json();
+      result = await (await fetch(url.toString(), this.requestInit(options, headers))).json();
       debug("result", result, "status", result.status);
     } catch (e) {
       debug("error", e);
@@ -249,7 +219,7 @@ export class HTTPClient<const Options extends HTTPClientOptions = any> implement
     const url = this.urlFor(resource, pathnameIdentity, searchParams);
     const headers = await this.genHeaders();
     try {
-      const response = this.observe(await fetch(url.toString(), this.requestInit(options, headers)));
+      const response = await fetch(url.toString(), this.requestInit(options, headers));
       const status = response.status;
       const body = await response.text();
       try {
@@ -297,6 +267,6 @@ export class HTTPClient<const Options extends HTTPClientOptions = any> implement
   }) {
     const url = this.urlFor(resource, pathnameIdentity, searchParams);
     const headers = await this.genHeaders();
-    return this.observe(await fetch(url.toString(), this.requestInit(options, headers)));
+    return await fetch(url.toString(), this.requestInit(options, headers));
   }
 }

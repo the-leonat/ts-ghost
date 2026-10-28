@@ -34,19 +34,6 @@ describe("admin-api transport", () => {
     }
   });
 
-  test("getServerVersion() is the content-version of the latest response, undefined before one", async () => {
-    vi.spyOn(globalThis, "fetch")
-      .mockImplementationOnce(async () => siteResponse("v6.72"))
-      .mockImplementationOnce(async () => siteResponse("v6.73"));
-    const api = new TSGhostAdminAPI("https://ghost.org", KEY, "v6.72");
-
-    expect(api.getServerVersion()).toBeUndefined();
-    await api.site.fetch();
-    expect(api.getServerVersion()).toBe("v6.72");
-    await api.site.fetch();
-    expect(api.getServerVersion()).toBe("v6.73");
-  });
-
   test("keys the schema doesn't declare pass through by default", async () => {
     vi.spyOn(globalThis, "fetch").mockImplementationOnce(
       async () => new Response(JSON.stringify({ site: { ...site, brand: { color: "#fff" } } })),
