@@ -5,7 +5,7 @@ import type { HTTPClient } from "../helpers/http-client";
 import { sanitizeFormatMask, sanitizeMask } from "../helpers/masks";
 import { type APIResource, type GhostIdentityInput } from "../schemas/shared";
 import type { Exactly, Mask, NoUnrecognizedKeys } from "../utils";
-import { contentFormats, type ContentFormats } from "./formats";
+import { contentFormats, withEmptyFormats, type ContentFormats } from "./formats";
 
 export class ReadFetcher<
   const Resource extends APIResource = any,
@@ -49,11 +49,15 @@ export class ReadFetcher<
     formats: NoUnrecognizedKeys<Formats, OutputShape>,
   ) {
     const requiredFormats = sanitizeFormatMask(this.config.output, formats);
-    const newOutput = this.config.output.required(requiredFormats as Exactly<Formats, Formats>);
     const params = {
       ...this._params,
       formats: Object.keys(requiredFormats).filter((key) => contentFormats.includes(key)),
     };
+    const newOutput = withEmptyFormats(
+      this.config.output.required(requiredFormats as Exactly<Formats, Formats>),
+      this.config.output,
+      params.formats,
+    );
     return new ReadFetcher(
       this.resource,
       {

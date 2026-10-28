@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 
 import { TSGhostAdminAPI } from "../admin-api";
-import { adminPostsCreateSchema } from "./posts";
+import { adminPostsCreateSchema, adminPostsUpdateSchema } from "./posts";
 
 describe("posts api .browse() Args Type-safety", () => {
   const url = process.env.VITE_GHOST_URL || "https://my-ghost-blog.com";
@@ -33,7 +33,9 @@ describe("posts schema validation", () => {
     const result = adminPostsCreateSchema.safeParse(invalidPost);
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues[0].message).toBe("newsletter is required when scheduling an email_only post");
+      expect(result.error.issues[0].message).toBe(
+        "newsletter is required when scheduling an email_only post",
+      );
       expect(result.error.issues[0].path).toEqual(["newsletter"]);
     }
   });
@@ -45,6 +47,14 @@ describe("posts schema validation", () => {
       status: "scheduled" as const,
     };
     expect(adminPostsCreateSchema.safeParse(validPost).success).toBe(true);
+  });
+
+  test("the deprecated newsletter body key is not sent: Ghost takes it only as the edit option", () => {
+    const newsletter = { slug: "default-newsletter" };
+    expect(adminPostsCreateSchema.parse({ title: "Test Post", newsletter })).toEqual({ title: "Test Post" });
+    expect(
+      adminPostsUpdateSchema.parse({ newsletter, updated_at: new Date("2026-01-01T00:00:00.000Z") }),
+    ).toEqual({ updated_at: "2026-01-01T00:00:00.000Z" });
   });
 
   test("scheduled post without email_only field and without newsletter should succeed", () => {

@@ -1,7 +1,8 @@
 import { z } from "zod";
-import { baseEmailSchema, baseNewsletterSchema, basePostsSchema } from "@ts-ghost/core-api";
+import { baseEmailSchema, basePostsSchema } from "@ts-ghost/core-api";
 
 import { adminAuthorsSchema } from "./authors";
+import { adminNewsletterSchema } from "./newsletters";
 import { adminTiersSchema } from "./tiers";
 
 export const adminPostsSchema = basePostsSchema.merge(
@@ -14,7 +15,7 @@ export const adminPostsSchema = basePostsSchema.merge(
     frontmatter: z.string().nullish(),
     tiers: z.array(adminTiersSchema).optional(),
     email: baseEmailSchema.nullish(),
-    newsletter: baseNewsletterSchema.nullish(),
+    newsletter: adminNewsletterSchema.nullish(),
     count: z
       .object({
         clicks: z.number().nullish(),
@@ -40,6 +41,7 @@ export type Post = z.infer<typeof adminPostsSchema>;
 const basePostsCreateSchema = z.object({
   title: z.string().min(1).max(2000),
   slug: z.string().max(191).optional(),
+  /** @deprecated Ghost 6 ignores mobiledoc input and stores lexical only; send `lexical` or `html`. */
   mobiledoc: z.string().max(1000000000).optional(),
   lexical: z.string().max(1000000000).optional(),
   html: z.string().max(1000000000).optional(),
@@ -50,6 +52,7 @@ const basePostsCreateSchema = z.object({
   status: z
     .union([z.literal("draft"), z.literal("published"), z.literal("scheduled"), z.literal("sent")])
     .optional(),
+  /** @deprecated Ghost has no locale on posts and pages and drops it. */
   locale: z.string().max(6).optional(),
   visibility: z
     .union([
@@ -138,6 +141,7 @@ const basePostsCreateSchema = z.object({
       description: `Specifying author via id, name or slug.`,
     })
     .optional(),
+  /** @deprecated Ghost ignores it in the body and the client no longer sends it; pass `edit`'s `newsletter` option. */
   newsletter: z
     .union([
       z.object({
@@ -163,10 +167,12 @@ const emailOnlyNewsletterRefinementOptions = {
   path: ["newsletter"],
 };
 
-export const adminPostsCreateSchema = basePostsCreateSchema.refine(
-  emailOnlyNewsletterRefinement,
-  emailOnlyNewsletterRefinementOptions,
-);
+// Ghost reads the newsletter only from the `?newsletter=` option, so the body key is dropped.
+const withoutNewsletter = <T extends { newsletter?: unknown }>({ newsletter: _, ...rest }: T) => rest as T;
+
+export const adminPostsCreateSchema = basePostsCreateSchema
+  .refine(emailOnlyNewsletterRefinement, emailOnlyNewsletterRefinementOptions)
+  .overwrite(withoutNewsletter);
 
 export type CreatePost = z.infer<typeof adminPostsCreateSchema>;
 
@@ -177,6 +183,7 @@ export const adminPostsUpdateSchema = basePostsCreateSchema
       updated_at: z.date().transform((val) => val.toISOString()),
     }),
   )
-  .refine(emailOnlyNewsletterRefinement, emailOnlyNewsletterRefinementOptions);
+  .refine(emailOnlyNewsletterRefinement, emailOnlyNewsletterRefinementOptions)
+  .overwrite(withoutNewsletter);
 
 export type UpdatePost = z.infer<typeof adminPostsUpdateSchema>;

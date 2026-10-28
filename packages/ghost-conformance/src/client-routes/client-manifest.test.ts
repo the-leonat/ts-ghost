@@ -10,13 +10,24 @@ const calls = await recordClientCalls();
 
 /** Client calls known to fail against the pinned Ghost, with why; fixed in #25. */
 const EXPECTED_FAILURES: Record<string, string> = {
-  "newsletters.read({slug})": "Ghost has no read-newsletter-by-slug route",
   "offers.read({slug})": "Ghost has no read-offer-by-slug route",
   "tiers.read({slug})": "Ghost has no read-tier-by-slug route",
 };
 
+/** Deprecated client calls kept callable although Ghost lacks their route; they must keep failing. */
+const DEPRECATED: Record<string, string> = {
+  "newsletters.read({slug})": "Ghost has no read-newsletter-by-slug route",
+};
+
 describe(`admin-api client against the Ghost ${manifest.ghost} manifest`, () => {
   for (const call of calls) {
+    const deprecated = DEPRECATED[call.name];
+    if (deprecated) {
+      test(`${call.name}: ${call.method} ${call.path} (deprecated: ${deprecated})`, () => {
+        expect(checkCall(manifest.routes, call)).toBeDefined();
+      });
+      continue;
+    }
     const reason = EXPECTED_FAILURES[call.name];
     const title = `${call.name}: ${call.method} ${call.path}${reason ? ` (expected failure: ${reason})` : ""}`;
     (reason ? test.fails : test)(title, () => {

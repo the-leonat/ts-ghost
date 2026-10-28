@@ -43,8 +43,7 @@ describe("pages", () => {
     expect(result.data.find((page) => page.id === seed.full.id)?.html).toBe(FULL_HTML);
   });
 
-  // Expected failure: formats({ plaintext }) makes plaintext required, but Ghost omits it on empty pages.
-  test.fails("browse with the plaintext format returns content", async () => {
+  test("browse with the plaintext format returns content", async () => {
     const result = await adminApi().pages.browse({ limit: "all" }).formats({ plaintext: true }).fetch();
 
     assert(result.success);
@@ -103,14 +102,14 @@ describe("pages", () => {
     expect(read.data.html).toBe(FULL_HTML);
   });
 
-  // Expected failure: pages have no locale in Ghost; the client's input accepts one that Ghost drops.
-  test.fails("add reads back locale", async () => {
+  // locale input is deprecated: pages have no locale in Ghost.
+  test("add ignores the deprecated locale", async () => {
     const added = await adminApi().pages.add({ title: `Locale ${uniqueSuffix()}`, locale: "de" });
     assert(added.success);
 
     const read = await adminApi().pages.read({ id: added.data.id }).fetch();
     assert(read.success);
-    expect(read.data).toMatchObject({ locale: "de" });
+    expect(read.data).not.toHaveProperty("locale");
   });
 
   test("edit persists every value sent", async () => {
@@ -172,13 +171,11 @@ describe("pages: unknown keys", () => {
   };
   const isAuthorKey = (k: string) => /^pages\[\]\.(authors\[\]|primary_author)\./.test(k);
 
-  // Expected failure: the author schema lacks Ghost 6.72's socials, tour and notification flags.
-  test.fails("authors carry no key the client's schema lacks", async () => {
+  test("authors carry no key the client's schema lacks", async () => {
     expect((await unknownAfterEveryOperation()).filter(isAuthorKey)).toEqual([]);
   });
 
-  // Expected failure: the pages schema lacks show_title_and_feature_image.
-  test.fails("pages carry no key the client's schema lacks", async () => {
+  test("pages carry no key the client's schema lacks", async () => {
     expect((await unknownAfterEveryOperation()).filter((k) => !isAuthorKey(k))).toEqual([]);
   });
 });

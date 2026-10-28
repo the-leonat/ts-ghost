@@ -10,6 +10,8 @@ export const adminPagesSchema = basePagesSchema.merge(
     mobiledoc: z.string().nullish(),
     status: z.union([z.literal("draft"), z.literal("published"), z.literal("scheduled")]),
     frontmatter: z.string().nullish(),
+    // Sent by Ghost 6; optional for older Ghost versions.
+    show_title_and_feature_image: z.boolean().optional(),
     tiers: z.array(adminTiersSchema).nullish(),
     count: z
       .object({
@@ -38,6 +40,7 @@ export type Page = z.infer<typeof adminPagesSchema>;
 export const adminPagesCreateSchema = z.object({
   title: z.string().min(1).max(2000),
   slug: z.string().max(191).optional(),
+  /** @deprecated Ghost 6 ignores mobiledoc input and stores lexical only; send `lexical` or `html`. */
   mobiledoc: z.string().max(1000000000).optional(),
   lexical: z.string().max(1000000000).optional(),
   html: z.string().max(1000000000).optional(),
@@ -46,6 +49,7 @@ export const adminPagesCreateSchema = z.object({
   feature_image_caption: z.string().max(65535).optional(),
   featured: z.boolean().optional(),
   status: z.union([z.literal("draft"), z.literal("published"), z.literal("scheduled")]).optional(),
+  /** @deprecated Ghost has no locale on posts and pages and drops it. */
   locale: z.string().max(6).optional(),
   visibility: z
     .union([

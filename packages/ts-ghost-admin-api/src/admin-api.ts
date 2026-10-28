@@ -2,7 +2,6 @@ import { z } from "zod";
 import {
   adminAPICredentialsSchema,
   APIComposer,
-  baseNewsletterSchema,
   baseOffersSchema,
   baseSiteSchema,
   baseTagsSchema,
@@ -15,7 +14,7 @@ import {
 
 import { adminTiersCreateSchema, adminTiersSchema } from "./schemas";
 import { adminMembersCreateSchema, adminMembersSchema } from "./schemas/members";
-import { adminNewsletterCreateSchema } from "./schemas/newsletters";
+import { adminNewsletterCreateSchema, adminNewsletterSchema } from "./schemas/newsletters";
 import { adminOffersCreateSchema, adminOffersUpdateSchema } from "./schemas/offers";
 import { adminPagesCreateSchema, adminPagesSchema, adminPagesUpdateSchema } from "./schemas/pages";
 import { adminPostsCreateSchema, adminPostsSchema, adminPostsUpdateSchema } from "./schemas/posts";
@@ -24,6 +23,14 @@ import { adminUsersSchema } from "./schemas/users";
 import { adminWebhookCreateSchema, adminWebhookSchema, adminWebhookUpdateSchema } from "./schemas/webhooks";
 
 export type { AdminAPICredentials, APIVersions } from "@ts-ghost/core-api";
+
+/** A read by id, plus a read by slug for a resource Ghost has no read-by-slug route for. */
+type ReadByIdOnly<Read extends (options: never) => unknown> = {
+  (options: { id: string }): ReturnType<Read>;
+  /** @deprecated Ghost has no read-by-slug route for this resource, so this always fails; use `read({ id })`. */
+  (options: { slug: string }): ReturnType<Read>;
+  (options: { id: string } | { slug: string }): ReturnType<Read>;
+};
 
 export class TSGhostAdminAPI<Version extends `v5.${string}` | `v6.${string}` = any> {
   private httpClientFactory: HTTPClientFactory;
@@ -144,10 +151,10 @@ export class TSGhostAdminAPI<Version extends `v5.${string}` | `v6.${string}` = a
 
   get newsletters() {
     const newslettersIncludeSchema = z.object({});
-    return new APIComposer(
+    const newsletters = new APIComposer(
       "newsletters",
       {
-        schema: baseNewsletterSchema,
+        schema: adminNewsletterSchema,
         identitySchema: slugOrIdSchema,
         include: newslettersIncludeSchema,
         createSchema: adminNewsletterCreateSchema,
@@ -157,6 +164,7 @@ export class TSGhostAdminAPI<Version extends `v5.${string}` | `v6.${string}` = a
       },
       this.httpClientFactory,
     ).access(["browse", "read", "add", "edit"]);
+    return newsletters as Omit<typeof newsletters, "read"> & { read: ReadByIdOnly<typeof newsletters.read> };
   }
 
   get offers() {

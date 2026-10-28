@@ -6,7 +6,7 @@ import { sanitizeFormatMask, sanitizeMask } from "../helpers/masks";
 import type { HTTPClient } from "../helpers/http-client";
 import { ghostMetaSchema, type APIResource } from "../schemas/shared";
 import type { Exactly, Mask, NoUnrecognizedKeys } from "../utils";
-import { contentFormats, type ContentFormats } from "./formats";
+import { contentFormats, withEmptyFormats, type ContentFormats } from "./formats";
 
 export class BrowseFetcher<
   const Resource extends APIResource = any,
@@ -58,7 +58,11 @@ export class BrowseFetcher<
       this.resource,
       {
         schema: this.config.schema,
-        output: this.config.output.required(requiredFormats as Exactly<Formats, Formats>),
+        output: withEmptyFormats(
+          this.config.output.required(requiredFormats as Exactly<Formats, Formats>),
+          this.config.output,
+          params.formats,
+        ),
         include: this.config.include,
       },
       params,

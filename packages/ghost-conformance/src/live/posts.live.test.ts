@@ -53,8 +53,7 @@ describe("posts", () => {
     expect(full?.html).toBe("<p>Hello <strong>world</strong></p>");
   });
 
-  // Expected failure: formats({ plaintext }) makes plaintext required, but Ghost omits it on empty posts.
-  test.fails("browse with the plaintext format returns content", async () => {
+  test("browse with the plaintext format returns content", async () => {
     const result = await adminApi()
       .posts.browse({ limit: "all", filter: seededOnly() })
       .formats({ plaintext: true })
@@ -140,24 +139,24 @@ describe("posts", () => {
     expect(read.data).toMatchObject({ status: "scheduled", published_at: publishedAt.toISOString() });
   });
 
-  // Expected failure: Ghost 6 ignores mobiledoc input and stores lexical only, so it never reads back.
-  test.fails("add reads back mobiledoc", async () => {
+  // mobiledoc input is deprecated: Ghost 6 stores lexical only.
+  test("add ignores the deprecated mobiledoc", async () => {
     const added = await adminApi().posts.add({ title: `Mobiledoc ${uniqueSuffix()}`, mobiledoc: MOBILEDOC });
     assert(added.success);
 
     const read = await adminApi().posts.read({ id: added.data.id }).fetch();
     assert(read.success);
-    expect(read.data.mobiledoc).toBe(MOBILEDOC);
+    expect(read.data.mobiledoc).toBeNull();
   });
 
-  // Expected failure: posts have no locale in Ghost; the client's input accepts one that Ghost drops.
-  test.fails("add reads back locale", async () => {
+  // locale input is deprecated: posts have no locale in Ghost.
+  test("add ignores the deprecated locale", async () => {
     const added = await adminApi().posts.add({ title: `Locale ${uniqueSuffix()}`, locale: "de" });
     assert(added.success);
 
     const read = await adminApi().posts.read({ id: added.data.id }).fetch();
     assert(read.success);
-    expect(read.data).toMatchObject({ locale: "de" });
+    expect(read.data).not.toHaveProperty("locale");
   });
 
   test("edit persists every value sent", async () => {
@@ -199,8 +198,7 @@ describe("posts", () => {
     expect(read.success).toBe(false);
   });
 
-  // Expected failure: the client's author status allows active, invited and locked, not inactive.
-  test.fails("read reports a post's inactive author", async () => {
+  test("read reports a post's inactive author", async () => {
     const { post, remove } = await seedPostWithInactiveAuthor(adminApi());
     onTestFinished(remove);
 
@@ -214,8 +212,7 @@ describe("posts", () => {
 describe("posts: unknown keys", () => {
   const responses = liveResponses({ ignore: IGNORED });
 
-  // Expected failure: the author schema lacks Ghost 6.72's socials, tour and notification flags.
-  test.fails("authors carry no key the client's schema lacks", async () => {
+  test("authors carry no key the client's schema lacks", async () => {
     const api = adminApi();
     const browsed = await api.posts
       .browse({ limit: "all", filter: seededOnly() })
@@ -235,15 +232,13 @@ describe("posts: unknown keys", () => {
     expect(unknown.filter((k) => /^posts\[\]\.(authors\[\]|primary_author)\./.test(k))).toEqual([]);
   });
 
-  // Expected failure: the post email schema lacks csd_email_count, post_id, newsletter_id, source_type and more.
-  test.fails("a sent post's email carries no key the client's schema lacks", async () => {
+  test("a sent post's email carries no key the client's schema lacks", async () => {
     assert((await adminApi().posts.read({ id: seed.emailed.id }).fetch()).success);
     const unknown = unknownKeysOfResponses(responses.all(), IGNORED);
     expect(unknown.filter((k) => k.startsWith("posts[].email."))).toEqual([]);
   });
 
-  // Expected failure: the post newsletter schema lacks its design and feedback fields.
-  test.fails("a sent post's newsletter carries no key the client's schema lacks", async () => {
+  test("a sent post's newsletter carries no key the client's schema lacks", async () => {
     assert((await adminApi().posts.read({ id: seed.emailed.id }).fetch()).success);
     const unknown = unknownKeysOfResponses(responses.all(), IGNORED);
     expect(unknown.filter((k) => k.startsWith("posts[].newsletter."))).toEqual([]);

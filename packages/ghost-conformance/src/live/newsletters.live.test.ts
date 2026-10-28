@@ -34,10 +34,10 @@ describe("newsletters", () => {
     expect(result.data).toEqual(seeded.archived);
   });
 
-  // Expected failure: the client offers slug reads, but Ghost has no /newsletters/slug/:slug/ route.
-  test.fails("GET /newsletters/slug/:slug/ returns the newsletter", async () => {
+  // Deprecated: Ghost has no /newsletters/slug/:slug/ route, so a read by slug always fails.
+  test("the deprecated read by slug fails", async () => {
     const result = await adminApi().newsletters.read({ slug: seeded.full.slug }).fetch();
-    expect(result.success).toBe(true);
+    expect(result.success).toBe(false);
   });
 
   test("POST /newsletters/ stores every field it was sent", async () => {
@@ -51,11 +51,9 @@ describe("newsletters", () => {
     expect(read.data).toMatchObject(input);
   });
 
-  // Expected failure: the client requires sender_name on add; Ghost doesn't.
-  test.fails("POST /newsletters/ accepts a newsletter with a name only", async () => {
+  test("POST /newsletters/ accepts a newsletter with a name only", async () => {
     const api = adminApi();
     const name = `Name only ${uniqueSuffix()}`;
-    // @ts-expect-error the create schema makes sender_name required
     const added = await api.newsletters.add({ name });
     if (!added.success) throw new Error(JSON.stringify(added.errors));
 
@@ -81,8 +79,7 @@ describe("newsletters", () => {
     expect(read.data).toMatchObject(edit);
   });
 
-  // Expected failure: the newsletter schema lacks Ghost 6.72's design keys (background_color, button_*, link_*...).
-  test.fails("newsletter responses send no key the client's schema lacks", async () => {
+  test("newsletter responses send no key the client's schema lacks", async () => {
     const api = adminApi();
     const id = seeded.full.id;
     const browsed = await api.newsletters.browse({ limit: "all" }).fetch();

@@ -12,8 +12,7 @@ const { failed, submitted } = EMAIL_SEED.posts;
 describe("emailed posts", () => {
   const responses = liveResponses({ ignore: IGNORED });
 
-  // Expected failure: core email schema requires `from`, `source` and `updated_at`; Ghost sends null.
-  test.fails("a post whose email has a null from and source parses", async () => {
+  test("a post whose email has a null from and source parses", async () => {
     const result = await adminApi().posts.read({ slug: failed }).fetch();
     expect(result.success).toBe(true);
     if (!result.success) return;
@@ -43,8 +42,7 @@ describe("emailed posts", () => {
     expect(byId).toEqual(bySlug);
   });
 
-  // Expected failure: the failed email's null `from`/`source`/`updated_at` break the whole browse.
-  test.fails("browse returns both emailed posts with their email status", async () => {
+  test("browse returns both emailed posts with their email status", async () => {
     const result = await adminApi()
       .posts.browse({ filter: `slug:[${failed},${submitted}]` })
       .fetch();
@@ -53,9 +51,7 @@ describe("emailed posts", () => {
     expect(result.data.map((post) => post.email?.status).sort()).toEqual(["failed", "submitted"]);
   });
 
-  // Expected failure: core email schema lacks csd_email_count, feedback_enabled, newsletter_id, post_id,
-  // source_type and track_clicks.
-  test.fails("an emailed post's email carries no key the client's schema lacks", async () => {
+  test("an emailed post's email carries no key the client's schema lacks", async () => {
     const result = await adminApi().posts.read({ slug: submitted }).fetch();
     if (!result.success) throw new Error("read failed");
     const raw = responses.last("/posts/") as { posts: { email: unknown }[] };
@@ -64,8 +60,7 @@ describe("emailed posts", () => {
     ).toEqual([]);
   });
 
-  // Expected failure: the post newsletter schema lacks feedback_enabled, show_* flags and more.
-  test.fails("an emailed post's newsletter carries no key the client's schema lacks", async () => {
+  test("an emailed post's newsletter carries no key the client's schema lacks", async () => {
     const result = await adminApi().posts.read({ slug: submitted }).fetch();
     if (!result.success) throw new Error("read failed");
     const raw = responses.last("/posts/") as { posts: { newsletter: unknown }[] };
