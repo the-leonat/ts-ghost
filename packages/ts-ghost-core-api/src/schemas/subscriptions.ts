@@ -71,7 +71,9 @@ export const baseSubscriptionsSchema = z.object({
     .omit({ id: true, nickname: true })
     .extend({
       original_amount: z.number().meta({ description: "The amount before any discount" }),
-      discount: baseDiscountSchema.meta({ description: "(nullable) The offer's active discount" }).nullable(),
+      discount: baseDiscountSchema
+        .meta({ description: "(nullable) The offer's active discount" })
+        .nullable(),
     })
     .meta({ description: "(nullable) The next payment, after any discount" })
     .nullish(),

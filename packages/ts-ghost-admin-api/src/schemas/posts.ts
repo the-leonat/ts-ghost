@@ -11,8 +11,9 @@ export const adminPostsSchema = basePostsSchema.merge(
     uuid: z.string(),
     mobiledoc: z.string().nullish(),
     email_only: z.boolean(),
-    // `sent`: an email-only post Ghost has emailed.
-    status: z.union([z.literal("draft"), z.literal("published"), z.literal("scheduled"), z.literal("sent")]),
+    status: z
+      .union([z.literal("draft"), z.literal("published"), z.literal("scheduled"), z.literal("sent")])
+      .meta({ description: "sent: an email-only post Ghost has emailed" }),
     email_segment: z.string().nullish(),
     frontmatter: z.string().nullish(),
     tiers: z.array(adminTiersSchema).optional(),

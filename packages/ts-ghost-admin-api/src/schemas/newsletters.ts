@@ -1,30 +1,27 @@
 import { z } from "zod";
 import { baseNewsletterSchema } from "@ts-ghost/core-api";
 
-const design = z.string().nullish();
-const flag = z.boolean().optional();
-
-/** A newsletter as the Admin API sends it, with Ghost 6's design and feedback settings (optional for older Ghost). */
+/** A newsletter as the Admin API sends it, with Ghost 6's design and feedback settings. */
 export const adminNewsletterSchema = baseNewsletterSchema.extend({
-  background_color: design,
-  button_color: design,
-  button_corners: design,
-  button_style: design,
-  divider_color: design,
-  header_background_color: design,
-  image_corners: design,
-  link_color: design,
-  link_style: design,
-  post_title_color: design,
-  section_title_color: design,
-  title_font_weight: design,
-  feedback_enabled: flag,
-  show_comment_cta: flag,
-  show_excerpt: flag,
-  show_latest_posts: flag,
-  show_post_title_section: flag,
-  show_share_button: flag,
-  show_subscription_details: flag,
+  background_color: z.string(),
+  button_color: z.string().nullable(),
+  button_corners: z.string(),
+  button_style: z.string(),
+  divider_color: z.string().nullable(),
+  header_background_color: z.string(),
+  image_corners: z.string(),
+  link_color: z.string().nullable(),
+  link_style: z.string(),
+  post_title_color: z.string().nullable(),
+  section_title_color: z.string().nullable(),
+  title_font_weight: z.string(),
+  feedback_enabled: z.boolean(),
+  show_comment_cta: z.boolean(),
+  show_excerpt: z.boolean(),
+  show_latest_posts: z.boolean(),
+  show_post_title_section: z.boolean(),
+  show_share_button: z.boolean().meta({ description: "Sent by Ghost 6.x after 6.0" }).optional(),
+  show_subscription_details: z.boolean(),
 });
 
 export type Newsletter = z.infer<typeof adminNewsletterSchema>;

@@ -59,7 +59,10 @@ describe("subscriptions", () => {
   test("a next payment's discount and the redeemed offers are typed as Ghost sends them", () => {
     const parsed = baseSubscriptionsSchema.parse(subscription);
     expect(parsed.next_payment?.discount).toEqual(discount);
-    expect(parsed.offer_redemptions?.[0]).toMatchObject({ code: "stripe-seed-offer", redemption_type: "signup" });
+    expect(parsed.offer_redemptions?.[0]).toMatchObject({
+      code: "stripe-seed-offer",
+      redemption_type: "signup",
+    });
   });
 
   test("a discount with an unknown type fails, where it used to pass as unknown", () => {

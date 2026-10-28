@@ -4,7 +4,6 @@ import { baseAttributionSchema, baseMembersSchema, baseSubscriptionsSchema } fro
 import { droppedByGhost } from "./dropped-by-ghost";
 import { adminTiersSchema } from "./tiers";
 
-
 export const adminMembersCreateSchema = z.object({
   email: z.email().meta({ description: "The email address of the member" }),
   name: z.string().meta({ description: "The name of the member" }).optional(),
@@ -79,8 +78,8 @@ export const adminMembersUpdateSchema = adminMembersCreateSchema.partial().exten
   stripe_customer_id: droppedByGhost(z.string()),
 });
 
-// Mailgun timestamps, null until the event arrives.
-export const adminMemberEmailRecipientSchema = z.object({
+/** An email sent to a member; the Mailgun event timestamps are null until the event arrives. */
+export const adminMembersEmailRecipientsSchema = z.object({
   id: z.string(),
   email_id: z.string(),
   member_id: z.string(),
@@ -96,17 +95,20 @@ export const adminMemberEmailRecipientSchema = z.object({
 
 export const adminMembersSchema = baseMembersSchema.merge(
   z.object({
-    uuid: z.string().optional(),
+    uuid: z.string(),
     subscribed: z.boolean(),
     comped: z.boolean().nullish(),
     email_suppression: z
       .object({
         suppressed: z.boolean(),
-        // Ghost's suppression entry, from Mailgun bounce and complaint events.
         info: z
           .object({
             reason: z.union([z.literal("spam"), z.literal("fail")]),
             timestamp: z.string(),
+          })
+          .meta({
+            description:
+              "(nullable) The Mailgun complaint (spam) or bounce (fail) that suppressed the email",
           })
           .nullish(),
       })
@@ -129,7 +131,7 @@ export const adminMembersSchema = baseMembersSchema.merge(
       .meta({ description: "(nullable) The member's active subscription, without price, tier and offer" })
       .nullish(),
     attribution: baseAttributionSchema.nullish(),
-    unsubscribe_url: z.string().optional(),
+    unsubscribe_url: z.string(),
     can_comment: z.boolean().optional(),
     commenting: z
       .object({
@@ -140,13 +142,12 @@ export const adminMembersSchema = baseMembersSchema.merge(
       .optional(),
     enable_comment_notifications: z.boolean().optional(),
     enable_updates_and_announcements: z.boolean().nullish(),
-    // A browse sends it only when included; a read, add or edit always does.
     tiers: z
       .array(adminTiersSchema)
-      .meta({ description: "The tiers the member has access to (include: tiers)" })
+      .meta({ description: "The member's tiers; a browse sends them only with include: tiers" })
       .optional(),
     email_recipients: z
-      .array(adminMemberEmailRecipientSchema)
+      .array(adminMembersEmailRecipientsSchema)
       .meta({ description: "The emails sent to the member (include: email_recipients)" })
       .optional(),
     metafields: z

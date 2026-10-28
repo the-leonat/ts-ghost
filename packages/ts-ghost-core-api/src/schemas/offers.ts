@@ -55,6 +55,6 @@ export const baseOffersSchema = z.object({
     })
     .nullable()
     .meta({ description: "(nullable) Tier on which offer is applied, null on a retention offer" }),
-  created_at: z.string().meta({ description: "When the offer was created" }).optional(),
-  last_redeemed: z.string().meta({ description: "(nullable) When the offer was last redeemed" }).nullish(),
+  created_at: z.string().meta({ description: "When the offer was created" }),
+  last_redeemed: z.string().meta({ description: "(nullable) When the offer was last redeemed" }).nullable(),
 });

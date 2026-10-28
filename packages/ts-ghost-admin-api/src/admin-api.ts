@@ -264,13 +264,13 @@ export class TSGhostAdminAPI<Version extends `v5.${string}` | `v6.${string}` = a
         output: z.array(
           z.object({
             key: z.string(),
-            // List-valued settings (e.g. all_blocked_email_domains) arrive as arrays.
             value: z
               .string()
               .nullable()
               .or(z.number().nullable())
               .or(z.boolean().nullable())
-              .or(z.array(z.string())),
+              .or(z.array(z.string()))
+              .meta({ description: "A list for list-valued settings, e.g. all_blocked_email_domains" }),
           }),
         ),
       },

@@ -12,7 +12,10 @@ export const baseEmailSchema = z.object({
   opened_count: z.number(),
   failed_count: z.number(),
   subject: z.string(),
-  from: z.string().meta({ description: "(nullable) Null when Ghost stored no sender, e.g. a failed email" }).nullable(),
+  from: z
+    .string()
+    .meta({ description: "(nullable) Null when Ghost stored no sender, e.g. a failed email" })
+    .nullable(),
   reply_to: z.string().nullable(),
   source: z.string().nullable(), // lexical format
   html: z.string().nullable(),

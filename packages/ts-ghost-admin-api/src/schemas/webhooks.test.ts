@@ -22,7 +22,8 @@ describe("webhook schemas accept what Ghost accepts", () => {
   });
 
   test("add rejects what Ghost rejects: an event with capitals or over 50 characters, a target over 2000", () => {
-    const add = (input: { event: string; target_url: string }) => adminWebhookCreateSchema.safeParse(input).success;
+    const add = (input: { event: string; target_url: string }) =>
+      adminWebhookCreateSchema.safeParse(input).success;
     expect(add({ event: "Post.Added", target_url: "/hook" })).toBe(false);
     expect(add({ event: "a".repeat(51), target_url: "/hook" })).toBe(false);
     expect(add({ event: "post.added", target_url: "x".repeat(2001) })).toBe(false);

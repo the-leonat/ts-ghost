@@ -8,37 +8,44 @@ export const adminAuthorsSchema = baseAuthorsSchema.merge(
     comment_notifications: z.boolean(),
     created_at: z.string().nullish(),
     updated_at: z.string().nullish(),
-    // The stored JSON string of the onboarding steps the user has seen.
-    tour: z.string().nullish(),
+    tour: z
+      .string()
+      .meta({ description: "(nullable) The JSON list of onboarding steps the user has seen" })
+      .nullish(),
     email: z.string().nullish(),
     free_member_signup_notification: z.boolean(),
     last_seen: z.string().nullish(),
     mention_notifications: z.boolean().optional(),
     milestone_notifications: z.boolean().optional(),
-    // Added in Ghost 6, so optional for older Ghost versions; likewise the socials below.
-    donation_notifications: z.boolean().optional(),
-    gift_subscription_notifications: z.boolean().optional(),
-    recommendation_notifications: z.boolean().optional(),
+    donation_notifications: z.boolean(),
+    gift_subscription_notifications: z
+      .boolean()
+      .meta({ description: "Sent by Ghost 6.x after 6.0" })
+      .optional(),
+    recommendation_notifications: z.boolean(),
     paid_subscription_canceled_notification: z.boolean(),
     paid_subscription_started_notification: z.boolean(),
-    bluesky: z.string().nullish(),
-    instagram: z.string().nullish(),
-    linkedin: z.string().nullish(),
-    mastodon: z.string().nullish(),
-    threads: z.string().nullish(),
-    tiktok: z.string().nullish(),
-    youtube: z.string().nullish(),
-    // Ghost's user states (core/server/models/user.js); `invited` is kept for existing consumers.
-    status: z.union([
-      z.literal("active"),
-      z.literal("invited"),
-      z.literal("locked"),
-      z.literal("inactive"),
-      z.literal("warn-1"),
-      z.literal("warn-2"),
-      z.literal("warn-3"),
-      z.literal("warn-4"),
-    ]),
+    bluesky: z.string().nullable(),
+    instagram: z.string().nullable(),
+    linkedin: z.string().nullable(),
+    mastodon: z.string().nullable(),
+    threads: z.string().nullable(),
+    tiktok: z.string().nullable(),
+    youtube: z.string().nullable(),
+    status: z
+      .union([
+        z.literal("active"),
+        z.literal("invited"),
+        z.literal("locked"),
+        z.literal("inactive"),
+        z.literal("warn-1"),
+        z.literal("warn-2"),
+        z.literal("warn-3"),
+        z.literal("warn-4"),
+      ])
+      .meta({
+        description: "Ghost's user states; inactive is a suspended user, invited is kept for older Ghost",
+      }),
     roles: z
       .array(
         z.object({

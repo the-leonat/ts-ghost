@@ -78,5 +78,7 @@ function deleteResponseData(response: Response, body: string) {
   } catch (e) {
     return { errors: [{ type: "FetchError", message: (e as Error).toString() }] };
   }
-  return { errors: [{ type: "FetchError", message: `Unexpected ${response.status} response without errors` }] };
+  return {
+    errors: [{ type: "FetchError", message: `Unexpected ${response.status} response without errors` }],
+  };
 }

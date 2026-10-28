@@ -155,7 +155,9 @@ describe("a response that doesn't match the schema", () => {
       success: false,
       status: 404,
       body,
-      errors: [{ type: "ResponseSchemaError", message: expect.stringContaining('errors[0]: {"message":"gone"}') }],
+      errors: [
+        { type: "ResponseSchemaError", message: expect.stringContaining('errors[0]: {"message":"gone"}') },
+      ],
     });
   });
 

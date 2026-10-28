@@ -29,15 +29,8 @@ const discountAmount = z.number().meta({
 });
 const discountDuration = z.union([z.literal("once"), z.literal("forever"), z.literal("repeating")]);
 
-/**
- * A trial offer has duration "trial" and its amount is the trial length in days.
- * There are other rules here that may be problematic unions
- * cadence: "year" | "month"
- * duration: "once" | "forever" | "repeating" => "repeating" when cadence is "month"
- * duration_in_months: number is only available when `duration` is "repeating"
- *
- * We could type all of that out, but it may complexify the readability and not be helpful ?
- */
+/** A fixed, percent or trial offer (a trial's `amount` is in days). Not enforced here: "repeating" needs
+ * cadence "month", and `duration_in_months` only applies to it. */
 export const adminOffersCreateSchema = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("fixed"),
