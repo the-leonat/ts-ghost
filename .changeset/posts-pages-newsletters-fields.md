@@ -1,17 +1,16 @@
 ---
-"@ts-ghost/core-api": minor
-"@ts-ghost/admin-api": minor
-"@ts-ghost/content-api": patch
+"@ts-ghost/core-api": major
+"@ts-ghost/admin-api": major
+"@ts-ghost/content-api": minor
 ---
 
-Posts, pages, users and newsletters gain the fields Ghost 6 sends, and inputs Ghost ignores are deprecated:
+Posts, pages and newsletters as Ghost 6 sends them, and one deprecation for the inputs Ghost drops.
 
-- `formats({ html, plaintext, ... })` no longer fails on a post or page with no content, which Ghost sends without that format. The missing format parses as empty: `""` in the Admin API, `null` in the Content API.
-- Users and authors: `bluesky`, `instagram`, `linkedin`, `mastodon`, `threads`, `tiktok`, `youtube`, `donation_notifications`, `gift_subscription_notifications` and `recommendation_notifications`.
-- A post's email: `post_id`, `newsletter_id`, `source_type`, `track_clicks`, `feedback_enabled` and `csd_email_count`.
-- Newsletters and a post's newsletter (new `adminNewsletterSchema`): their design settings (`background_color`, `button_*`, `link_*`, `title_font_weight`...) and `feedback_enabled` and `show_*` flags.
-- Pages: `show_title_and_feature_image`.
+- `formats()` no longer fails on a post or page Ghost sends without a requested format (it omits a format the post has no content for). The missing format parses as its empty value: admin-api posts and pages give `html: ""`, `plaintext: ""`, `lexical` an empty Lexical document and `mobiledoc: null`; content-api posts and pages give `plaintext: null` (`html` already parsed as `""`). Before, such a post failed the whole result.
+- admin-api posts and pages: an `.include()` now always asks for `authors` too. An explicit include replaces Ghost's default `authors,tags`, so `.include({ tags: true })` lost the required `authors` and `primary_author` and failed (PhilDL/ts-ghost#320).
+- Newsletters and a post's newsletter (new `adminNewsletterSchema`) have their design settings (`background_color`, `button_*`, `link_*`, `title_font_weight`...), `feedback_enabled` and the `show_*` flags; `show_share_button` is optional (Ghost 6.0 lacks it), the rest are always sent by Ghost 6.
+- Pages have `show_title_and_feature_image`.
 - `newsletters.add` no longer requires `sender_name`.
-- Deprecated: `newsletters.read({ slug })` (Ghost has no such route, so it always fails; use `read({ id })`), the `mobiledoc` input of posts and pages (Ghost 6 stores lexical only), their `locale` input (Ghost has none), and the `newsletter` key in a post's body, which Ghost ignores and the client no longer sends; pass `posts.edit`'s `newsletter` option instead.
-
-The new fields are optional, so older Ghost versions still parse.
+- Deprecated and no longer sent, though still accepted so existing calls compile: the `mobiledoc` input of posts and pages (Ghost 6 stores lexical only), their `locale` input (Ghost has none), and the `newsletter` key in a post's body (Ghost ignores it; pass `posts.edit`'s `newsletter` option).
+- Breaking: `posts.add`/`posts.edit` no longer reject an `email_only` scheduled post without a body `newsletter`. Ghost decides: `posts.add` can't schedule an email-only post (Ghost answers 422), and `posts.edit(id, data, { newsletter })` schedules or sends it.
+- Deprecated: `newsletters.read({ slug })` (Ghost has no such route, so it always fails; use `read({ id })`).
