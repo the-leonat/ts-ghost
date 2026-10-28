@@ -70,14 +70,12 @@ describe("webhooks", () => {
     expect(unknownKeys(raw.webhooks[0], edited.data, { at: "webhook", ignore: IGNORED })).toEqual([]);
   });
 
-  // Expected failure: the webhook update schema drops secret, so a secret-only edit throws "No data to edit".
-  test.fails("PUT /webhooks/:id/ rotates the secret on its own", async () => {
+  test("PUT /webhooks/:id/ rotates the secret on its own", async () => {
     const api = adminApi();
     const added = await api.webhooks.add(newWebhook());
     if (!added.success) throw new Error(JSON.stringify(added.errors));
 
     const secret = `rotated-${randomBytes(8).toString("hex")}`;
-    // @ts-expect-error the update schema has no secret
     const edited = await api.webhooks.edit(added.data.id, { secret });
     if (!edited.success) throw new Error(JSON.stringify(edited.errors));
     expect(edited.data.secret).toBe(secret);
