@@ -1,11 +1,7 @@
 import { describe, expectTypeOf, test } from "vitest";
 import { z } from "zod";
 
-import {
-  defineGhostObject,
-  type SchemaTarget,
-  type SchemaTargetOf,
-} from "./targets";
+import { defineGhostObject, type SchemaTarget, type SchemaTargetOf } from "./targets";
 
 const fields = {
   "thing.from_6_0": { since: "6.0" },

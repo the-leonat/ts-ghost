@@ -82,18 +82,15 @@ describe("tiers", () => {
     },
   );
 
-  liveTest(
-    "the deprecated price and benefit includes are not sent",
-    async ({ api, responses }) => {
-      const include = { monthly_price: true, yearly_price: true, benefits: true } as const;
-      const browsed = await api.tiers.browse({ limit: "all" }).include(include).fetch();
-      const read = await api.tiers.read({ id: seed.full.id }).include(include).fetch();
+  liveTest("the deprecated price and benefit includes are not sent", async ({ api, responses }) => {
+    const include = { monthly_price: true, yearly_price: true, benefits: true } as const;
+    const browsed = await api.tiers.browse({ limit: "all" }).include(include).fetch();
+    const read = await api.tiers.read({ id: seed.full.id }).include(include).fetch();
 
-      assertOk(browsed);
-      assertOk(read);
-      expect(responses.all().map((r) => new URL(r.url).searchParams.has("include"))).toEqual([false, false]);
-    },
-  );
+    assertOk(browsed);
+    assertOk(read);
+    expect(responses.all().map((r) => new URL(r.url).searchParams.has("include"))).toEqual([false, false]);
+  });
 
   // The deprecated slug read stays callable; Ghost has no /tiers/slug/:slug/ route.
   liveTest("the deprecated read by slug gets Ghost's 404", async ({ api }) => {

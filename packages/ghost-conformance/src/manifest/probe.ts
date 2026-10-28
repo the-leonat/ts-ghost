@@ -1,8 +1,8 @@
 import { createHmac } from "node:crypto";
 
 import { adminApiUrl } from "../ghost/admin-api.ts";
-import { versionAtLeast } from "../ghost/pin.ts";
 import { readStaffToken, signIn, type GhostCredentials } from "../ghost/bootstrap.ts";
+import { versionAtLeast } from "../ghost/pin.ts";
 import {
   classifyRoute,
   CREDENTIALS,

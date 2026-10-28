@@ -10,12 +10,7 @@ import { MANIFEST_FILE, parseManifest } from "../manifest/manifest.ts";
 import { clientCalls, measureCoverage } from "../route-coverage/coverage.ts";
 import type { RecordedResponse } from "../unknown-keys.ts";
 import { errorAnnotation, stepOutputs } from "./actions.ts";
-import {
-  fieldDrift,
-  removalChangeset,
-  updateFieldTable,
-  type FieldDrift,
-} from "./fields.ts";
+import { fieldDrift, removalChangeset, updateFieldTable, type FieldDrift } from "./fields.ts";
 import { closeDriftPr, openDriftPr } from "./open-pr.ts";
 import { planDrift, resolveNewestGhost, type GhostRelease } from "./plan.ts";
 import {

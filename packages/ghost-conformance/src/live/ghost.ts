@@ -45,5 +45,8 @@ export function requireRoute(context: Pick<TestContext, "skip">, route: string) 
 export function ghostSends(field: keyof typeof GHOST_FIELDS): boolean {
   const { version } = inject("ghost");
   const range: { since?: string; until?: string } = GHOST_FIELDS[field];
-  return (!range.since || versionAtLeast(version, range.since)) && !(range.until && versionAtLeast(version, range.until));
+  return (
+    (!range.since || versionAtLeast(version, range.since)) &&
+    !(range.until && versionAtLeast(version, range.until))
+  );
 }
