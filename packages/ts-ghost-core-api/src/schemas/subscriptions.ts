@@ -3,13 +3,33 @@ import { z } from "zod";
 import { baseOffersSchema } from "./offers";
 import { baseTiersSchema } from "./tiers";
 
+/** Where a member or subscription came from: the page and referrer Ghost recorded. */
+export const baseAttributionSchema = z.object({
+  id: z.string().nullable(),
+  type: z.string().nullable(),
+  url: z.string().nullable(),
+  title: z.string().nullable(),
+  referrer_source: z.string().nullable(),
+  referrer_medium: z.string().nullable(),
+  referrer_url: z.string().nullable(),
+});
+
+const basePlanSchema = z.object({
+  id: z.string(),
+  nickname: z.string().nullable(),
+  amount: z.number(),
+  interval: z.string().nullable(),
+  currency: z.string(),
+});
+
+// Many values are Stripe's, typed as Ghost stores them (its columns).
 export const baseSubscriptionsSchema = z.object({
-  id: z.string().meta({ description: "Stripe subscription ID sub_XXXX" }),
+  id: z.string().meta({ description: "Stripe subscription ID sub_XXXX, empty for a comped member" }),
   customer: z
     .object({
       id: z.string(),
       name: z.string().nullable(),
-      email: z.string(),
+      email: z.string().nullable(),
     })
     .meta({ description: "Stripe customer attached to the subscription" }),
   status: z.string().meta({ description: "Subscription status" }),
@@ -19,16 +39,35 @@ export const baseSubscriptionsSchema = z.object({
     description: "If the subscription should be canceled or renewed at period end",
   }),
   cancellation_reason: z.string().meta({ description: "Reason for subscription cancellation" }).nullable(),
-  current_period_end: z.string().meta({ description: "Subscription end date" }),
+  current_period_end: z
+    .string()
+    .meta({ description: "(nullable) Subscription end date, null when comped" })
+    .nullable(),
   price: z.object({
     id: z.string().meta({ description: "Stripe price ID" }),
     price_id: z.string().meta({ description: "Ghost price ID" }),
-    nickname: z.string().meta({ description: "Price nickname" }),
+    nickname: z.string().meta({ description: "(nullable) Price nickname" }).nullable(),
     amount: z.number().meta({ description: "Price amount" }),
-    interval: z.string().meta({ description: "Price interval" }),
+    interval: z.string().meta({ description: "(nullable) Price interval" }).nullable(),
     type: z.string().meta({ description: "Price type" }),
     currency: z.string().meta({ description: "Price currency" }),
+    tier: z
+      .object({ id: z.string(), tier_id: z.string().nullish(), name: z.string().nullish() })
+      .meta({ description: "The Stripe product and Ghost tier of the price" })
+      .optional(),
   }),
+  plan: basePlanSchema.meta({ description: "The Stripe price, under Stripe's legacy name" }).optional(),
+  next_payment: basePlanSchema
+    .omit({ id: true, nickname: true })
+    .extend({ original_amount: z.number(), discount: z.unknown().nullable() })
+    .meta({ description: "(nullable) The next payment, after any discount" })
+    .nullish(),
   tier: baseTiersSchema.nullish(),
   offer: baseOffersSchema.nullish(),
+  offer_redemptions: z.array(z.unknown()).optional(),
+  attribution: baseAttributionSchema.nullish(),
+  trial_start_at: z.string().nullish(),
+  trial_end_at: z.string().nullish(),
+  discount_start: z.string().nullish(),
+  discount_end: z.string().nullish(),
 });

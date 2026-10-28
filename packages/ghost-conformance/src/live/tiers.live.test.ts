@@ -84,8 +84,7 @@ describe("tiers", () => {
     expect(responses.all().map((r) => new URL(r.url).searchParams.has("include"))).toEqual([false]);
   });
 
-  // Expected failure: the client still sends the price and benefit includes, which Ghost ignores.
-  test.fails("the deprecated price and benefit includes are not sent", async () => {
+  test("the deprecated price and benefit includes are not sent", async () => {
     const include = { monthly_price: true, yearly_price: true, benefits: true } as const;
     const browsed = await adminApi().tiers.browse({ limit: "all" }).include(include).fetch();
     const read = await adminApi().tiers.read({ id: seed.full.id }).include(include).fetch();
@@ -94,11 +93,12 @@ describe("tiers", () => {
     expect(responses.all().map((r) => new URL(r.url).searchParams.has("include"))).toEqual([false, false]);
   });
 
-  // Expected failure: the client offers slug reads, but Ghost has no /tiers/slug/:slug/ route.
-  test.fails("GET /tiers/slug/:slug/ returns the tier", async () => {
+  // The deprecated slug read stays callable; Ghost has no /tiers/slug/:slug/ route.
+  test("the deprecated read by slug gets Ghost's 404", async () => {
     const result = await adminApi().tiers.read({ slug: "default-product" }).fetch();
 
-    assert(result.success);
+    assert(!result.success);
+    expect(result.status).toBe(404);
   });
 
   test("tiers carry no key the client's schema lacks", async () => {

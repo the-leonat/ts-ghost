@@ -9,10 +9,6 @@ const baseOffersCreateSchema = z.object({
   display_title: z.string().optional(),
   display_description: z.string().optional(),
   cadence: z.union([z.literal("year"), z.literal("month")]),
-  amount: z.number().meta({
-    description: "Amount of the percent or fixed amount in the smallest unit of the currency",
-  }),
-  duration: z.union([z.literal("once"), z.literal("forever"), z.literal("repeating")]),
   duration_in_months: z
     .number()
     .meta({
@@ -28,7 +24,13 @@ const baseOffersCreateSchema = z.object({
   }),
 });
 
+const discountAmount = z.number().meta({
+  description: "Amount of the percent or fixed amount in the smallest unit of the currency",
+});
+const discountDuration = z.union([z.literal("once"), z.literal("forever"), z.literal("repeating")]);
+
 /**
+ * A trial offer has duration "trial" and its amount is the trial length in days.
  * There are other rules here that may be problematic unions
  * cadence: "year" | "month"
  * duration: "once" | "forever" | "repeating" => "repeating" when cadence is "month"
@@ -40,11 +42,22 @@ export const adminOffersCreateSchema = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("fixed"),
     currency: z.string(),
+    amount: discountAmount,
+    duration: discountDuration,
     ...baseOffersCreateSchema.shape,
   }),
   z.object({
     type: z.literal("percent"),
     currency: z.string().nullish(),
+    amount: discountAmount,
+    duration: discountDuration,
+    ...baseOffersCreateSchema.shape,
+  }),
+  z.object({
+    type: z.literal("trial"),
+    currency: z.string().nullish(),
+    amount: z.number().meta({ description: "Length of the free trial, in days" }),
+    duration: z.literal("trial"),
     ...baseOffersCreateSchema.shape,
   }),
 ]);

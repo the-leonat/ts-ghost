@@ -31,7 +31,10 @@ export const baseMembersSchema = z.object({
   subscriptions: z
     .array(baseSubscriptionsSchema)
     .meta({ description: "The subscriptions associated with the member" }),
-  avatar_image: z.string().meta({ description: "The URL of the member's avatar image" }),
+  avatar_image: z
+    .string()
+    .meta({ description: "(nullable) The URL of the member's avatar image, null when Gravatar is off" })
+    .nullable(),
   email_count: z.number().meta({ description: "The number of emails sent to the member" }),
   email_opened_count: z.number().meta({ description: "The number of emails opened by the member" }),
   email_open_rate: z.number().meta({ description: "(nullable) The open rate of the member" }).nullish(),

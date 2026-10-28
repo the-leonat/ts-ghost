@@ -47,8 +47,7 @@ describe("paid members", () => {
     ]);
   });
 
-  // Expected failure: customer.email and price.nickname are typed as strings; Ghost sends null.
-  test.fails("a subscription with a null customer email and price nickname parses", async () => {
+  test("a subscription with a null customer email and price nickname parses", async () => {
     const result = await adminApi()
       .members.read({ id: await memberId(STRIPE_SEED.members.nulls) })
       .fetch();
@@ -67,8 +66,7 @@ describe("paid members", () => {
     ]);
   });
 
-  // Expected failure: the paid member with a null customer email fails the members schema.
-  test.fails("browsing paid members parses", async () => {
+  test("browsing paid members parses", async () => {
     const result = await adminApi().members.browse({ filter: "status:paid" }).fetch();
 
     assert(result.success);
@@ -77,22 +75,17 @@ describe("paid members", () => {
     );
   });
 
-  // Expected failure: the client offers no member includes and its schema strips `tiers`.
-  test.fails("a paid member's tiers come with the include", async () => {
+  test("a paid member's tiers come with the include", async () => {
     const result = await adminApi()
       .members.read({ id: await memberId(STRIPE_SEED.members.paid) })
-      // @ts-expect-error the client's member include schema is empty
       .include({ tiers: true })
       .fetch();
 
     assert(result.success);
-    // @ts-expect-error the client's member schema lacks `tiers`
     expect(result.data.tiers).toEqual([expect.objectContaining({ slug: "default-product", type: "paid" })]);
   });
 
-  // Expected failure: subscriptions lack plan, attribution, trial/discount dates, offer_redemptions, next_payment,
-  // price.tier, tier price ids/expiry_at and offer redemption_type/created_at/last_redeemed (Ghost 6.72).
-  test.fails("a subscription carries no key the client's schema lacks", async () => {
+  test("a subscription carries no key the client's schema lacks", async () => {
     const result = await adminApi()
       .members.read({ id: await memberId(STRIPE_SEED.members.paid) })
       .fetch();

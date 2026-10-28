@@ -43,35 +43,6 @@ const EMAIL = [
   "source_type",
   "track_clicks",
 ];
-const MEMBER = [
-  "attribution",
-  "can_comment",
-  "commenting",
-  "current_subscription",
-  "enable_comment_notifications",
-  "enable_updates_and_announcements",
-  "tiers",
-  "unsubscribe_url",
-  "uuid",
-];
-const SUBSCRIPTION = [
-  "attribution",
-  "discount_end",
-  "discount_start",
-  "next_payment",
-  "offer.created_at",
-  "offer.last_redeemed",
-  "offer.redemption_type",
-  "offer_redemptions",
-  "plan",
-  "price.tier",
-  "tier.expiry_at",
-  "tier.monthly_price_id",
-  "tier.yearly_price_id",
-  "trial_end_at",
-  "trial_start_at",
-];
-const OFFER = ["created_at", "last_redeemed", "redemption_type"];
 const SITE = [
   "accent_color",
   "allow_external_signup",
@@ -92,9 +63,6 @@ export const PENDING_KEYS: string[] = [
   ...authored("pages"),
   "pages[].show_title_and_feature_image",
   ...NEWSLETTER.map((k) => `newsletters[].${k}`),
-  ...MEMBER.map((k) => `members[].${k}`),
-  ...SUBSCRIPTION.map((k) => `members[].subscriptions[].${k}`),
-  ...OFFER.map((k) => `offers[].${k}`),
   ...SITE.map((k) => `site.${k}`),
   ...USER.map((k) => `users[].${k}`),
 ];

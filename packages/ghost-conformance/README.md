@@ -65,5 +65,6 @@ Every place where the client and Ghost currently disagree is an expected failure
 - **Pending keys** ([`src/live/pending-keys.ts`](./src/live/pending-keys.ts)): unknown keys Ghost sends that are waiting for a schema fix. Each group belongs to a resource's "carries no key the client's schema lacks" `test.fails`. Remove the keys when that test turns green.
 - **`IGNORED`** (top of each live test file): keys the client deliberately doesn't model. These are permanent, unlike pending keys.
 - **`EXPECTED_FAILURES`** in [`client-manifest.test.ts`](./src/client-routes/client-manifest.test.ts): client calls to routes the manifest doesn't have.
+- **`DEPRECATED`** in the same file: deprecated client calls kept callable although Ghost lacks their route; the test asserts the route is missing. These are permanent until the call is removed.
 
 The Vitest reporter counts expected failures separately (`N expected fail`), and the drift PR body does too.
