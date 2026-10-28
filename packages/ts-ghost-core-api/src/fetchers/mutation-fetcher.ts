@@ -1,9 +1,8 @@
-import { z } from "zod";
 import * as z4 from "zod/v4/core";
 
 import { DebugOption } from "../helpers/debug";
 import { HTTPClient } from "../helpers/http-client";
-import { parseFetched } from "../helpers/response-schema";
+import { parseFetched, resultSchema } from "../helpers/response-schema";
 import type { APIResource } from "../schemas/shared";
 
 type ExplicitObjectKeys<T> = {
@@ -63,24 +62,7 @@ export class MutationFetcher<
   }
 
   public async submit(options?: RequestInit & DebugOption) {
-    const schema = z.discriminatedUnion("success", [
-      z.object({
-        success: z.literal(true),
-        data: this.config.output,
-      }),
-      z.object({
-        success: z.literal(false),
-        errors: z.array(
-          z.object({
-            type: z.string(),
-            message: z.string(),
-            context: z.string().nullish(),
-          }),
-        ),
-        status: z.number(),
-        body: z.string().optional(),
-      }),
-    ]);
+    const schema = resultSchema({ data: this.config.output });
     // Ghost API is expecting a JSON object with a key that matches the resource name
     // e.g. { posts: [ { title: "Hello World" } ] }
     // https://ghost.org/docs/api/v3/content/#create-a-post

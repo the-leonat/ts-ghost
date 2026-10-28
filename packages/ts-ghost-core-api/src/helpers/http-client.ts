@@ -173,6 +173,7 @@ export class HTTPClient<const Options extends HTTPClientOptions = any> implement
     };
   }
 
+  /** @deprecated Unused by the fetchers, and its error shape differs from theirs; use `fetchWithStatus`. */
   public async fetch({
     resource,
     searchParams,
@@ -227,6 +228,8 @@ export class HTTPClient<const Options extends HTTPClientOptions = any> implement
       this.config.onResponse?.(response);
       const status = response.status;
       const body = await response.text();
+      // A delete answers 204 with no body.
+      if (body === "" && response.ok) return { data: undefined, status, body };
       try {
         const data = JSON.parse(body);
         return { data, status, body };
@@ -259,6 +262,7 @@ export class HTTPClient<const Options extends HTTPClientOptions = any> implement
     }
   }
 
+  /** @deprecated Unused by the fetchers; use `fetchWithStatus`. */
   public async fetchRawResponse({
     resource,
     searchParams,

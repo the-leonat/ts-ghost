@@ -56,12 +56,13 @@ describe("keys Ghost sends that the schema doesn't declare", () => {
     const result = await browse(client({ strict: true })).fetch();
     expect(result).toMatchObject({ success: false, status: 200 });
     assert(!result.success);
-    expect(result.errors.map((e) => e.type)).toEqual(Array(3).fill("ResponseSchemaError"));
-    expect(result.errors.map((e) => e.message.match(/at (\S+):/)?.[1])).toEqual([
-      "posts[0].extra",
-      "posts[0].author.bio",
-      "posts[0].tags[0].color",
-    ]);
+    expect(result.errors.map(({ type, kind, path }) => ({ type, kind, path }))).toEqual(
+      ["posts[0].extra", "posts[0].author.bio", "posts[0].tags[0].color"].map((path) => ({
+        type: "ResponseSchemaError",
+        kind: "undeclared",
+        path,
+      })),
+    );
   });
 
   test("strict mode passes through the paths it ignores, with [] for any index", async () => {
@@ -125,7 +126,14 @@ describe("keys Ghost sends that the schema doesn't declare", () => {
       success: false,
       status: 200,
       body: expect.any(String),
-      errors: [{ type: "ResponseSchemaError", message: expect.stringContaining("posts[0].extra") }],
+      errors: [
+        {
+          type: "ResponseSchemaError",
+          kind: "undeclared",
+          path: "posts[0].extra",
+          message: expect.stringContaining("posts[0].extra"),
+        },
+      ],
     });
   });
 });

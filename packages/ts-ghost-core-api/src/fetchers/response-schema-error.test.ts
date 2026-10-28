@@ -34,14 +34,19 @@ describe("a response that doesn't match the schema", () => {
   const browse = () =>
     new BrowseFetcher("posts", { schema, output: schema, include: z.object({}) }, {}, httpClient);
 
-  test("browse returns a ResponseSchemaError naming the failing path", async () => {
+  test("browse returns a ResponseSchemaError with the failing path in Ghost's terms", async () => {
     fetchMocker.doMockOnce(JSON.stringify({ posts: [{ id: "1", title: null }], meta }));
     const result = await browse().fetch();
     expect(result).toMatchObject({ success: false, status: 200 });
     assert(!result.success);
-    expect(result.errors).toHaveLength(1);
-    expect(result.errors[0]!.type).toBe("ResponseSchemaError");
-    expect(result.errors[0]!.message).toContain("posts[0].title");
+    expect(result.errors).toEqual([
+      {
+        type: "ResponseSchemaError",
+        kind: "mismatch",
+        path: "posts[0].title",
+        message: expect.stringContaining("posts[0].title"),
+      },
+    ]);
   });
 
   test("paginate returns the same error as its current page", async () => {
@@ -60,7 +65,12 @@ describe("a response that doesn't match the schema", () => {
     expect(result).toMatchObject({ success: false, status: 500 });
     assert(!result.success);
     expect(result.errors).toEqual([
-      { type: "ResponseSchemaError", message: expect.stringContaining('errors[0]: {"code":"WEIRD"}') },
+      {
+        type: "ResponseSchemaError",
+        kind: "mismatch",
+        path: "errors[0]",
+        message: expect.stringContaining('errors[0]: {"code":"WEIRD"}'),
+      },
     ]);
     expect(result.body).toBe(JSON.stringify({ errors: [{ code: "WEIRD" }] }));
   });
@@ -157,7 +167,12 @@ describe("a response that doesn't match the schema", () => {
       status: 404,
       body,
       errors: [
-        { type: "ResponseSchemaError", message: expect.stringContaining('errors[0]: {"message":"gone"}') },
+        {
+          type: "ResponseSchemaError",
+          kind: "mismatch",
+          path: "errors[0]",
+          message: expect.stringContaining('errors[0]: {"message":"gone"}'),
+        },
       ],
     });
   });

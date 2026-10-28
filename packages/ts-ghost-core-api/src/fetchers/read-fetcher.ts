@@ -4,7 +4,7 @@ import { DebugOption } from "../helpers/debug";
 import type { HTTPClient } from "../helpers/http-client";
 import { requiredIncludes, sendableIncludes } from "../helpers/includes";
 import { sanitizeFormatMask, sanitizeMask } from "../helpers/masks";
-import { dropUnselected, parseFetched } from "../helpers/response-schema";
+import { dropUnselected, parseFetched, resultSchema } from "../helpers/response-schema";
 import { type APIResource, type GhostIdentityInput } from "../schemas/shared";
 import type { Exactly, Mask, NoUnrecognizedKeys } from "../utils";
 import { contentFormats, withEmptyFormats, type ContentFormats } from "./formats";
@@ -175,23 +175,7 @@ export class ReadFetcher<
   }
 
   public async fetch(options?: RequestInit & DebugOption) {
-    const res = z.discriminatedUnion("success", [
-      z.object({
-        success: z.literal(true),
-        data: this.config.output,
-      }),
-      z.object({
-        success: z.literal(false),
-        errors: z.array(
-          z.object({
-            type: z.string(),
-            message: z.string(),
-          }),
-        ),
-        status: z.number(),
-        body: z.string().optional(),
-      }),
-    ]);
+    const res = resultSchema({ data: this.config.output });
     const fetched = await this.httpClient.fetchWithStatus({
       resource: this.resource,
       pathnameIdentity: this._pathnameIdentity,

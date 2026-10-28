@@ -143,6 +143,20 @@ describe("transport", () => {
       expect(result.errors).toEqual([{ type: "NotFoundError", message: "Resource not found" }]);
     });
 
+    test.each([
+      ["browse", (f: HTTPClientFactory) => tags(f).browse().fetch()],
+      ["delete", (f: HTTPClientFactory) => tags(f).delete("1")],
+    ])("a %s answered with a non-2xx JSON body without errors fails with a FetchError", async (_, call) => {
+      fetchMocker.mockResponseOnce(JSON.stringify({ ok: false }), { status: 500 });
+
+      expect(await call(new HTTPClientFactory(credentials))).toEqual({
+        success: false,
+        status: 500,
+        body: JSON.stringify({ ok: false }),
+        errors: [{ type: "FetchError", message: "Unexpected 500 response without errors" }],
+      });
+    });
+
     test("a read keeps them too", async () => {
       fetchMocker.mockResponseOnce(proxyPage, { status: 503 });
       const read = await tags(new HTTPClientFactory(credentials)).read({ id: "1" }).fetch();

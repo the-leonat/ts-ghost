@@ -48,9 +48,6 @@ export function recordResponses(): ResponseRecorder {
   };
 }
 
-const PREFIX = "Response does not match the schema at ";
-const UNDECLARED = ": key not declared by the schema";
-
 /**
  * Paths, as `posts[].key`, of the keys a strict client's results failed on because its schema lacks them.
  * A successful result, or one failing for another reason, adds nothing.
@@ -58,12 +55,9 @@ const UNDECLARED = ": key not declared by the schema";
 export function undeclaredKeys(...results: unknown[]): string[] {
   const found = new Set<string>();
   for (const result of results) {
-    const errors = (result as { errors?: { type: string; message: string }[] } | undefined)?.errors ?? [];
-    for (const { type, message } of errors) {
-      if (type !== "ResponseSchemaError" || !message.startsWith(PREFIX) || !message.endsWith(UNDECLARED))
-        continue;
-      found.add(message.slice(PREFIX.length, -UNDECLARED.length).replace(/\[\d+\]/g, "[]"));
-    }
+    const errors = (result as { errors?: { kind?: string; path?: string }[] } | undefined)?.errors ?? [];
+    for (const { kind, path } of errors)
+      if (kind === "undeclared" && path) found.add(path.replace(/\[\d+\]/g, "[]"));
   }
   return [...found].sort();
 }
