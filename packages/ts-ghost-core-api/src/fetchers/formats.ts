@@ -20,5 +20,6 @@ export function withEmptyFormats<Required extends z.ZodObject>(
       return [key, inner.safeParse(null).success ? inner.default(null) : inner.default("")];
     }),
   );
-  return required.extend(shape) as unknown as Required;
+  // extend() widens the shape type; the parsed output type is unchanged.
+  return required.extend(shape) as Required;
 }
