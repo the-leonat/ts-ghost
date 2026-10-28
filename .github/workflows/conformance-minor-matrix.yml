@@ -1,0 +1,89 @@
+# Fork-only experiment: run the conformance checks against several Ghost 6 minors.
+name: 🧪 Conformance minor matrix
+on:
+  push:
+    branches: [ci-minor-matrix]
+  workflow_dispatch: {}
+permissions:
+  contents: read
+
+jobs:
+  ghost:
+    name: Ghost ${{ matrix.ghost }}
+    runs-on: ubuntu-26.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        ghost: ["6.0.0", "6.10.0", "6.20.0", "6.30.0", "6.50.0", "6.60.0", "6.70.0", "6.72.0", "6.73.0"]
+    defaults:
+      run:
+        working-directory: packages/ghost-conformance
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v6.1.0
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22.x
+          check-latest: true
+          cache: "pnpm"
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+        working-directory: .
+
+      - name: Pin Ghost ${{ matrix.ghost }}
+        run: echo "${{ matrix.ghost }}" > ghost-version
+
+      - name: Regenerate the manifest
+        id: manifest
+        continue-on-error: true
+        run: pnpm manifest
+
+      - name: Manifest diff against the committed 6.72.0 manifest
+        if: always()
+        run: |
+          {
+            echo "### Ghost ${{ matrix.ghost }}: manifest diff vs 6.72.0"
+            echo '```diff'
+            git diff --no-color -U0 -- manifest.json | grep -E '^[+-][[:space:]]*\{' | head -200 || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          git diff --no-color -U0 -- manifest.json | grep -cE '^[+-][[:space:]]*\{' || true
+
+      - name: Client to manifest check
+        id: client
+        if: steps.manifest.outcome == 'success'
+        continue-on-error: true
+        run: pnpm vitest run src/client-routes
+
+      - name: Live suite
+        id: live
+        continue-on-error: true
+        run: pnpm test:live --reporter=default --reporter=json --outputFile=live-report.json
+
+      - name: Summarise
+        if: always()
+        run: |
+          node -e '
+            const fs = require("fs");
+            let line = "no report";
+            try {
+              const r = JSON.parse(fs.readFileSync("live-report.json", "utf8"));
+              const all = r.testResults.flatMap((f) => f.assertionResults);
+              const failed = all.filter((t) => t.status === "failed");
+              line = `${r.numPassedTests} passed, ${r.numFailedTests} failed of ${r.numTotalTests}`;
+              line += "\n" + failed.map((t) => `- ${t.fullName}: ${(t.failureMessages[0] || "").split("\n")[0].slice(0, 200)}`).join("\n");
+            } catch {}
+            fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, `\n### Ghost ${process.env.V}: live suite\n${line}\n`);
+          '
+          echo "manifest=${{ steps.manifest.outcome }} client=${{ steps.client.outcome }} live=${{ steps.live.outcome }}" | tee -a "$GITHUB_STEP_SUMMARY"
+        env:
+          V: ${{ matrix.ghost }}
+
+      - uses: actions/upload-artifact@v7.0.2
+        if: always()
+        with:
+          name: ghost-${{ matrix.ghost }}
+          path: |
+            packages/ghost-conformance/manifest.json
+            packages/ghost-conformance/live-report.json
+          if-no-files-found: ignore
