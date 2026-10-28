@@ -69,16 +69,14 @@ describe("offers", () => {
     });
   });
 
-  // Expected failure: offer.tier is required in the client's schema; a retention offer has none.
-  test.fails("a retention offer reads with no tier", async () => {
+  test("a retention offer reads with no tier", async () => {
     const result = await adminApi().offers.read({ id: seed.retention.id }).fetch();
 
     assert(result.success);
     expect(result.data).toMatchObject({ code: seed.retention.code, type: "percent", tier: null });
   });
 
-  // Expected failure: the retention offer's null tier fails the client's offers schema.
-  test.fails("browse lists the retention and the trial offer", async () => {
+  test("browse lists the retention and the trial offer", async () => {
     const result = await adminApi().offers.browse({ limit: "all" }).fetch();
 
     assert(result.success);
@@ -87,8 +85,7 @@ describe("offers", () => {
     expect(byCode.get(seed.trial.code)).toMatchObject({ tier: { id: seed.tierId } });
   });
 
-  // Expected failure: the client's offer create schema has no trial type.
-  test.fails("add creates a trial offer of a number of trial days on a tier", async () => {
+  test("add creates a trial offer of a number of trial days on a tier", async () => {
     const code = `trial-${uniqueSuffix()}`;
     const trial = {
       name: `Trial ${code}`,
@@ -100,13 +97,13 @@ describe("offers", () => {
       currency: "USD",
       tier: { id: seed.tierId },
     } as const;
-    // @ts-expect-error the client's offer create schema has no trial type
     const added = await adminApi().offers.add(trial);
 
     assert(added.success);
     const read = await adminApi().offers.read({ id: added.data.id }).fetch();
     assert(read.success);
-    expect(read.data).toMatchObject({ ...trial, tier: { id: seed.tierId } });
+    // Ghost stores no currency on a trial offer.
+    expect(read.data).toMatchObject({ ...trial, currency: null, tier: { id: seed.tierId } });
   });
 
   test("a trial offer must have a trial duration, and other offers cannot have one", async () => {
@@ -122,34 +119,30 @@ describe("offers", () => {
     expect(responses.all()).toEqual([]);
   });
 
-  // Expected failure: the client's offers schema lacks redemption_type, created_at and last_redeemed.
-  test.fails(
-    "a trial offer reads back with its tier, redemption type, creation time and last redemption",
-    async () => {
-      const result = await adminApi().offers.read({ id: seed.trial.id }).fetch();
-
-      assert(result.success);
-      expect(result.data).toMatchObject({
-        type: "trial",
-        duration: "trial",
-        amount: 14,
-        redemption_type: "signup",
-        tier: { id: seed.tierId, name: expect.any(String) },
-        created_at: expect.stringMatching(ISO_MS),
-        last_redeemed: null,
-      });
-    },
-  );
-
-  // Expected failure: the client offers slug reads, but Ghost has no /offers/slug/:slug/ route.
-  test.fails("GET /offers/slug/:slug/ returns the offer", async () => {
-    const result = await adminApi().offers.read({ slug: seed.trial.code }).fetch();
+  test("a trial offer reads back with its tier, redemption type, creation time and last redemption", async () => {
+    const result = await adminApi().offers.read({ id: seed.trial.id }).fetch();
 
     assert(result.success);
+    expect(result.data).toMatchObject({
+      type: "trial",
+      duration: "trial",
+      amount: 14,
+      redemption_type: "signup",
+      tier: { id: seed.tierId, name: expect.any(String) },
+      created_at: expect.stringMatching(ISO_MS),
+      last_redeemed: null,
+    });
   });
 
-  // Expected failure: the client's offers schema lacks redemption_type, created_at and last_redeemed.
-  test.fails("an offer carries no key the client's schema lacks", async () => {
+  // The deprecated slug read stays callable; Ghost has no /offers/slug/:slug/ route.
+  test("the deprecated read by slug gets Ghost's 404", async () => {
+    const result = await adminApi().offers.read({ slug: seed.trial.code }).fetch();
+
+    assert(!result.success);
+    expect(result.status).toBe(404);
+  });
+
+  test("an offer carries no key the client's schema lacks", async () => {
     const result = await adminApi().offers.read({ id: seed.trial.id }).fetch();
 
     assert(result.success);

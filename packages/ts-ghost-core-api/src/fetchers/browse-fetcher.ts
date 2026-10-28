@@ -3,6 +3,7 @@ import { z, ZodRawShape } from "zod";
 import { BrowseParamsSchema } from "../helpers/browse-params";
 import { DebugOption } from "../helpers/debug";
 import type { HTTPClient } from "../helpers/http-client";
+import { filterSendableIncludes, requiredIncludes } from "../helpers/includes";
 import { sanitizeFormatMask, sanitizeMask } from "../helpers/masks";
 import { ghostMetaSchema, type APIResource } from "../schemas/shared";
 import type { Exactly, Mask, NoUnrecognizedKeys } from "../utils";
@@ -84,9 +85,11 @@ export class BrowseFetcher<
       ...this._params,
       include: Object.keys(parsedInclude),
     };
-    const requiredIncludeKeys = sanitizeMask(this.config.output, parsedInclude, {
-      excludeDotNotation: true,
-    });
+    const requiredIncludeKeys = sanitizeMask(
+      this.config.output,
+      requiredIncludes(this.config.include, parsedInclude),
+      { excludeDotNotation: true },
+    );
 
     return new BrowseFetcher(
       this.resource,
@@ -156,8 +159,9 @@ export class BrowseFetcher<
     if (inputKeys.length !== outputKeys.length && outputKeys.length > 0) {
       this._urlParams.fields = outputKeys.filter((key) => key !== "count").join(",");
     }
-    if (this._params.include && this._params.include.length > 0) {
-      this._urlParams.include = this._params.include.join(",");
+    const include = filterSendableIncludes(this.config.include, this._params.include ?? []);
+    if (include.length > 0) {
+      this._urlParams.include = include.join(",");
     }
     if (this._params.formats && this._params.formats.length > 0) {
       this._urlParams.formats = this._params.formats.join(",");

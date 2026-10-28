@@ -29,4 +29,7 @@ export const baseTiersSchema = z.object({
   visibility: ghostVisibilitySchema,
   currency: z.string().nullish(),
   trial_days: z.number().default(0),
+  monthly_price_id: z.string().meta({ description: "Monthly Stripe price id" }).nullish(),
+  yearly_price_id: z.string().meta({ description: "Yearly Stripe price id" }).nullish(),
+  expiry_at: z.string().meta({ description: "(nullable) When a member's comped access ends" }).nullish(),
 });

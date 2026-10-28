@@ -9,11 +9,17 @@ import {
   DebugOption,
   emailOrIdSchema,
   HTTPClientFactory,
+  ignoredInclude,
   slugOrIdSchema,
 } from "@ts-ghost/core-api";
 
 import { adminTiersCreateSchema, adminTiersSchema } from "./schemas";
-import { adminMembersCreateSchema, adminMembersSchema } from "./schemas/members";
+import {
+  adminMembersCreateSchema,
+  adminMembersIncludeSchema,
+  adminMembersSchema,
+  adminMembersUpdateSchema,
+} from "./schemas/members";
 import { adminNewsletterCreateSchema, adminNewsletterSchema } from "./schemas/newsletters";
 import { adminOffersCreateSchema, adminOffersUpdateSchema } from "./schemas/offers";
 import { adminPagesCreateSchema, adminPagesSchema, adminPagesUpdateSchema } from "./schemas/pages";
@@ -31,6 +37,10 @@ type ReadByIdOnly<Read extends (options: never) => unknown> = {
   (options: { slug: string }): ReturnType<Read>;
   (options: { id: string } | { slug: string }): ReturnType<Read>;
 };
+
+/** Types a composer's slug read as deprecated (newsletters, tiers, offers: Ghost reads them by id only). */
+const readByIdOnly = <C extends { read: (options: never) => unknown }>(composer: C) =>
+  composer as unknown as Omit<C, "read"> & { read: ReadByIdOnly<C["read"]> };
 
 export class TSGhostAdminAPI<Version extends `v5.${string}` | `v6.${string}` = any> {
   private httpClientFactory: HTTPClientFactory;
@@ -125,8 +135,9 @@ export class TSGhostAdminAPI<Version extends `v5.${string}` | `v6.${string}` = a
       {
         schema: adminMembersSchema,
         identitySchema: z.object({ id: z.string() }),
-        include: z.object({}),
+        include: adminMembersIncludeSchema,
         createSchema: adminMembersCreateSchema,
+        updateSchema: adminMembersUpdateSchema,
         createOptionsSchema: z.object({
           send_email: z.boolean().optional(),
           email_type: z.union([z.literal("signin"), z.literal("subscribe"), z.literal("signup")]).optional(),
@@ -142,11 +153,14 @@ export class TSGhostAdminAPI<Version extends `v5.${string}` | `v6.${string}` = a
 
   get tiers() {
     const tiersIncludeSchema = z.object({
-      monthly_price: z.literal(true).optional(),
-      yearly_price: z.literal(true).optional(),
-      benefits: z.literal(true).optional(),
+      /** @deprecated Ghost ignores it and always sends a tier's monthly price, so it is not sent. */
+      monthly_price: ignoredInclude(),
+      /** @deprecated Ghost ignores it and always sends a tier's yearly price, so it is not sent. */
+      yearly_price: ignoredInclude(),
+      /** @deprecated Ghost ignores it and always sends a tier's benefits, so it is not sent. */
+      benefits: ignoredInclude(),
     });
-    return new APIComposer(
+    const tiers = new APIComposer(
       "tiers",
       {
         schema: adminTiersSchema,
@@ -156,6 +170,7 @@ export class TSGhostAdminAPI<Version extends `v5.${string}` | `v6.${string}` = a
       },
       this.httpClientFactory,
     ).access(["browse", "read"]); // for now tiers mutations don't really work in the admin api
+    return readByIdOnly(tiers);
   }
 
   get newsletters() {
@@ -173,12 +188,12 @@ export class TSGhostAdminAPI<Version extends `v5.${string}` | `v6.${string}` = a
       },
       this.httpClientFactory,
     ).access(["browse", "read", "add", "edit"]);
-    return newsletters as Omit<typeof newsletters, "read"> & { read: ReadByIdOnly<typeof newsletters.read> };
+    return readByIdOnly(newsletters);
   }
 
   get offers() {
     const offersIncludeSchema = z.object({});
-    return new APIComposer(
+    const offers = new APIComposer(
       "offers",
       {
         schema: baseOffersSchema,
@@ -189,6 +204,7 @@ export class TSGhostAdminAPI<Version extends `v5.${string}` | `v6.${string}` = a
       },
       this.httpClientFactory,
     ).access(["browse", "read", "add", "edit"]);
+    return readByIdOnly(offers);
   }
 
   get tags() {
