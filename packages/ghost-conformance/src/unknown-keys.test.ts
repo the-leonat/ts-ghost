@@ -4,7 +4,19 @@ import { TSGhostAdminAPI } from "@ts-ghost/admin-api";
 import { recordResponses, undeclaredKeys } from "./unknown-keys.ts";
 
 const KEY = "1efedd9db174adee2d23d982:4b74dca0219bad629852191af326a45037346c2231240e0f7aec1f9371cc14e8";
-const site = { title: "T", description: "D", logo: null, version: "6.72", url: "http://localhost/" };
+const site = {
+  title: "T",
+  description: "D",
+  logo: null,
+  icon: null,
+  cover_image: null,
+  accent_color: null,
+  locale: "en",
+  version: "6.72",
+  url: "http://localhost/",
+  site_uuid: "3a6509ac-c05d-4ab0-b201-b09512b9ad72",
+  allow_external_signup: true,
+};
 
 function ghostReturns(body: unknown) {
   vi.stubGlobal(
