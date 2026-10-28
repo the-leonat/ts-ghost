@@ -83,6 +83,6 @@ describe("tags", () => {
 
     expect(await api.tags.delete(added.data.id)).toEqual({ success: true });
     const read = await api.tags.read({ id: added.data.id }).fetch();
-    expect(read.success).toBe(false);
+    expect(read).toMatchObject({ success: false, status: 404 });
   });
 });

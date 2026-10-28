@@ -144,7 +144,7 @@ describe("pages", () => {
 
     expect(await adminApi().pages.delete(added.data.id)).toEqual({ success: true });
     const read = await adminApi().pages.read({ id: added.data.id }).fetch();
-    expect(read.success).toBe(false);
+    expect(read).toMatchObject({ success: false, status: 404 });
   });
 });
 

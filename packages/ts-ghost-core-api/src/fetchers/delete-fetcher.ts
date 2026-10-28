@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { DebugOption } from "../helpers/debug";
 import type { HTTPClient } from "../helpers/http-client";
+import { parseResponse } from "../helpers/response-schema";
 import type { APIResource } from "../schemas/shared";
 
 export class DeleteFetcher<const Resource extends APIResource = any> {
@@ -91,6 +92,10 @@ export class DeleteFetcher<const Resource extends APIResource = any> {
         status: 0,
       };
     }
-    return schema.parse(result);
+    return parseResponse(schema, result, {
+      dataPath: this.resource,
+      status: result.status ?? 0,
+      body: result.body,
+    });
   }
 }

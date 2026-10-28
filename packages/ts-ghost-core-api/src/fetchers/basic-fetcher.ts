@@ -2,6 +2,7 @@ import { z, ZodTypeAny } from "zod";
 
 import { DebugOption } from "../helpers/debug";
 import type { HTTPClient } from "../helpers/http-client";
+import { parseResponse } from "../helpers/response-schema";
 import type { APIResource } from "../schemas/shared";
 
 export class BasicFetcher<const Resource extends APIResource = any, OutputShape extends ZodTypeAny = any> {
@@ -44,7 +45,7 @@ export class BasicFetcher<const Resource extends APIResource = any, OutputShape 
       resource: this.resource,
     })) as { data: any; status: number; body?: string };
     let data: any = {};
-    if (result.errors) {
+    if (result?.errors) {
       data.success = false;
       data.errors = result.errors;
       data.status = status;
@@ -52,9 +53,9 @@ export class BasicFetcher<const Resource extends APIResource = any, OutputShape 
     } else {
       data = {
         success: true,
-        data: result[this.resource],
+        data: result?.[this.resource],
       };
     }
-    return res.parse(data);
+    return parseResponse(res, data, { dataPath: this.resource, status, body });
   }
 }

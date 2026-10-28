@@ -196,7 +196,7 @@ describe("posts", () => {
 
     expect(await adminApi().posts.delete(added.data.id)).toEqual({ success: true });
     const read = await adminApi().posts.read({ id: added.data.id }).fetch();
-    expect(read.success).toBe(false);
+    expect(read).toMatchObject({ success: false, status: 404 });
   });
 
   test("read reports a post's inactive author", async () => {

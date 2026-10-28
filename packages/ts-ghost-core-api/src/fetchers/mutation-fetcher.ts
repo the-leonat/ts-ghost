@@ -3,6 +3,7 @@ import * as z4 from "zod/v4/core";
 
 import { DebugOption } from "../helpers/debug";
 import { HTTPClient } from "../helpers/http-client";
+import { parseResponse } from "../helpers/response-schema";
 import type { APIResource } from "../schemas/shared";
 
 type ExplicitObjectKeys<T> = {
@@ -99,7 +100,7 @@ export class MutationFetcher<
       options: { ...options, method: this._options.method, body: JSON.stringify(createData) },
     })) as { data: any; status: number; body?: string };
     let result: any = {};
-    if (response.errors) {
+    if (response?.errors) {
       result.success = false;
       result.errors = response.errors;
       result.status = status;
@@ -107,9 +108,9 @@ export class MutationFetcher<
     } else {
       result = {
         success: true,
-        data: response[this.resource][0],
+        data: response?.[this.resource]?.[0],
       };
     }
-    return schema.parse(result);
+    return parseResponse(schema, result, { dataPath: `${this.resource}[0]`, status, body });
   }
 }

@@ -5,6 +5,7 @@ import { DebugOption } from "../helpers/debug";
 import type { HTTPClient } from "../helpers/http-client";
 import { filterSendableIncludes, requiredIncludes } from "../helpers/includes";
 import { sanitizeFormatMask, sanitizeMask } from "../helpers/masks";
+import { parseResponse } from "../helpers/response-schema";
 import { ghostMetaSchema, type APIResource } from "../schemas/shared";
 import type { Exactly, Mask, NoUnrecognizedKeys } from "../utils";
 import { contentFormats, withEmptyFormats, type ContentFormats } from "./formats";
@@ -221,7 +222,7 @@ export class BrowseFetcher<
       options,
     })) as { data: any; status: number; body?: string };
     let data: any = {};
-    if (result.errors) {
+    if (result?.errors) {
       data.success = false;
       data.errors = result.errors;
       data.status = status;
@@ -229,7 +230,7 @@ export class BrowseFetcher<
     } else {
       data = {
         success: true,
-        meta: result.meta || {
+        meta: result?.meta || {
           pagination: {
             pages: 0,
             page: 0,
@@ -239,10 +240,10 @@ export class BrowseFetcher<
             next: null,
           },
         },
-        data: result[this.resource],
+        data: result?.[this.resource],
       };
     }
-    return resultSchema.parse(data);
+    return parseResponse(resultSchema, data, { dataPath: this.resource, status, body });
   }
 
   public async paginate(options?: RequestInit & DebugOption) {
@@ -265,7 +266,7 @@ export class BrowseFetcher<
       options,
     })) as { data: any; status: number; body?: string };
     let data: any = {};
-    if (result.errors) {
+    if (result?.errors) {
       data.success = false;
       data.errors = result.errors;
       data.status = status;
@@ -273,7 +274,7 @@ export class BrowseFetcher<
     } else {
       data = {
         success: true,
-        meta: result.meta || {
+        meta: result?.meta || {
           pagination: {
             pages: 0,
             page: 0,
@@ -283,14 +284,14 @@ export class BrowseFetcher<
             next: null,
           },
         },
-        data: result[this.resource],
+        data: result?.[this.resource],
       };
     }
     const response: {
       current: z.infer<typeof resultSchema>;
       next: BrowseFetcher<Resource, Params, Fields, BaseShape, OutputShape, IncludeShape> | undefined;
     } = {
-      current: resultSchema.parse(data),
+      current: parseResponse(resultSchema, data, { dataPath: this.resource, status, body }),
       next: undefined,
     };
     if (response.current.success === false) return response;

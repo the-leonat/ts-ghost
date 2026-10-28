@@ -84,7 +84,7 @@ describe("members", () => {
 
     expect(await api.members.delete(added.data.id)).toEqual({ success: true });
     const gone = await api.members.read({ id: added.data.id }).fetch();
-    expect(gone.success).toBe(false);
+    expect(gone).toMatchObject({ success: false, status: 404 });
   });
 
   test("Ghost drops geolocation on add and edit, and stripe_customer_id on edit", async () => {
