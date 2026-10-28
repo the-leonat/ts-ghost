@@ -143,28 +143,34 @@ describe("transport", () => {
       expect(result.errors).toEqual([{ type: "NotFoundError", message: "Resource not found" }]);
     });
 
-    test("a read and a paginate keep them too", async () => {
-      const api = tags(new HTTPClientFactory(credentials));
+    test("a read keeps them too", async () => {
       fetchMocker.mockResponseOnce(proxyPage, { status: 503 });
-      const read = await api.read({ id: "1" }).fetch();
-      fetchMocker.mockResponseOnce(proxyPage, { status: 504 });
-      const page = await api.browse().paginate();
+      const read = await tags(new HTTPClientFactory(credentials)).read({ id: "1" }).fetch();
 
       assert(read.success === false);
       expect([read.status, read.body]).toEqual([503, proxyPage]);
+    });
+
+    test("a paginate keeps them too", async () => {
+      fetchMocker.mockResponseOnce(proxyPage, { status: 504 });
+      const page = await tags(new HTTPClientFactory(credentials)).browse().paginate();
+
       assert(page.current.success === false);
       expect([page.current.status, page.current.body]).toEqual([504, proxyPage]);
     });
 
-    test("a mutation and a delete keep them too", async () => {
-      const api = tags(new HTTPClientFactory(credentials));
+    test("a mutation keeps them too", async () => {
       fetchMocker.mockResponseOnce(proxyPage, { status: 502 });
-      const added = await api.add({ name: "a" });
-      fetchMocker.mockResponseOnce(proxyPage, { status: 502 });
-      const deleted = await api.delete("1");
+      const added = await tags(new HTTPClientFactory(credentials)).add({ name: "a" });
 
       assert(added.success === false);
       expect([added.status, added.body]).toEqual([502, proxyPage]);
+    });
+
+    test("a delete keeps them too", async () => {
+      fetchMocker.mockResponseOnce(proxyPage, { status: 502 });
+      const deleted = await tags(new HTTPClientFactory(credentials)).delete("1");
+
       assert(deleted.success === false);
       expect([deleted.status, deleted.body]).toEqual([502, proxyPage]);
     });

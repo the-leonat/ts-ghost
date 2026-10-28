@@ -1,6 +1,7 @@
-import { afterEach, describe, expect, test, vi } from "vitest";
+import { describe, expect, test } from "vitest";
 
 import { TSGhostAdminAPI } from "./admin-api";
+import { json, stubFetch } from "./stub-fetch";
 
 const KEY = "1efedd9db174adee2d23d982:4b74dca0219bad629852191af326a45037346c2231240e0f7aec1f9371cc14e8";
 
@@ -17,19 +18,14 @@ const site = {
   site_uuid: "3a6509ac-c05d-4ab0-b201-b09512b9ad72",
   allow_external_signup: true,
 };
-const siteResponse = (version: string) =>
-  new Response(JSON.stringify({ site }), { headers: { "content-version": version } });
+const withBrand = json({ site: { ...site, brand: { color: "#fff" } } });
 
 describe("admin-api transport", () => {
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
   test("default request options apply to every request, a delete included, next to authentication", async () => {
-    const fetchSpy = vi
-      .spyOn(globalThis, "fetch")
-      .mockImplementationOnce(async () => siteResponse("v6.72"))
-      .mockImplementationOnce(async () => new Response(null, { status: 204 }));
+    const fetchSpy = stubFetch([
+      json({ site }, { headers: { "content-version": "v6.72" } }),
+      () => new Response(null, { status: 204 }),
+    ]);
     const api = new TSGhostAdminAPI("https://ghost.org", KEY, "v6.72", {
       defaultRequestOptions: { redirect: "manual", headers: { "X-Client": "ts-ghost-test" } },
     });
@@ -47,17 +43,13 @@ describe("admin-api transport", () => {
   });
 
   test("keys the schema doesn't declare pass through by default", async () => {
-    vi.spyOn(globalThis, "fetch").mockImplementationOnce(
-      async () => new Response(JSON.stringify({ site: { ...site, brand: { color: "#fff" } } })),
-    );
+    stubFetch([withBrand]);
     const result = await new TSGhostAdminAPI("https://ghost.org", KEY, "v6.72").site.fetch();
     expect(result).toEqual({ success: true, data: { ...site, brand: { color: "#fff" } } });
   });
 
   test("the strict option fails a result carrying an undeclared key, naming its path", async () => {
-    vi.spyOn(globalThis, "fetch").mockImplementationOnce(
-      async () => new Response(JSON.stringify({ site: { ...site, brand: { color: "#fff" } } })),
-    );
+    stubFetch([withBrand]);
     const api = new TSGhostAdminAPI("https://ghost.org", KEY, "v6.72", { strict: true });
     expect(await api.site.fetch()).toMatchObject({
       success: false,

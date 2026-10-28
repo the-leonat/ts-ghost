@@ -121,14 +121,19 @@ describe("content-api client options", () => {
     extra: { nested: 1 },
   };
   afterEach(() => {
-    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
   });
-  const respond = () =>
-    vi
-      .spyOn(globalThis, "fetch")
-      .mockImplementationOnce(async () => new Response(JSON.stringify({ tags: [tag] })));
+  // One answer; a further request rejects instead of reaching the network.
+  const respond = () => {
+    const fetch = vi.fn<typeof globalThis.fetch>(async (input) => {
+      if (fetch.mock.calls.length > 1) throw new Error(`Unexpected fetch of ${String(input)}`);
+      return new Response(JSON.stringify({ tags: [tag] }));
+    });
+    vi.stubGlobal("fetch", fetch);
+    return fetch;
+  };
 
-  test("pass through by default", async () => {
+  test("keys the schema doesn't declare pass through by default", async () => {
     respond();
     const result = await new TSGhostContentAPI("https://ghost.org", KEY, "v6.0").tags
       .read({ id: "1" })
@@ -136,7 +141,7 @@ describe("content-api client options", () => {
     expect(result).toEqual({ success: true, data: expect.objectContaining({ extra: { nested: 1 } }) });
   });
 
-  test("fail the result with the strict option, naming the path", async () => {
+  test("the strict option fails a result carrying an undeclared key, naming its path", async () => {
     respond();
     const api = new TSGhostContentAPI("https://ghost.org", KEY, "v6.0", { strict: true });
     expect(await api.tags.read({ id: "1" }).fetch()).toMatchObject({

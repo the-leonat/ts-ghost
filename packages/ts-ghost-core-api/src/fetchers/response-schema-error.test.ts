@@ -1,5 +1,5 @@
 import createFetchMock from "vitest-fetch-mock";
-import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import { afterEach, assert, beforeEach, describe, expect, test, vi } from "vitest";
 import { z } from "zod";
 
 import { HTTPClient } from "../helpers/http-client";
@@ -28,6 +28,7 @@ describe("a response that doesn't match the schema", () => {
   });
   afterEach(() => {
     fetchMocker.resetMocks();
+    fetchMocker.disableMocks();
   });
 
   const browse = () =>
@@ -37,7 +38,7 @@ describe("a response that doesn't match the schema", () => {
     fetchMocker.doMockOnce(JSON.stringify({ posts: [{ id: "1", title: null }], meta }));
     const result = await browse().fetch();
     expect(result).toMatchObject({ success: false, status: 200 });
-    if (result.success) return;
+    assert(!result.success);
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]!.type).toBe("ResponseSchemaError");
     expect(result.errors[0]!.message).toContain("posts[0].title");
@@ -57,7 +58,7 @@ describe("a response that doesn't match the schema", () => {
     fetchMocker.doMockOnce(JSON.stringify({ errors: [{ code: "WEIRD" }] }), { status: 500 });
     const result = await browse().fetch();
     expect(result).toMatchObject({ success: false, status: 500 });
-    if (result.success) return;
+    assert(!result.success);
     expect(result.errors).toEqual([
       { type: "ResponseSchemaError", message: expect.stringContaining('errors[0]: {"code":"WEIRD"}') },
     ]);

@@ -1,5 +1,5 @@
 import createFetchMock from "vitest-fetch-mock";
-import { describe, expect, test } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { z } from "zod";
 
 import { BrowseFetcher } from "../fetchers/browse-fetcher";
@@ -36,18 +36,23 @@ describe("include keys", () => {
     });
     fetchMocker.enableMocks();
   });
-  afterEach(() => fetchMocker.resetMocks());
+  afterEach(() => {
+    fetchMocker.resetMocks();
+    fetchMocker.disableMocks();
+  });
 
-  test("an include that parses to undefined is accepted but never sent", async () => {
+  test("a read leaves out an include that parses to undefined, sending the others", async () => {
     fetchMocker.mockResponse(JSON.stringify({ tiers: [{ id: "1", tiers: [] }], meta }));
     await new ReadFetcher("tiers", config, { identity: { id: "1" } }, httpClient)
       .include({ benefits: true, tiers: true })
       .fetch();
-    await new BrowseFetcher("tiers", config, {}, httpClient).include({ benefits: true }).fetch();
+    expect(sentUrls()[0]?.get("include")).toBe("tiers");
+  });
 
-    const [read, browse] = sentUrls();
-    expect(read?.get("include")).toBe("tiers");
-    expect(browse?.has("include")).toBe(false);
+  test("a browse whose only include parses to undefined sends no include", async () => {
+    fetchMocker.mockResponse(JSON.stringify({ tiers: [{ id: "1", tiers: [] }], meta }));
+    await new BrowseFetcher("tiers", config, {}, httpClient).include({ benefits: true }).fetch();
+    expect(sentUrls()[0]?.has("include")).toBe(false);
   });
 
   test("an include flagged omittedWhenEmpty is sent but does not make its key required", async () => {

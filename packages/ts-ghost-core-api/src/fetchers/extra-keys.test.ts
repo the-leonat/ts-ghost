@@ -1,5 +1,5 @@
 import createFetchMock from "vitest-fetch-mock";
-import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import { afterEach, assert, beforeEach, describe, expect, test, vi } from "vitest";
 import { z } from "zod";
 
 import { HTTPClient, type HTTPClientOptions } from "../helpers/http-client";
@@ -38,6 +38,7 @@ beforeEach(() => {
 });
 afterEach(() => {
   fetchMocker.resetMocks();
+  fetchMocker.disableMocks();
 });
 
 describe("keys Ghost sends that the schema doesn't declare", () => {
@@ -54,7 +55,7 @@ describe("keys Ghost sends that the schema doesn't declare", () => {
     fetchMocker.doMockOnce(JSON.stringify({ posts: [post], meta }));
     const result = await browse(client({ strict: true })).fetch();
     expect(result).toMatchObject({ success: false, status: 200 });
-    if (result.success) return;
+    assert(!result.success);
     expect(result.errors.map((e) => e.type)).toEqual(Array(3).fill("ResponseSchemaError"));
     expect(result.errors.map((e) => e.message.match(/at (\S+):/)?.[1])).toEqual([
       "posts[0].extra",
@@ -86,7 +87,8 @@ describe("keys Ghost sends that the schema doesn't declare", () => {
         success: false,
         errors: [{ type: "ResponseSchemaError", message: expect.stringContaining("posts[0].extra") }],
       });
-      if (!result.success) expect(result.errors).toHaveLength(1);
+      assert(!result.success);
+      expect(result.errors).toHaveLength(1);
     });
   });
 

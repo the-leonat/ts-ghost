@@ -23,17 +23,27 @@ describe("webhook schemas accept what Ghost accepts", () => {
     expect(adminWebhookSchema.safeParse(stored).success).toBe(true);
   });
 
-  test("add and edit take any lowercase event of up to 50 characters and a relative target", () => {
-    const input = { event: "some.custom_event", target_url: "/hook" };
-    expect(adminWebhookCreateSchema.safeParse(input).success).toBe(true);
-    expect(adminWebhookUpdateSchema.safeParse(input).success).toBe(true);
+  test("add takes any lowercase event of up to 50 characters and a relative target", () => {
+    expect(
+      adminWebhookCreateSchema.safeParse({ event: "some.custom_event", target_url: "/hook" }).success,
+    ).toBe(true);
   });
 
-  test("add rejects what Ghost rejects: an event with capitals or over 50 characters, a target over 2000", () => {
-    const add = (input: { event: string; target_url: string }) =>
-      adminWebhookCreateSchema.safeParse(input).success;
-    expect(add({ event: "Post.Added", target_url: "/hook" })).toBe(false);
-    expect(add({ event: "a".repeat(51), target_url: "/hook" })).toBe(false);
-    expect(add({ event: "post.added", target_url: "x".repeat(2001) })).toBe(false);
+  test("edit takes any lowercase event of up to 50 characters and a relative target", () => {
+    expect(
+      adminWebhookUpdateSchema.safeParse({ event: "some.custom_event", target_url: "/hook" }).success,
+    ).toBe(true);
+  });
+
+  // What Ghost rejects.
+  test.for([
+    { reason: "an event with capitals", input: { event: "Post.Added", target_url: "/hook" } },
+    { reason: "an event over 50 characters", input: { event: "a".repeat(51), target_url: "/hook" } },
+    {
+      reason: "a target over 2000 characters",
+      input: { event: "post.added", target_url: "x".repeat(2001) },
+    },
+  ])("add rejects $reason", ({ input }) => {
+    expect(adminWebhookCreateSchema.safeParse(input).success).toBe(false);
   });
 });

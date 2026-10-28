@@ -1,7 +1,8 @@
-import { afterAll, afterEach, assert, beforeEach, describe, expect, test, vi } from "vitest";
+import { afterEach, assert, beforeEach, describe, expect, test, vi } from "vitest";
 import { GHOST_LATEST } from "@ts-ghost/core-api";
 
 import { TSGhostAdminAPI } from "./admin-api";
+import { json, stubFetch } from "./stub-fetch";
 
 const key = "1efedd9db174adee2d23d982:4b74dca0219bad629852191af326a45037346c2231240e0f7aec1f9371cc14e8";
 const url = "https://my-ghost-blog.com";
@@ -55,27 +56,23 @@ const ghost60Newsletter = newsletter;
 const ghost672Newsletter = { ...newsletter, show_share_button: true };
 
 describe("schema targets", () => {
-  const fetch = vi.spyOn(globalThis, "fetch");
-  const respond = (body: unknown) => fetch.mockResolvedValue(new Response(JSON.stringify(body)));
-  beforeEach(() => fetch.mockClear());
-  afterAll(() => fetch.mockRestore());
+  const ghost60 = json({ newsletters: [ghost60Newsletter] });
+  const ghost672 = json({ newsletters: [ghost672Newsletter] });
 
   const read = (api: { newsletters: { read: (o: { id: string }) => { fetch: () => Promise<unknown> } } }) =>
     api.newsletters.read({ id: "n1" }).fetch();
 
   test('"v6.x" selects v6-compat: a field Ghost added after 6.0 may be missing', async () => {
     const api = new TSGhostAdminAPI(url, key, "v6.0");
-    respond({ newsletters: [ghost60Newsletter] });
+    stubFetch([ghost60, ghost672]);
     expect(await read(api)).toMatchObject({ success: true });
-    respond({ newsletters: [ghost672Newsletter] });
     expect(await read(api)).toMatchObject({ success: true, data: { show_share_button: true } });
   });
 
   test('{ schema: "latest" } selects v6-latest: every field the pin sends is required', async () => {
     const api = new TSGhostAdminAPI(url, key, "v6.72", { schema: "latest" });
-    respond({ newsletters: [ghost672Newsletter] });
+    stubFetch([ghost672, ghost60]);
     expect(await read(api)).toMatchObject({ success: true });
-    respond({ newsletters: [ghost60Newsletter] });
     expect(await read(api)).toMatchObject({
       success: false,
       errors: [
@@ -89,11 +86,10 @@ describe("schema targets", () => {
 
   test('"v5.x" selects v5: Ghost 6 fields are not declared, so strict mode refuses them', async () => {
     const api = new TSGhostAdminAPI(url, key, "v5.130", { strict: true });
-    respond({ newsletters: [ghost60Newsletter] });
+    stubFetch([ghost60, ghost672]);
     const result = await api.newsletters.read({ id: "n1" }).fetch();
     assert(result.success);
     expect(result.data).not.toHaveProperty("show_share_button");
-    respond({ newsletters: [ghost672Newsletter] });
     expect(await read(api)).toMatchObject({
       success: false,
       errors: [{ message: expect.stringContaining("newsletters[0].show_share_button: key not declared") }],
@@ -107,22 +103,15 @@ describe("schema targets", () => {
 });
 
 describe("a v6-latest client on another Ghost minor", () => {
-  // Spied per test: the describe above restores the global fetch when it ends.
-  let fetch = vi.spyOn(globalThis, "fetch");
   let warn = vi.spyOn(console, "warn");
   const respondAs = (version: string) =>
-    fetch.mockImplementation(
-      async () =>
-        new Response(JSON.stringify({ newsletters: [ghost672Newsletter] }), {
-          headers: { "content-version": version },
-        }),
-    );
+    stubFetch([json({ newsletters: [ghost672Newsletter] }, { headers: { "content-version": version } })], {
+      repeat: true,
+    });
   beforeEach(() => {
-    fetch = vi.spyOn(globalThis, "fetch");
     warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
   });
   afterEach(() => {
-    fetch.mockRestore();
     warn.mockRestore();
   });
 
