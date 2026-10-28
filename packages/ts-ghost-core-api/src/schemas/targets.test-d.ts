@@ -3,7 +3,6 @@ import { z } from "zod";
 
 import {
   defineGhostObject,
-  type ResourcesAbsentIn,
   type SchemaTarget,
   type SchemaTargetOf,
 } from "./targets";
@@ -54,30 +53,6 @@ describe("Ghost object types per target", () => {
       from_6_0: boolean;
       from_6_13: boolean;
     }>();
-  });
-});
-
-describe("ResourcesAbsentIn", () => {
-  type Table = {
-    "resource.automations": { since: "6.10" };
-    "resource.labs_only": { since: "6.0" };
-    "resource.retired": { until: "6.40" };
-    "posts.title": { since: "6.2" };
-  };
-  type Absent<T extends SchemaTarget> = ResourcesAbsentIn<Table, T>;
-
-  test("v5 lacks every resource Ghost 6 added; v6-latest lacks removed ones; v6-compat keeps all", () => {
-    expectTypeOf<Absent<"v5">>().toEqualTypeOf<"automations" | "labs_only">();
-    expectTypeOf<Absent<"v6-compat">>().toEqualTypeOf<never>();
-    expectTypeOf<Absent<"v6-latest">>().toEqualTypeOf<"retired">();
-  });
-
-  test("hides them from a client type, so using one is a type error", () => {
-    type Client = { posts: 1; automations: 2; retired: 3 };
-    const v5 = {} as Omit<Client, Absent<"v5">>;
-    // @ts-expect-error v5 has no automations resource
-    void v5.automations;
-    expectTypeOf<Omit<Client, Absent<"v6-compat">>>().toEqualTypeOf<Client>();
   });
 });
 

@@ -107,8 +107,8 @@ describe("pages", () => {
   });
 
   // locale input is deprecated: pages have no locale in Ghost.
-  liveTest("add ignores the deprecated locale", async ({ api, deprecatedApi }) => {
-    const added = await deprecatedApi.pages.add({ title: `Locale ${uniqueSuffix()}`, locale: "de" });
+  liveTest("add ignores the deprecated locale", async ({ api }) => {
+    const added = await api.pages.add({ title: `Locale ${uniqueSuffix()}`, locale: "de" });
     assertOk(added);
 
     const read = await api.pages.read({ id: added.data.id }).fetch();

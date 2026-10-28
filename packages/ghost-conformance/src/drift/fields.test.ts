@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 import { adminResponseSchemas } from "@ts-ghost/admin-api";
 
-import { fieldDrift, removalChangeset, routeGroupDrift, updateFieldTable } from "./fields.ts";
+import { fieldDrift, removalChangeset, updateFieldTable } from "./fields.ts";
 
 const site = {
   title: "t",
@@ -78,29 +78,5 @@ describe("updateFieldTable", () => {
         "} as const satisfies GhostFieldTable;",
       ].join("\n"),
     );
-  });
-});
-
-describe("routeGroupDrift", () => {
-  const manifest = (...paths: string[]) => ({
-    ghost: "6.72.0",
-    routes: paths.map((path) => ({
-      method: "GET",
-      path,
-      labs: null,
-      public: false,
-      integration: true,
-      staff: true,
-      session: true,
-    })),
-  });
-
-  test("names route groups the new Ghost added or removed as resource entries", () => {
-    const before = manifest("/posts/", "/posts/:id/", "/legacy/");
-    const after = manifest("/posts/", "/automations/", "/automations/:id/");
-    expect(routeGroupDrift(before, after)).toEqual({
-      added: ["resource.automations"],
-      removed: ["resource.legacy"],
-    });
   });
 });

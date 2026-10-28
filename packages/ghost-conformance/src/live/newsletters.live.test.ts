@@ -34,8 +34,8 @@ describe("newsletters", () => {
   });
 
   // Deprecated: Ghost has no /newsletters/slug/:slug/ route, so a read by slug always fails.
-  liveTest("the deprecated read by slug fails", async ({ deprecatedApi }) => {
-    const result = await deprecatedApi.newsletters.read({ slug: seeded.full.slug }).fetch();
+  liveTest("the deprecated read by slug fails", async ({ api }) => {
+    const result = await api.newsletters.read({ slug: seeded.full.slug }).fetch();
     expect(result).toMatchObject({ success: false, status: 404 });
   });
 

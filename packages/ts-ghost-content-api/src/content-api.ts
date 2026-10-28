@@ -2,13 +2,11 @@ import {
   APIComposer,
   BasicFetcher,
   contentAPICredentialsSchema,
-  GHOST_FIELDS,
   HTTPClientFactory,
   schemaTarget,
   slugOrIdSchema,
   warnOnceOffLatest,
   type DebugOption,
-  type ResourcesAbsentIn,
   type SchemaOption,
   type SchemaTargetOf,
   type StrictOption,
@@ -49,7 +47,7 @@ export enum BrowseEndpointType {
  * The Content API client. Like the admin client, it selects a schema target from `version` and
  * `options.schema`; the Content API's fields are the same in every target so far.
  */
-export class TSGhostContentAPIClient<
+export class TSGhostContentAPI<
   Version extends `v5.${string}` | `v6.${string}` = any,
   Options extends ContentAPIOptions = {},
 > {
@@ -129,25 +127,3 @@ export class TSGhostContentAPIClient<
     return new BasicFetcher("settings", { output: settingsSchema }, this.HTTPClientFactoryFactory.create());
   }
 }
-
-/** The client a version and options select: resources its schema target lacks are left out of the type. */
-export type TSGhostContentAPI<
-  Version extends `v5.${string}` | `v6.${string}` = any,
-  Options extends ContentAPIOptions = {},
-> = Omit<
-  TSGhostContentAPIClient<Version, Options>,
-  ResourcesAbsentIn<typeof GHOST_FIELDS, SchemaTargetOf<Version, Options>>
->;
-
-type ContentAPIConstructor = {
-  new <Version extends `v5.${string}` | `v6.${string}` = any, Options extends ContentAPIOptions = {}>(
-    url: string,
-    key: string,
-    version: Version,
-    options?: Options & OptionsFor<Version>,
-  ): TSGhostContentAPI<Version, Options>;
-  prototype: TSGhostContentAPIClient;
-};
-
-/** The Content API client; see TSGhostContentAPIClient. */
-export const TSGhostContentAPI = TSGhostContentAPIClient as ContentAPIConstructor;

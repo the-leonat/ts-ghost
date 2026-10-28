@@ -28,7 +28,7 @@ const EXPECTED_FAILURES: Record<SchemaTarget, Record<string, string>> = {
   "v6-latest": {},
 };
 
-/** Deprecated calls kept callable although Ghost lacks their route; v6-latest's types leave them out. */
+/** Deprecated calls kept callable although Ghost lacks their route. */
 const DEPRECATED: Record<string, string> = {
   "newsletters.read({slug})": "Ghost has no read-newsletter-by-slug route",
   "offers.read({slug})": "Ghost has no read-offer-by-slug route",
@@ -44,7 +44,6 @@ for (const { target, leg } of CHECKS) {
       const route = `${target}: ${call.method} ${call.path} (${call.name})`;
       const deprecated = DEPRECATED[call.name];
       if (deprecated) {
-        if (target === "v6-latest") continue;
         test(`${route}, deprecated: ${deprecated}`, () => {
           expect(checkCall(manifest.routes, call)).toBeDefined();
         });

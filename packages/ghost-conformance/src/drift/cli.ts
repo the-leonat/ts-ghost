@@ -13,7 +13,6 @@ import { errorAnnotation, stepOutputs } from "./actions.ts";
 import {
   fieldDrift,
   removalChangeset,
-  routeGroupDrift,
   updateFieldTable,
   type FieldDrift,
 } from "./fields.ts";
@@ -95,14 +94,7 @@ const steps: Record<string, () => Promise<number>> = {
       .filter(Boolean)
       .map((line) => JSON.parse(line) as RecordedResponse);
     const { adminResponseSchemas } = await import("@ts-ghost/admin-api");
-    const fields = fieldDrift(adminResponseSchemas("v6-latest"), responses);
-    const before = parseManifest(await readFile(file("manifest.before.json"), "utf8"));
-    const groups = routeGroupDrift(before, parseManifest(await readFile(MANIFEST_FILE, "utf8")));
-    const drift = {
-      added: [...groups.added, ...fields.added],
-      removed: [...groups.removed, ...fields.removed],
-      untracked: fields.untracked,
-    };
+    const drift = fieldDrift(adminResponseSchemas("v6-latest"), responses);
     const minor = plan.to.split(".").slice(0, 2).join(".");
     await writeFile(
       GHOST_FIELDS_FILE,

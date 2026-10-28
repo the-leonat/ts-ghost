@@ -144,8 +144,8 @@ describe("posts", () => {
   });
 
   // mobiledoc input is deprecated: Ghost 6 stores lexical only.
-  liveTest("add ignores the deprecated mobiledoc", async ({ api, deprecatedApi }) => {
-    const added = await deprecatedApi.posts.add({
+  liveTest("add ignores the deprecated mobiledoc", async ({ api }) => {
+    const added = await api.posts.add({
       title: `Mobiledoc ${uniqueSuffix()}`,
       mobiledoc: MOBILEDOC,
     });
@@ -157,8 +157,8 @@ describe("posts", () => {
   });
 
   // locale input is deprecated: posts have no locale in Ghost.
-  liveTest("add ignores the deprecated locale", async ({ api, deprecatedApi }) => {
-    const added = await deprecatedApi.posts.add({ title: `Locale ${uniqueSuffix()}`, locale: "de" });
+  liveTest("add ignores the deprecated locale", async ({ api }) => {
+    const added = await api.posts.add({ title: `Locale ${uniqueSuffix()}`, locale: "de" });
     assertOk(added);
 
     const read = await api.posts.read({ id: added.data.id }).fetch();

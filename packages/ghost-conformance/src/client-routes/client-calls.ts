@@ -1,4 +1,4 @@
-import { GHOST_FIELDS, TSGhostAdminAPI } from "@ts-ghost/admin-api";
+import { TSGhostAdminAPI } from "@ts-ghost/admin-api";
 
 import { ADMIN_API_PATH } from "../ghost/admin-api.ts";
 import type { SchemaTarget } from "../ghost/pin.ts";
@@ -102,12 +102,6 @@ const TARGET_CLIENT = {
   "v6-latest": ["v6.72", { schema: "latest" }],
 } as const;
 
-/** Whether `target`'s client type leaves `resource` out (its `resource.<name>` since/until entry). */
-function absentIn(target: SchemaTarget, resource: string): boolean {
-  const range = (GHOST_FIELDS as Record<string, { since?: string; until?: string }>)[`resource.${resource}`];
-  return target === "v5" ? !!range?.since : target === "v6-latest" ? !!range?.until : false;
-}
-
 /** Every request the public admin client of `target` makes, found by calling each method against a recording fetch. */
 export async function recordClientCalls(target: SchemaTarget = "v6-compat"): Promise<ClientCall[]> {
   const [version, options] = TARGET_CLIENT[target];
@@ -119,8 +113,7 @@ export async function recordClientCalls(target: SchemaTarget = "v6-compat"): Pro
   try {
     const resources = Object.entries(Object.getOwnPropertyDescriptors(TSGhostAdminAPI.prototype))
       .filter(([, descriptor]) => descriptor.get)
-      .map(([resource]) => resource)
-      .filter((resource) => !absentIn(target, resource));
+      .map(([resource]) => resource);
     for (const resource of resources) {
       const methods = api[resource as keyof TSGhostAdminAPI] as unknown as Record<string, Method>;
       if (typeof methods.fetch === "function") {

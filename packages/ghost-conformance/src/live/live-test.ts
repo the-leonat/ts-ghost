@@ -1,6 +1,5 @@
 import { appendFileSync } from "node:fs";
 import { assert, inject, test } from "vitest";
-import type { TSGhostAdminAPI } from "@ts-ghost/admin-api";
 
 import { recordResponses, type ResponseRecorder } from "../unknown-keys.ts";
 import { adminApi, type CredentialKind, type LiveGhost } from "./ghost.ts";
@@ -20,8 +19,6 @@ type LiveFixtures = {
   apiFor: (key: CredentialKind) => LiveApi;
   /** `apiFor("integration")`. */
   api: LiveApi;
-  /** `api` typed as v6-compat, for tests of deprecated forms that v6-latest's types leave out. */
-  deprecatedApi: TSGhostAdminAPI<`v6.${string}`>;
 };
 
 /** What a live test's function receives. */
@@ -59,9 +56,6 @@ export const liveTest = test.extend<LiveFixtures>({
   },
   api: async ({ apiFor }, use) => {
     await use(apiFor("integration"));
-  },
-  deprecatedApi: async ({ api }, use) => {
-    await use(api as unknown as TSGhostAdminAPI<`v6.${string}`>);
   },
 });
 

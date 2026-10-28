@@ -32,9 +32,7 @@ const OBJECTS: Record<string, (target: SchemaTarget) => { shape: object }> = {
 
 describe("the since/until table", () => {
   // The drift job adds an entry for a key Ghost starts sending; this fails until the schema types it.
-  // `resource.<name>` entries describe whole resources, not schema fields.
-  const fields = Object.entries(GHOST_FIELDS).filter(([key]) => !key.startsWith("resource."));
-  test.each(fields)("%s names a field its schema declares", (key, range) => {
+  test.each(Object.entries(GHOST_FIELDS))("%s names a field its schema declares", (key, range) => {
     const name = key.slice(0, key.lastIndexOf("."));
     const field = key.slice(key.lastIndexOf(".") + 1);
     expect(OBJECTS, `no schema is mapped to "${name}"`).toHaveProperty([name]);

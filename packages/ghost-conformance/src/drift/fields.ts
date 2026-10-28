@@ -115,23 +115,3 @@ export function removalChangeset(version: string, removed: string[]): string {
     "",
   ].join("\n");
 }
-
-/** Route groups (first path segments) a new Ghost added or removed, as `resource.<group>` table keys. */
-export function routeGroupDrift(
-  before: { routes: { path: string }[] },
-  after: { routes: { path: string }[] },
-): { added: string[]; removed: string[] } {
-  const groups = (m: { routes: { path: string }[] }) => new Set(m.routes.map((r) => r.path.split("/")[1]!));
-  const [was, now] = [groups(before), groups(after)];
-  const key = (group: string) => `resource.${group}`;
-  return {
-    added: [...now]
-      .filter((g) => !was.has(g))
-      .sort()
-      .map(key),
-    removed: [...was]
-      .filter((g) => !now.has(g))
-      .sort()
-      .map(key),
-  };
-}

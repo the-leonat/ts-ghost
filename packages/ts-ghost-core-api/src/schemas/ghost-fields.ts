@@ -6,6 +6,7 @@ export const GHOST_LATEST = "6.72";
 /**
  * When each response field appeared (`since`) in Ghost 6, or the first minor without it (`until`), keyed
  * `"<schema>.<field>"`. Unlisted fields are sent by Ghost 5.last and every 6.x. Maintained by the drift job.
+ * Resource-level entries (`resource.<name>`) come back with the first resource Ghost adds after 6.0.
  */
 export const GHOST_FIELDS = {
   "admin.authors.gift_subscription_notifications": { since: "6.39" },

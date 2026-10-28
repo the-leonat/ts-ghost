@@ -144,23 +144,14 @@ describe("a post's authors, exactly", () => {
 });
 
 describe("deprecated forms", () => {
-  test("v6-compat and v5 keep them; v6-latest has none", () => {
-    void compat.offers.read({ slug: "black-friday" });
-    void v5.posts.add({ title: "t", locale: "de" });
-    void compat.members.edit("1", { geolocation: "{}", stripe_customer_id: "cus_1" });
-    // @ts-expect-error Ghost reads offers by id only
-    void latest.offers.read({ slug: "black-friday" });
-    // @ts-expect-error Ghost drops locale
-    void latest.posts.add({ title: "t", locale: "de" });
-    // @ts-expect-error Ghost drops mobiledoc
-    void latest.pages.add({ title: "t", mobiledoc: "{}" });
-    // @ts-expect-error Ghost drops the body's newsletter; pass edit's newsletter option
-    void latest.posts.add({ title: "t", newsletter: { id: "n" } });
-    // @ts-expect-error Ghost drops geolocation
-    void latest.members.add({ email: "a@b.co", geolocation: "{}" });
-    // @ts-expect-error Ghost drops stripe_customer_id on edit
-    void latest.members.edit("1", { stripe_customer_id: "cus_1" });
-    // @ts-expect-error Ghost always sends tier prices and drops the include
-    void latest.tiers.browse().include({ monthly_price: true });
+  test("every target keeps them, as @deprecated", () => {
+    for (const api of [v5, compat, latest]) {
+      void api.offers.read({ slug: "black-friday" });
+      void api.posts.add({ title: "t", locale: "de", newsletter: { id: "n" } });
+      void api.pages.add({ title: "t", mobiledoc: "{}" });
+      void api.members.add({ email: "a@b.co", geolocation: "{}" });
+      void api.members.edit("1", { geolocation: "{}", stripe_customer_id: "cus_1" });
+      void api.tiers.browse().include({ monthly_price: true });
+    }
   });
 });

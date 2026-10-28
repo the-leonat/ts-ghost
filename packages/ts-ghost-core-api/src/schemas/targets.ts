@@ -56,18 +56,6 @@ type Presence<T extends SchemaTarget, R> = T extends "v5"
       ? "absent"
       : "required";
 
-/**
- * Client resources target `T` lacks, from `resource.<name>` entries: v5 lacks any with a `since`, v6-latest any
- * with an `until`; v6-compat keeps resources added later (Ghost answers 404 before their `since`).
- */
-export type ResourcesAbsentIn<Table, T extends SchemaTarget> = {
-  [K in keyof Table & `resource.${string}`]: Presence<T, Table[K]> extends "absent"
-    ? K extends `resource.${infer Resource}`
-      ? Resource
-      : never
-    : never;
-}[keyof Table & `resource.${string}`];
-
 type RangeOf<Table, Name extends string, Key> = `${Name}.${Key & string}` extends keyof Table
   ? Table[`${Name}.${Key & string}`]
   : {};

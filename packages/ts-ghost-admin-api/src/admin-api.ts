@@ -8,20 +8,17 @@ import {
   BasicFetcher,
   DebugOption,
   emailOrIdSchema,
-  GHOST_FIELDS,
   HTTPClientFactory,
   schemaTarget,
   slugOrIdSchema,
   warnOnceOffLatest,
-  type ResourcesAbsentIn,
   type SchemaOption,
-  type SchemaTarget,
   type SchemaTargetOf,
   type StrictOption,
 } from "@ts-ghost/core-api";
 
 import { adminTiersCreateSchema, adminTiersSchema } from "./schemas";
-import { droppedByGhost, forTarget } from "./schemas/dropped-by-ghost";
+import { droppedByGhost } from "./schemas/dropped-by-ghost";
 import {
   adminMembersCreateSchema,
   adminMembersIncludeSchema,
@@ -59,22 +56,16 @@ type ReadByIdOnly<Fetcher> = {
   (options: { id: string } | { slug: string }): Fetcher;
 };
 
-/**
- * Types a composer's slug read as deprecated (newsletters, tiers, offers: Ghost reads them by id only);
- * v6-latest has no slug read at all.
- */
-const readByIdOnly = <T extends SchemaTarget, C extends object, Fetcher>(
-  _target: T,
+/** Types a composer's slug read as deprecated (newsletters, tiers, offers: Ghost reads them by id only). */
+const readByIdOnly = <C extends object, Fetcher>(
   composer: C & { read: (options: { id: string } | { slug: string }) => Fetcher },
-): Omit<C, "read"> & {
-  read: T extends "v6-latest" ? (options: { id: string }) => Fetcher : ReadByIdOnly<Fetcher>;
-} => composer as any;
+): Omit<C, "read"> & { read: ReadByIdOnly<Fetcher> } => composer as any;
 
 /**
  * The Admin API client. Its schema target follows `version` and `options.schema`: "v5.x" parses as the last
  * Ghost 5, "v6.x" as any Ghost 6 (v6-compat), and "v6.x" with `{ schema: "latest" }` as the pinned Ghost 6.
  */
-export class TSGhostAdminAPIClient<
+export class TSGhostAdminAPI<
   Version extends `v5.${string}` | `v6.${string}` = any,
   Options extends AdminAPIOptions = {},
 > {
@@ -115,8 +106,8 @@ export class TSGhostAdminAPIClient<
         schema: adminPostsSchemaFor(this.target),
         identitySchema: slugOrIdSchema,
         include: postsIncludeSchema,
-        createSchema: forTarget(this.target, adminPostsCreateSchema),
-        updateSchema: forTarget(this.target, adminPostsUpdateSchema),
+        createSchema: adminPostsCreateSchema,
+        updateSchema: adminPostsUpdateSchema,
         updateOptionsSchema: z.object({
           newsletter: z.string().optional(),
           email_segment: z.string().optional(),
@@ -146,8 +137,8 @@ export class TSGhostAdminAPIClient<
         schema: adminPagesSchemaFor(this.target),
         identitySchema: slugOrIdSchema,
         include: pagesIncludeSchema,
-        createSchema: forTarget(this.target, adminPagesCreateSchema),
-        updateSchema: forTarget(this.target, adminPagesUpdateSchema),
+        createSchema: adminPagesCreateSchema,
+        updateSchema: adminPagesUpdateSchema,
         updateOptionsSchema: z.object({
           force_rerender: z.boolean().optional(),
           save_revision: z.boolean().optional(),
@@ -169,8 +160,8 @@ export class TSGhostAdminAPIClient<
         schema: adminMembersSchemaFor(this.target),
         identitySchema: z.object({ id: z.string() }),
         include: adminMembersIncludeSchema,
-        createSchema: forTarget(this.target, adminMembersCreateSchema),
-        updateSchema: forTarget(this.target, adminMembersUpdateSchema),
+        createSchema: adminMembersCreateSchema,
+        updateSchema: adminMembersUpdateSchema,
         createOptionsSchema: z.object({
           send_email: z.boolean().optional(),
           email_type: z.union([z.literal("signin"), z.literal("subscribe"), z.literal("signup")]).optional(),
@@ -199,12 +190,12 @@ export class TSGhostAdminAPIClient<
         // The tiers endpoint always sends benefits; a member's or post's embedded tier doesn't.
         schema: adminTiersSchema.required({ benefits: true }),
         identitySchema: slugOrIdSchema,
-        include: forTarget(this.target, tiersIncludeSchema),
+        include: tiersIncludeSchema,
         createSchema: adminTiersCreateSchema,
       },
       this.httpClientFactory,
     ).access(["browse", "read"]); // for now tiers mutations don't really work in the admin api
-    return readByIdOnly(this.target, tiers);
+    return readByIdOnly(tiers);
   }
 
   get newsletters() {
@@ -222,7 +213,7 @@ export class TSGhostAdminAPIClient<
       },
       this.httpClientFactory,
     ).access(["browse", "read", "add", "edit"]);
-    return readByIdOnly(this.target, newsletters);
+    return readByIdOnly(newsletters);
   }
 
   get offers() {
@@ -238,7 +229,7 @@ export class TSGhostAdminAPIClient<
       },
       this.httpClientFactory,
     ).access(["browse", "read", "add", "edit"]);
-    return readByIdOnly(this.target, offers);
+    return readByIdOnly(offers);
   }
 
   get tags() {
@@ -314,25 +305,3 @@ export class TSGhostAdminAPIClient<
     );
   }
 }
-
-/** The client a version and options select: resources its schema target lacks are left out of the type. */
-export type TSGhostAdminAPI<
-  Version extends `v5.${string}` | `v6.${string}` = any,
-  Options extends AdminAPIOptions = {},
-> = Omit<
-  TSGhostAdminAPIClient<Version, Options>,
-  ResourcesAbsentIn<typeof GHOST_FIELDS, SchemaTargetOf<Version, Options>>
->;
-
-type AdminAPIConstructor = {
-  new <Version extends `v5.${string}` | `v6.${string}` = any, Options extends AdminAPIOptions = {}>(
-    url: string,
-    key: string,
-    version: Version,
-    options?: Options & OptionsFor<Version>,
-  ): TSGhostAdminAPI<Version, Options>;
-  prototype: TSGhostAdminAPIClient;
-};
-
-/** The Admin API client; see TSGhostAdminAPIClient. */
-export const TSGhostAdminAPI = TSGhostAdminAPIClient as AdminAPIConstructor;

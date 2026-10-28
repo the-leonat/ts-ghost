@@ -92,19 +92,19 @@ describe("members", () => {
     expect(gone).toMatchObject({ success: false, status: 404 });
   });
 
-  liveTest("Ghost drops geolocation on add", async ({ deprecatedApi }) => {
+  liveTest("Ghost drops geolocation on add", async ({ api }) => {
     const email = `member-dropped-${uniqueSuffix()}@conformance.test`;
-    const added = await deprecatedApi.members.add({ email, geolocation: '{"country":"Germany"}' });
+    const added = await api.members.add({ email, geolocation: '{"country":"Germany"}' });
     assertOk(added);
     onTestFinished(async () => {
-      await deprecatedApi.members.delete(added.data.id);
+      await api.members.delete(added.data.id);
     });
     expect(added.data.geolocation).toBeNull();
   });
 
-  liveTest("Ghost drops geolocation and stripe_customer_id on edit", async ({ api, deprecatedApi }) => {
+  liveTest("Ghost drops geolocation and stripe_customer_id on edit", async ({ api }) => {
     const added = await addMember(api);
-    const edited = await deprecatedApi.members.edit(added.id, {
+    const edited = await api.members.edit(added.id, {
       note: "edited",
       geolocation: '{"country":"Germany"}',
       stripe_customer_id: "cus_dropped",
