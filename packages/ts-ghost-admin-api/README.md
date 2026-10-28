@@ -755,6 +755,21 @@ let query = await api.posts
   .fetch({ next: { revalidate: 10 } }); // NextJS revalidate this data every 10 seconds at most
 ```
 
+### Client options
+
+The client's fourth argument sets options for every request it makes:
+
+```ts
+const api = new TSGhostAdminAPI(url, key, "v6.0", {
+  // Applied to every request, add, edit and delete included; per-call options win and headers are merged.
+  defaultRequestOptions: { redirect: "manual", headers: { "X-Client": "my-app" } },
+  // Fail a result that carries a key the client's schema doesn't declare.
+  strict: { ignore: ["posts[].new_key"] },
+});
+```
+
+By default a key Ghost sends that the schema doesn't declare passes through to `result.data`, untyped. With `strict: true` such a key instead fails the result with one `{ type: "ResponseSchemaError", message }` error per key, naming its path (e.g. `posts[0].new_key`). `strict: { ignore: [...] }` is strict mode that still lets the listed paths through, `[]` matching any index.
+
 <ContentNavigation
 previous={{ title: "Output Modfiers", href: "/docs/admin-api/output-modifiers" }}
 next={{ title: "Add", href: "/docs/admin-api/add" }}
@@ -968,8 +983,7 @@ const tiers = await api.tiers
   .browse({
     filter: "active:true+type:paid",
   })
-  .include({ benefits: true, monthly_price: true, yearly_price: true })
-  .fetch();
+  .fetch(); // Ghost always sends prices and benefits, no include needed
 
 if (!tiers.success) {
   throw new Error(tiers.errors.join(", "));

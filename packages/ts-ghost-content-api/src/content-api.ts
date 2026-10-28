@@ -34,7 +34,10 @@ export class TSGhostContentAPI<Version extends `v5.${string}` | `v6.${string}` =
     protected readonly key: string,
     protected readonly version: Version,
     protected readonly options?: DebugOption & {
-      /** Fail a result carrying a key the client's schema doesn't declare; by default such keys pass through. */
+      /** Request options for every request; per-call options win, headers merge. */
+      defaultRequestOptions?: RequestInit;
+      /** Fail a result carrying a key the schema doesn't declare (by default it passes through);
+       * `{ ignore: ["posts[].new_key"] }` lets the listed paths through, `[]` matching any index. */
       strict?: StrictOption;
     },
   ) {

@@ -83,7 +83,7 @@ describe("content-api", () => {
   });
 });
 
-describe("content-api undeclared keys", () => {
+describe("content-api client options", () => {
   const KEY = "59d4bf56c73c04a18c867dc3ba";
   const tag = {
     id: "1",
@@ -130,5 +130,18 @@ describe("content-api undeclared keys", () => {
       success: false,
       errors: [{ type: "ResponseSchemaError", message: expect.stringContaining("tags[0].extra") }],
     });
+  });
+
+  test("default request options apply to every request, next to the content key", async () => {
+    const fetch = respond();
+    const api = new TSGhostContentAPI("https://ghost.org", KEY, "v6.0", {
+      defaultRequestOptions: { redirect: "manual", headers: { "X-Client": "ts-ghost-test" } },
+    });
+    await api.tags.read({ id: "1" }).fetch();
+
+    const [url, init] = fetch.mock.calls[0]!;
+    expect(init?.redirect).toBe("manual");
+    expect(new Headers(init?.headers).get("x-client")).toBe("ts-ghost-test");
+    expect(new URL(String(url)).searchParams.get("key")).toBe(KEY);
   });
 });

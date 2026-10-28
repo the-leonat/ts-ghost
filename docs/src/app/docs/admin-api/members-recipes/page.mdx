@@ -43,8 +43,7 @@ const tiers = await api.tiers
   .browse({
     filter: "active:true+type:paid",
   })
-  .include({ benefits: true, monthly_price: true, yearly_price: true })
-  .fetch();
+  .fetch(); // Ghost always sends prices and benefits, no include needed
 
 if (!tiers.success) {
   throw new Error(tiers.errors.join(", "));

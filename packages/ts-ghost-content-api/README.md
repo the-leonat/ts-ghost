@@ -605,6 +605,21 @@ let query = await api.posts
   .fetch({ next: { revalidate: 10 } }); // NextJS revalidate this data every 10 seconds at most
 ```
 
+### Client options
+
+The client's fourth argument sets options for every request it makes:
+
+```ts
+const api = new TSGhostContentAPI(url, key, "v6.0", {
+  // Applied to every request; per-call options win and headers are merged.
+  defaultRequestOptions: { redirect: "manual", headers: { "X-Client": "my-app" } },
+  // Fail a result that carries a key the client's schema doesn't declare.
+  strict: { ignore: ["posts[].new_key"] },
+});
+```
+
+By default a key Ghost sends that the schema doesn't declare passes through to `result.data`, untyped. With `strict: true` such a key instead fails the result with one `{ type: "ResponseSchemaError", message }` error per key, naming its path (e.g. `posts[0].new_key`). `strict: { ignore: [...] }` is strict mode that still lets the listed paths through, `[]` matching any index.
+
 <ContentNavigation
 previous={{ title: "Output Modifiers", href: "/docs/content-api/output-modifiers" }}
 next={{ title: "Common Recipes", href: "/docs/content-api/common-recipes" }}
