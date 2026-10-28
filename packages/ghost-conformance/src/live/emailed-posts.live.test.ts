@@ -39,7 +39,8 @@ describe("emailed posts", () => {
     const bySlug = await adminApi().posts.read({ slug: submitted }).fetch();
     if (!bySlug.success) throw new Error("read by slug failed");
     const byId = await adminApi().posts.read({ id: bySlug.data.id }).fetch();
-    expect(byId).toEqual(bySlug);
+    // A post lists every tier, which the tiers seed adds and renames concurrently; compare all else.
+    expect(byId).toEqual({ ...bySlug, data: { ...bySlug.data, tiers: expect.any(Array) } });
   });
 
   test("browse returns both emailed posts with their email status", async () => {

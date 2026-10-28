@@ -77,7 +77,8 @@ describe("posts", () => {
 
     assert(byId.success && bySlug.success);
     expect(byId.data.id).toBe(seed.full.id);
-    expect(bySlug.data).toEqual(byId.data);
+    // A post lists every tier, which the tiers seed adds and renames concurrently; compare all else.
+    expect(bySlug.data).toEqual({ ...byId.data, tiers: expect.any(Array) });
   });
 
   test("nullable fields come back null on a bare post and set on a full post", async () => {

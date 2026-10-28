@@ -63,7 +63,8 @@ describe("pages", () => {
 
     assert(byId.success && bySlug.success);
     expect(byId.data.id).toBe(seed.full.id);
-    expect(bySlug.data).toEqual(byId.data);
+    // A page lists every tier, which the tiers seed adds and renames concurrently; compare all else.
+    expect(bySlug.data).toEqual({ ...byId.data, tiers: expect.any(Array) });
   });
 
   test("nullable fields come back null on a bare page and set on a full page", async () => {
