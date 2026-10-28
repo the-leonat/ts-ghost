@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { ghostObject } from "./ghost-fields";
+import { ghostObject } from "./targets";
 import { baseNewsletterSchema } from "./newsletter";
 import { baseSubscriptionsSchemaFor } from "./subscriptions";
 import { perTarget, type SchemaTarget } from "./targets";

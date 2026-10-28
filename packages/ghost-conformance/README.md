@@ -66,7 +66,7 @@ CI runs the live suite on every PR to `main`, once per leg ([`.github/workflows/
 
 1. bumps the pin in `ghost-versions.json` and regenerates the manifest,
 2. runs the client → manifest check and the live suite (`pin` leg) against the new Ghost,
-3. writes the client's since/until table ([`ghost-fields.ts`](../ts-ghost-core-api/src/schemas/ghost-fields.ts)): a field the new Ghost sends that no schema declares gets `since`, a required field it no longer sends gets `until`, and `GHOST_LATEST` moves to the new minor. A removal also gets a `major` changeset. A new field still needs its type in the schema; the admin-api unit tests fail until it has one,
+3. regenerates the client's since/until table ([`ghost-fields.ts`](../ts-ghost-core-api/src/schemas/ghost-fields.ts), a generated file core-api's `targets.ts` reads) from the built table: a field the new Ghost sends that no schema declares gets `since`, a required field it no longer sends gets `until`, and `GHOST_LATEST` moves to the new minor. A removal also gets a `major` changeset. A new field still needs its type in the schema; the admin-api unit tests fail until it has one,
 4. force-pushes `conformance/drift` and rewrites the PR's title and description: always from the default branch's pin to the newest Ghost, with the manifest diff, the test results, the route coverage at both versions, and links to the release notes of every version in between,
 5. fails the run if the manifest, the client check or the live suite failed, so a breaking release doesn't show up as green.
 

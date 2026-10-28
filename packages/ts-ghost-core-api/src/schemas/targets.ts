@@ -1,6 +1,7 @@
 import { z, type ZodOptional, type ZodRawShape, type ZodType } from "zod";
 
 import type { IsAny } from "../utils";
+import { GHOST_FIELDS, GHOST_LATEST } from "./ghost-fields";
 
 /**
  * The response shape a client parses against:
@@ -28,6 +29,12 @@ export type SchemaTargetOf<Version, Options> =
           ? "v6-latest"
           : "v6-compat"
         : "v6-compat";
+
+/** The version a `{ schema: "latest" }` client passes: exactly the pinned Ghost minor, e.g. "v6.72". */
+export type LatestVersion = `v${typeof GHOST_LATEST}`;
+
+/** A client's version parameter: exactly LatestVersion with `{ schema: "latest" }`, else `Version`. */
+export type VersionFor<Version, Options> = Options extends { schema: "latest" } ? LatestVersion : Version;
 
 export function schemaTarget(version: string, options?: SchemaOption): SchemaTarget {
   if (version.startsWith("v5.")) {
@@ -104,5 +111,25 @@ export function defineGhostObject<const Table extends GhostFieldTable>(table: Ta
     }
     // The name lets tools map a response path back to its table key.
     return z.object(out).meta({ ghostFields: name }) as any;
+  };
+}
+
+/** Builds a response object for a target from its full shape, by GHOST_FIELDS. */
+export const ghostObject = defineGhostObject(GHOST_FIELDS);
+
+/**
+ * A response hook for a v6-latest client: warns once when Ghost's `content-version` names another minor than
+ * GHOST_LATEST, since the exact types may not fit it. It never fails a result, strict mode included.
+ */
+export function warnOnceOffLatest(latest: string = GHOST_LATEST) {
+  let warned = false;
+  return (response: Response) => {
+    const sent = /^v?(\d+\.\d+)/.exec(response.headers.get("content-version") ?? "")?.[1];
+    if (warned || !sent || sent === latest) return;
+    warned = true;
+    console.warn(
+      `@ts-ghost: Ghost v${sent} answered a client on the v6-latest schema, which matches Ghost ${latest}; ` +
+        `types may not fit. Use "v6.x" without { schema: "latest" } for any Ghost 6.`,
+    );
   };
 }

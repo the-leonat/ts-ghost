@@ -10,7 +10,13 @@ import { MANIFEST_FILE, parseManifest } from "../manifest/manifest.ts";
 import { clientCalls, measureCoverage } from "../route-coverage/coverage.ts";
 import type { RecordedResponse } from "../unknown-keys.ts";
 import { errorAnnotation, stepOutputs } from "./actions.ts";
-import { fieldDrift, removalChangeset, updateFieldTable, type FieldDrift } from "./fields.ts";
+import {
+  fieldDrift,
+  GHOST_FIELDS_FILE,
+  ghostFieldsSource,
+  removalChangeset,
+  type FieldDrift,
+} from "./fields.ts";
 import { closeDriftPr, openDriftPr } from "./open-pr.ts";
 import { planDrift, resolveNewestGhost, type GhostRelease } from "./plan.ts";
 import {
@@ -33,8 +39,7 @@ import {
 const PACKAGE_DIR = fileURLToPath(new URL("../..", import.meta.url));
 const STATE = resolve(process.env.DRIFT_STATE ?? join(PACKAGE_DIR, ".drift"));
 const file = (name: string) => join(STATE, name);
-/** The client's since/until table and the changeset a field removal gets. */
-const GHOST_FIELDS_FILE = resolve(PACKAGE_DIR, "../ts-ghost-core-api/src/schemas/ghost-fields.ts");
+/** The changeset a field removal gets. */
 const CHANGESET_FILE = (version: string) =>
   resolve(PACKAGE_DIR, `../../.changeset/ghost-${version.replaceAll(".", "-")}-fields.md`);
 /** Set by the workflow from the manifest step's outcome; a failed generation leaves the old manifest. */
@@ -88,13 +93,10 @@ const steps: Record<string, () => Promise<number>> = {
       .split("\n")
       .filter(Boolean)
       .map((line) => JSON.parse(line) as RecordedResponse);
-    const { adminResponseSchemas } = await import("@ts-ghost/admin-api");
+    const { adminResponseSchemas, GHOST_FIELDS } = await import("@ts-ghost/admin-api");
     const drift = fieldDrift(adminResponseSchemas("v6-latest"), responses);
     const minor = plan.to.split(".").slice(0, 2).join(".");
-    await writeFile(
-      GHOST_FIELDS_FILE,
-      updateFieldTable(await readFile(GHOST_FIELDS_FILE, "utf8"), drift, minor),
-    );
+    await writeFile(GHOST_FIELDS_FILE, ghostFieldsSource(GHOST_FIELDS, drift, minor));
     if (drift.removed.length)
       await writeFile(CHANGESET_FILE(plan.to), removalChangeset(plan.to, drift.removed));
     await writeFile(file("fields.json"), JSON.stringify(drift, null, 2));

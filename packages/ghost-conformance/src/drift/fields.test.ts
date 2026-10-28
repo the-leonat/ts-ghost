@@ -1,7 +1,8 @@
+import { readFile } from "node:fs/promises";
 import { describe, expect, test } from "vitest";
-import { adminResponseSchemas } from "@ts-ghost/admin-api";
+import { adminResponseSchemas, GHOST_FIELDS, GHOST_LATEST } from "@ts-ghost/admin-api";
 
-import { fieldDrift, removalChangeset, updateFieldTable } from "./fields.ts";
+import { fieldDrift, GHOST_FIELDS_FILE, ghostFieldsSource, removalChangeset } from "./fields.ts";
 
 const site = {
   title: "t",
@@ -53,24 +54,18 @@ describe("removalChangeset", () => {
   });
 });
 
-describe("updateFieldTable", () => {
-  const source = [
-    'export const GHOST_LATEST = "6.72";',
-    "export const GHOST_FIELDS = {",
-    '  "site.timezone": { since: "6.67" },',
-    '  "zeta.old": { since: "6.1" },',
-    "} as const satisfies GhostFieldTable;",
-  ].join("\n");
+describe("ghostFieldsSource", () => {
+  const table = { "site.timezone": { since: "6.67" }, "zeta.old": { since: "6.1" } };
 
   test("adds since and until for the new minor, sorted, and moves GHOST_LATEST", () => {
-    const updated = updateFieldTable(
-      source,
+    const source = ghostFieldsSource(
+      table,
       { added: ["admin.posts.new_key"], removed: ["zeta.old"], untracked: [] },
       "6.74",
     );
-    expect(updated).toBe(
+    expect(source).toContain('export const GHOST_LATEST = "6.74";');
+    expect(source).toContain(
       [
-        'export const GHOST_LATEST = "6.74";',
         "export const GHOST_FIELDS = {",
         '  "admin.posts.new_key": { since: "6.74" },',
         '  "site.timezone": { since: "6.67" },',
@@ -78,5 +73,11 @@ describe("updateFieldTable", () => {
         "} as const satisfies GhostFieldTable;",
       ].join("\n"),
     );
+  });
+
+  test("regenerates the committed table file unchanged when nothing drifted", async () => {
+    const committed = await readFile(GHOST_FIELDS_FILE, "utf8");
+    const none = { added: [], removed: [], untracked: [] };
+    expect(ghostFieldsSource(GHOST_FIELDS, none, GHOST_LATEST)).toBe(committed);
   });
 });

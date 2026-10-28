@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { ghostObject } from "./ghost-fields";
+import { ghostObject } from "./targets";
 import { perTarget, type SchemaTarget } from "./targets";
 
 /** The site as /site/ sends it, for a schema target. */
