@@ -45,6 +45,7 @@ export class DeleteFetcher<const Resource extends APIResource = any> {
           }),
         ),
         status: z.number(),
+        body: z.string().optional(),
       }),
     ]);
     let result: any = {};
@@ -62,11 +63,20 @@ export class DeleteFetcher<const Resource extends APIResource = any> {
           success: true,
         };
       } else {
-        const res = await response.json();
-        if (res.errors) {
+        const body = await response.text();
+        let errors: unknown;
+        try {
+          errors = JSON.parse(body).errors;
+        } catch (e) {
+          errors = [{ type: "FetchError", message: (e as Error).toString() }];
+        }
+        if (errors) {
           result.success = false;
-          result.errors = res.errors;
+          result.errors = errors;
           result.status = response.status;
+          result.body = body;
+        } else if (response.ok) {
+          result = { success: true };
         }
       }
     } catch (e) {

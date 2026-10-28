@@ -95,5 +95,6 @@ export const adminWebhookUpdateSchema = z.object({
   event: ghostEventTypes.optional(),
   target_url: z.url().meta({ description: "The URL of the webhook" }).optional(),
   name: z.string().meta({ description: "The name of the webhook" }).optional(),
+  secret: z.string().meta({ description: "The secret of the webhook" }).nullish(),
   api_version: z.string().meta({ description: "The API version of the webhook" }).nullish(),
 });

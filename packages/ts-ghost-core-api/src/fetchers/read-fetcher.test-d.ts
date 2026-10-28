@@ -101,6 +101,7 @@ describe("ReadFetcher type narrowing", () => {
             message: string;
           }[];
           status: number;
+          body?: string | undefined;
         }
     >();
 
@@ -126,6 +127,7 @@ describe("ReadFetcher type narrowing", () => {
             message: string;
           }[];
           status: number;
+          body?: string | undefined;
         }
     >();
 
@@ -151,6 +153,7 @@ describe("ReadFetcher type narrowing", () => {
             message: string;
           }[];
           status: number;
+          body?: string | undefined;
         }
     >();
 
@@ -178,6 +181,7 @@ describe("ReadFetcher type narrowing", () => {
             message: string;
           }[];
           status: number;
+          body?: string | undefined;
         }
     >();
 
@@ -205,6 +209,7 @@ describe("ReadFetcher type narrowing", () => {
             message: string;
           }[];
           status: number;
+          body?: string | undefined;
         }
     >();
 
@@ -232,6 +237,7 @@ describe("ReadFetcher type narrowing", () => {
             message: string;
           }[];
           status: number;
+          body?: string | undefined;
         }
     >();
   });

@@ -185,19 +185,25 @@ export class ReadFetcher<
           }),
         ),
         status: z.number(),
+        body: z.string().optional(),
       }),
     ]);
-    const { data: result, status } = (await this.httpClient.fetchWithStatus({
+    const {
+      data: result,
+      status,
+      body,
+    } = (await this.httpClient.fetchWithStatus({
       resource: this.resource,
       pathnameIdentity: this._pathnameIdentity,
       searchParams: this._urlSearchParams,
       options,
-    })) as { data: any; status: number };
+    })) as { data: any; status: number; body?: string };
     let data: any = {};
     if (result.errors) {
       data.success = false;
       data.errors = result.errors;
       data.status = status;
+      if (body !== undefined) data.body = body;
     } else {
       data = {
         success: true,

@@ -12,8 +12,7 @@ const IGNORED: string[] = [];
 describe("settings", () => {
   const responses = liveResponses({ ignore: IGNORED });
 
-  // Expected failure: the settings schema only allows scalar values; Ghost sends list values (all_blocked_email_domains).
-  test.fails("GET /settings/ returns every setting as key and value", async () => {
+  test("GET /settings/ returns every setting as key and value", async () => {
     const result = await adminApi().settings.fetch();
     if (!result.success) throw new Error(JSON.stringify(result.errors));
 

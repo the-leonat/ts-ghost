@@ -43,15 +43,6 @@ const EMAIL = [
   "source_type",
   "track_clicks",
 ];
-const SITE = [
-  "accent_color",
-  "allow_external_signup",
-  "cover_image",
-  "icon",
-  "locale",
-  "site_uuid",
-  "timezone",
-];
 
 const authored = (resource: string) =>
   AUTHOR.flatMap((k) => [`${resource}[].authors[].${k}`, `${resource}[].primary_author.${k}`]);
@@ -63,6 +54,5 @@ export const PENDING_KEYS: string[] = [
   ...authored("pages"),
   "pages[].show_title_and_feature_image",
   ...NEWSLETTER.map((k) => `newsletters[].${k}`),
-  ...SITE.map((k) => `site.${k}`),
   ...USER.map((k) => `users[].${k}`),
 ];
