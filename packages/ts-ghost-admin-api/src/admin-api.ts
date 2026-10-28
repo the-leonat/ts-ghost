@@ -72,7 +72,8 @@ export class TSGhostAdminAPI<Version extends `v5.${string}` | `v6.${string}` = a
 
   get posts() {
     const postsIncludeSchema = z.object({
-      authors: z.literal(true).optional(),
+      // Always sent: an include replaces Ghost's default `authors,tags`, and authors are required.
+      authors: z.literal(true).default(true),
       tags: z.literal(true).optional(),
       tiers: z.literal(true).optional(),
     });
@@ -102,7 +103,8 @@ export class TSGhostAdminAPI<Version extends `v5.${string}` | `v6.${string}` = a
 
   get pages() {
     const pagesIncludeSchema = z.object({
-      authors: z.literal(true).optional(),
+      // Always sent: an include replaces Ghost's default `authors,tags`, and authors are required.
+      authors: z.literal(true).default(true),
       tags: z.literal(true).optional(),
       tiers: z.literal(true).optional(),
     });

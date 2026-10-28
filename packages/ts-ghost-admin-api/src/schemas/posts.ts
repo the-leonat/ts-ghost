@@ -11,7 +11,8 @@ export const adminPostsSchema = basePostsSchema.merge(
     uuid: z.string(),
     mobiledoc: z.string().nullish(),
     email_only: z.boolean(),
-    status: z.union([z.literal("draft"), z.literal("published"), z.literal("scheduled")]),
+    // `sent`: an email-only post Ghost has emailed.
+    status: z.union([z.literal("draft"), z.literal("published"), z.literal("scheduled"), z.literal("sent")]),
     email_segment: z.string().nullish(),
     frontmatter: z.string().nullish(),
     tiers: z.array(adminTiersSchema).optional(),
@@ -159,12 +160,10 @@ export const adminPostsCreateSchema = basePostsCreateSchema;
 
 export type CreatePost = z.infer<typeof adminPostsCreateSchema>;
 
-export const adminPostsUpdateSchema = basePostsCreateSchema
-  .partial({ title: true })
-  .merge(
-    z.object({
-      updated_at: z.date().transform((val) => val.toISOString()),
-    }),
-  );
+export const adminPostsUpdateSchema = basePostsCreateSchema.partial({ title: true }).merge(
+  z.object({
+    updated_at: z.date().transform((val) => val.toISOString()),
+  }),
+);
 
 export type UpdatePost = z.infer<typeof adminPostsUpdateSchema>;
