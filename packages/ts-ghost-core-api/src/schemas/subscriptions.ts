@@ -22,6 +22,16 @@ const basePlanSchema = z.object({
   currency: z.string(),
 });
 
+const baseDiscountSchema = z.object({
+  offer_id: z.string(),
+  start: z.string().nullable(),
+  end: z.string().meta({ description: "(nullable) Null for a forever discount" }).nullable(),
+  duration: z.union([z.literal("once"), z.literal("repeating"), z.literal("forever")]),
+  duration_in_months: z.number().nullable(),
+  type: z.union([z.literal("percent"), z.literal("fixed")]),
+  amount: z.number(),
+});
+
 // Many values are Stripe's, typed as Ghost stores them (its columns).
 export const baseSubscriptionsSchema = z.object({
   id: z.string().meta({ description: "Stripe subscription ID sub_XXXX, empty for a comped member" }),
@@ -59,12 +69,18 @@ export const baseSubscriptionsSchema = z.object({
   plan: basePlanSchema.meta({ description: "The Stripe price, under Stripe's legacy name" }).optional(),
   next_payment: basePlanSchema
     .omit({ id: true, nickname: true })
-    .extend({ original_amount: z.number(), discount: z.unknown().nullable() })
+    .extend({
+      original_amount: z.number().meta({ description: "The amount before any discount" }),
+      discount: baseDiscountSchema.meta({ description: "(nullable) The offer's active discount" }).nullable(),
+    })
     .meta({ description: "(nullable) The next payment, after any discount" })
     .nullish(),
   tier: baseTiersSchema.nullish(),
   offer: baseOffersSchema.nullish(),
-  offer_redemptions: z.array(z.unknown()).optional(),
+  offer_redemptions: z
+    .array(baseOffersSchema)
+    .meta({ description: "The offers redeemed on the subscription" })
+    .optional(),
   attribution: baseAttributionSchema.nullish(),
   trial_start_at: z.string().nullish(),
   trial_end_at: z.string().nullish(),
