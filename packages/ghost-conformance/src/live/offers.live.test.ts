@@ -3,7 +3,7 @@ import { assert, beforeAll, describe, expect, inject } from "vitest";
 import { seedOffers } from "../seeds/offers.ts";
 import { uniqueSuffix } from "../seeds/unique-suffix.ts";
 import { undeclaredKeys } from "../unknown-keys.ts";
-import { ghostAtLeast, requireBehaviour } from "./ghost.ts";
+import { ghostSends, requireBehaviour } from "./ghost.ts";
 import { assertOk, liveTest } from "./live-test.ts";
 
 let seed: Awaited<ReturnType<typeof seedOffers>>;
@@ -151,8 +151,7 @@ describe("offers", () => {
         type: "trial",
         duration: "trial",
         amount: 14,
-        // Ghost sends redemption_type since 6.13.
-        ...(ghostAtLeast("6.13.0") && { redemption_type: "signup" }),
+        ...(ghostSends("offers.redemption_type") && { redemption_type: "signup" }),
         tier: { id: seed.tierId, name: expect.any(String) },
         created_at: expect.stringMatching(ISO_MS),
         last_redeemed: null,
@@ -161,8 +160,8 @@ describe("offers", () => {
   );
 
   // The deprecated slug read stays callable; Ghost has no /offers/slug/:slug/ route.
-  liveTest("the deprecated read by slug gets Ghost's 404", async ({ deprecatedApi }) => {
-    const result = await deprecatedApi.offers.read({ slug: seed.trial.code }).fetch();
+  liveTest("the deprecated read by slug gets Ghost's 404", async ({ api }) => {
+    const result = await api.offers.read({ slug: seed.trial.code }).fetch();
 
     assert(!result.success);
     expect(result.status).toBe(404);

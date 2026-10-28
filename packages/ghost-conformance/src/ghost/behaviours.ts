@@ -1,3 +1,5 @@
+import { compareVersions } from "./pin.ts";
+
 /** Behaviour of a route every leg has that changed in some Ghost, with the first version that has it.
  * Whether a route exists at all is the manifests' job (manifestFor). */
 export const GHOST_BEHAVIOURS = {
@@ -21,15 +23,4 @@ export function lacks(behaviour: GhostBehaviour, version: string): string | unde
   return ghostHas(behaviour, version)
     ? undefined
     : `Ghost ${version} predates ${behaviour} (${GHOST_BEHAVIOURS[behaviour]})`;
-}
-
-/** Whether Ghost `version` is `min` or newer, comparing each part numerically. */
-export function versionAtLeast(version: string, min: string): boolean {
-  return compareVersions(version, min) >= 0;
-}
-
-function compareVersions(a: string, b: string): number {
-  const [x, y] = [a, b].map((v) => v.split(".").map(Number));
-  for (let i = 0; i < 3; i++) if (x![i] !== y![i]) return (x![i] ?? 0) - (y![i] ?? 0);
-  return 0;
 }

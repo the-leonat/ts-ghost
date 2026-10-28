@@ -1,11 +1,13 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import type { SchemaTarget } from "@ts-ghost/admin-api";
+
+export type { SchemaTarget };
 
 /** The one file pinning every Ghost image: the last Ghost 5, Ghost 6.0.0 and the drift-maintained pin. */
 export const GHOST_VERSIONS_FILE = fileURLToPath(new URL("../../ghost-versions.json", import.meta.url));
 
 export type GhostVersions = { v5: string; "v6.0": string; pin: string };
-export type SchemaTarget = "v5" | "v6-compat" | "v6-latest";
 
 /** Each matrix leg: which pinned Ghost it runs and the client schema target it checks. */
 const LEGS = {
@@ -70,4 +72,16 @@ export function clientVersion(version: string): `v5.${string}` | `v6.${string}` 
 /** Client options selecting `target` on top of the version string. */
 export function clientOptions(target: SchemaTarget): { schema?: "latest" } {
   return target === "v6-latest" ? { schema: "latest" } : {};
+}
+
+/** Compares Ghost versions part by part, numerically; a missing part counts as 0. */
+export function compareVersions(a: string, b: string): number {
+  const [x, y] = [a, b].map((v) => v.split(".").map(Number));
+  for (let i = 0; i < 3; i++) if (x![i] !== y![i]) return (x![i] ?? 0) - (y![i] ?? 0);
+  return 0;
+}
+
+/** Whether Ghost `version` is `min` or newer. */
+export function versionAtLeast(version: string, min: string): boolean {
+  return compareVersions(version, min) >= 0;
 }

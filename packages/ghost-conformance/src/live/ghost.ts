@@ -1,8 +1,8 @@
-import { describe, expect, inject, test, type ProvidedContext, type TestContext } from "vitest";
-import { TSGhostAdminAPI } from "@ts-ghost/admin-api";
+import { inject, type ProvidedContext, type TestContext } from "vitest";
+import { GHOST_FIELDS, TSGhostAdminAPI } from "@ts-ghost/admin-api";
 
-import { lacks, versionAtLeast, type GhostBehaviour } from "../ghost/behaviours.ts";
-import { clientOptions, clientVersion } from "../ghost/pin.ts";
+import { lacks, type GhostBehaviour } from "../ghost/behaviours.ts";
+import { clientOptions, clientVersion, versionAtLeast } from "../ghost/pin.ts";
 import { manifestFor } from "../manifest/manifests.ts";
 
 export type CredentialKind = "integration" | "staff";
@@ -41,19 +41,9 @@ export function requireRoute(context: Pick<TestContext, "skip">, route: string) 
   if (!manifestFor(version).has(route)) context.skip(`Ghost ${version} has no ${route}`);
 }
 
-/** Whether the live Ghost is `version` or newer, for fields only later Ghost sends. */
-export function ghostAtLeast(version: string): boolean {
-  return versionAtLeast(inject("ghost").version, version);
-}
-
-/** Describes a client resource's live tests; a leg whose manifest lacks `GET /<resource>/` asserts the 404 instead. */
-export function describeResource(resource: string, tests: () => void) {
+/** Whether the live Ghost sends `field`, by its GHOST_FIELDS since/until entry. */
+export function ghostSends(field: keyof typeof GHOST_FIELDS): boolean {
   const { version } = inject("ghost");
-  if (manifestFor(version).has(`GET /${resource}/`)) return describe(resource, tests);
-  describe(resource, () => {
-    test(`Ghost ${version} has no ${resource} and answers 404`, async () => {
-      const api = adminApi() as unknown as Record<string, { browse(): { fetch(): Promise<unknown> } }>;
-      expect(await api[resource]!.browse().fetch()).toMatchObject({ success: false, status: 404 });
-    });
-  });
+  const range: { since?: string; until?: string } = GHOST_FIELDS[field];
+  return (!range.since || versionAtLeast(version, range.since)) && !(range.until && versionAtLeast(version, range.until));
 }
