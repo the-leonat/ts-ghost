@@ -3,6 +3,7 @@ import { adminMembersSchema } from "@ts-ghost/admin-api";
 
 import { EMAIL_SEED } from "../seeds/emails.ts";
 import { MEMBER_SEED, seedMembers } from "../seeds/members.ts";
+import { sessionRequest } from "../seeds/session.ts";
 import { unknownKeys } from "../unknown-keys.ts";
 import { adminApi, liveResponses } from "./ghost.ts";
 
@@ -172,7 +173,14 @@ describe("members", () => {
     const id = await memberId(EMAIL_SEED.members.recipient);
     const result = await adminApi().members.read({ id }).include({ email_recipients: true }).fetch();
     if (!result.success) throw new Error("read failed");
-    const recipients = result.data.email_recipients as Record<string, unknown>[];
+    // Only the seeded emails: a newsletter another file sends also reaches this member.
+    const { posts } = await sessionRequest<{ posts: { email: { id: string } }[] }>(
+      inject("ghost"),
+      "GET",
+      `/posts/?filter=slug:[${Object.values(EMAIL_SEED.posts).join(",")}]&fields=id&include=email`,
+    );
+    const seededEmails = posts.map((post) => post.email.id);
+    const recipients = result.data.email_recipients.filter((r) => seededEmails.includes(r.email_id));
     expect(recipients).toHaveLength(2);
     for (const recipient of recipients) {
       expect(recipient).toMatchObject({
