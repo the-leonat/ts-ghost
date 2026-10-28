@@ -4,7 +4,7 @@ import { DebugOption } from "../helpers/debug";
 import type { HTTPClient } from "../helpers/http-client";
 import { requiredIncludes, sendableIncludes } from "../helpers/includes";
 import { sanitizeFormatMask, sanitizeMask } from "../helpers/masks";
-import { dropUnselected, parseResponse } from "../helpers/response-schema";
+import { dropUnselected, parseFetched } from "../helpers/response-schema";
 import { type APIResource, type GhostIdentityInput } from "../schemas/shared";
 import type { Exactly, Mask, NoUnrecognizedKeys } from "../utils";
 import { contentFormats, withEmptyFormats, type ContentFormats } from "./formats";
@@ -192,33 +192,18 @@ export class ReadFetcher<
         body: z.string().optional(),
       }),
     ]);
-    const {
-      data: result,
-      status,
-      body,
-    } = (await this.httpClient.fetchWithStatus({
+    const fetched = await this.httpClient.fetchWithStatus({
       resource: this.resource,
       pathnameIdentity: this._pathnameIdentity,
       searchParams: this._urlSearchParams,
       options,
-    })) as { data: any; status: number; body?: string };
-    let data: any = {};
-    if (result?.errors) {
-      data.success = false;
-      data.errors = result.errors;
-      data.status = status;
-      if (body !== undefined) data.body = body;
-    } else {
-      data = {
-        success: true,
-        data: dropUnselected(result?.[this.resource]?.[0], this.config.schema, this.config.output),
-      };
-    }
-    return parseResponse(res, data, {
+    });
+    return parseFetched(res, fetched, {
       dataPath: `${this.resource}[0]`,
-      status,
-      body,
       strict: this.httpClient.strict,
+      success: (result) => ({
+        data: dropUnselected(result?.[this.resource]?.[0], this.config.schema, this.config.output),
+      }),
     });
   }
 }

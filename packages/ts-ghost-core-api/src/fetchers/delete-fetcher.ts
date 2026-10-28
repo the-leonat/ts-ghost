@@ -1,8 +1,8 @@
 import { z } from "zod";
 
 import { DebugOption } from "../helpers/debug";
-import type { HTTPClient } from "../helpers/http-client";
-import { parseResponse } from "../helpers/response-schema";
+import type { FetchWithStatusResult, HTTPClient } from "../helpers/http-client";
+import { parseFetched } from "../helpers/response-schema";
 import type { APIResource } from "../schemas/shared";
 
 export class DeleteFetcher<const Resource extends APIResource = any> {
@@ -49,53 +49,34 @@ export class DeleteFetcher<const Resource extends APIResource = any> {
         body: z.string().optional(),
       }),
     ]);
-    let result: any = {};
+    let fetched: FetchWithStatusResult<any>;
     try {
       const response = await this.httpClient.fetchRawResponse({
         resource: this.resource,
         pathnameIdentity: this._pathnameIdentity,
-        options: {
-          ...options,
-          method: "DELETE",
-        },
+        options: { ...options, method: "DELETE" },
       });
-      if (response.status === 204) {
-        result = {
-          success: true,
-        };
-      } else {
-        const body = await response.text();
-        let errors: unknown;
-        try {
-          errors = JSON.parse(body).errors;
-        } catch (e) {
-          errors = [{ type: "FetchError", message: (e as Error).toString() }];
-        }
-        if (errors) {
-          result.success = false;
-          result.errors = errors;
-          result.status = response.status;
-          result.body = body;
-        } else if (response.ok) {
-          result = { success: true };
-        }
-      }
+      const body = await response.text();
+      fetched = { data: deleteResponseData(response, body), status: response.status, body };
     } catch (e) {
-      result = {
-        success: false,
-        errors: [
-          {
-            type: "FetchError",
-            message: (e as Error).toString(),
-          },
-        ],
-        status: 0,
-      };
+      fetched = { data: { errors: [{ type: "FetchError", message: (e as Error).toString() }] }, status: 0 };
     }
-    return parseResponse(schema, result, {
+    return parseFetched(schema, fetched, {
       dataPath: this.resource,
-      status: result.status ?? 0,
-      body: result.body,
+      strict: this.httpClient.strict,
+      success: () => ({}),
     });
   }
+}
+
+/** A delete's body: empty on success (204), Ghost's errors, or a FetchError for an unreadable or unexpected one. */
+function deleteResponseData(response: Response, body: string) {
+  if (response.ok && body === "") return {};
+  try {
+    const data = JSON.parse(body);
+    if (response.ok || data?.errors !== undefined) return data;
+  } catch (e) {
+    return { errors: [{ type: "FetchError", message: (e as Error).toString() }] };
+  }
+  return { errors: [{ type: "FetchError", message: `Unexpected ${response.status} response without errors` }] };
 }

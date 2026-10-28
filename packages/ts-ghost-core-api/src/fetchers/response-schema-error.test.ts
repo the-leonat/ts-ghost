@@ -53,14 +53,34 @@ describe("a response that doesn't match the schema", () => {
     });
   });
 
-  test("a Ghost error body whose items lack type and message returns an error result", async () => {
+  test("a Ghost error item without type and message becomes a ResponseSchemaError carrying the item", async () => {
     fetchMocker.doMockOnce(JSON.stringify({ errors: [{ code: "WEIRD" }] }), { status: 500 });
     const result = await browse().fetch();
     expect(result).toMatchObject({ success: false, status: 500 });
     if (result.success) return;
-    expect(result.errors.map((e) => e.type)).toEqual(["ResponseSchemaError", "ResponseSchemaError"]);
-    expect(result.errors[0]!.message).toContain("errors[0].type");
+    expect(result.errors).toEqual([
+      { type: "ResponseSchemaError", message: expect.stringContaining('errors[0]: {"code":"WEIRD"}') },
+    ]);
     expect(result.body).toBe(JSON.stringify({ errors: [{ code: "WEIRD" }] }));
+  });
+
+  test("Ghost's usable error items are kept next to a ResponseSchemaError for each unusable one", async () => {
+    const ghostError = { type: "ValidationError", message: "Title is required" };
+    fetchMocker.doMockOnce(JSON.stringify({ errors: [ghostError, { code: "WEIRD" }] }), { status: 422 });
+    expect(await browse().fetch()).toMatchObject({
+      success: false,
+      status: 422,
+      errors: [ghostError, { type: "ResponseSchemaError", message: expect.stringContaining("errors[1]") }],
+    });
+  });
+
+  test("an errors value that is not a list becomes one ResponseSchemaError", async () => {
+    fetchMocker.doMockOnce(JSON.stringify({ errors: "boom" }), { status: 500 });
+    expect(await browse().fetch()).toMatchObject({
+      success: false,
+      status: 500,
+      errors: [{ type: "ResponseSchemaError", message: expect.stringContaining('errors: "boom"') }],
+    });
   });
 
   test("read returns a ResponseSchemaError naming the failing path", async () => {
@@ -124,7 +144,7 @@ describe("a response that doesn't match the schema", () => {
     expect(await mutation.submit()).toMatchObject({
       success: false,
       status: 422,
-      errors: [{ type: "ResponseSchemaError", message: expect.stringContaining("errors[0].message") }],
+      errors: [{ type: "ResponseSchemaError", message: expect.stringContaining("errors[0]") }],
     });
   });
 
@@ -135,7 +155,7 @@ describe("a response that doesn't match the schema", () => {
       success: false,
       status: 404,
       body,
-      errors: [{ type: "ResponseSchemaError", message: expect.stringContaining("errors[0].type") }],
+      errors: [{ type: "ResponseSchemaError", message: expect.stringContaining('errors[0]: {"message":"gone"}') }],
     });
   });
 

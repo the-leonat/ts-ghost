@@ -1,5 +1,7 @@
 import type { z, ZodObject, ZodType } from "zod";
 
+import type { FetchWithStatusResult } from "./http-client";
+
 /** An error item for a response value the client's schema rejects; `path` is in Ghost's terms, e.g. `posts[0].title`. */
 export type ResponseSchemaError = { type: "ResponseSchemaError"; message: string };
 
@@ -25,6 +27,35 @@ export function responsePath(path: readonly PropertyKey[], dataPath: string): st
 export type StrictOption = boolean | { ignore?: readonly string[] };
 
 type Context = { dataPath: string; status: number; body?: string; strict?: StrictOption };
+
+/**
+ * A fetcher's result from Ghost's response: its `errors`, else `{ success: true, ...success(data) }`.
+ * Parsed with `parseResponse`, so it never throws.
+ */
+export function parseFetched<S extends ZodType>(
+  schema: S,
+  { data, status, body }: FetchWithStatusResult<any>,
+  options: { dataPath: string; strict?: StrictOption; success: (data: any) => object },
+): z.infer<S> {
+  const context = { dataPath: options.dataPath, status, body, strict: options.strict };
+  if (data?.errors !== undefined)
+    return parseResponse(schema, errorResult(usableErrors(data.errors), context), context);
+  return parseResponse(schema, { success: true, ...options.success(data) }, context);
+}
+
+const isGhostError = (item: unknown) =>
+  isPlainObject(item) &&
+  typeof item.type === "string" &&
+  typeof item.message === "string" &&
+  (item.context == null || typeof item.context === "string");
+
+/** Ghost's error items, each one lacking a string `type` and `message` swapped for a ResponseSchemaError carrying it. */
+function usableErrors(errors: unknown) {
+  if (!Array.isArray(errors)) return [responseSchemaError("errors", JSON.stringify(errors))];
+  return errors.map((item, i) =>
+    isGhostError(item) ? item : responseSchemaError(`errors[${i}]`, JSON.stringify(item)),
+  );
+}
 
 /**
  * Parses a fetcher result without throwing: a mismatch becomes an error result of ResponseSchemaErrors.
@@ -56,7 +87,7 @@ export function parseResponse<S extends ZodType>(schema: S, result: unknown, con
   return parsed.data;
 }
 
-function errorResult(errors: ResponseSchemaError[], context: Context): any {
+function errorResult(errors: unknown[], context: Context): any {
   return {
     success: false,
     errors,

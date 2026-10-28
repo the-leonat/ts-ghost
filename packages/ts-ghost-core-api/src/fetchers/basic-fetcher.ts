@@ -2,7 +2,7 @@ import { z, ZodTypeAny } from "zod";
 
 import { DebugOption } from "../helpers/debug";
 import type { HTTPClient } from "../helpers/http-client";
-import { parseResponse } from "../helpers/response-schema";
+import { parseFetched } from "../helpers/response-schema";
 import type { APIResource } from "../schemas/shared";
 
 export class BasicFetcher<const Resource extends APIResource = any, OutputShape extends ZodTypeAny = any> {
@@ -36,31 +36,11 @@ export class BasicFetcher<const Resource extends APIResource = any, OutputShape 
         body: z.string().optional(),
       }),
     ]);
-    const {
-      data: result,
-      status,
-      body,
-    } = (await this.httpClient.fetchWithStatus({
-      options,
-      resource: this.resource,
-    })) as { data: any; status: number; body?: string };
-    let data: any = {};
-    if (result?.errors) {
-      data.success = false;
-      data.errors = result.errors;
-      data.status = status;
-      if (body !== undefined) data.body = body;
-    } else {
-      data = {
-        success: true,
-        data: result?.[this.resource],
-      };
-    }
-    return parseResponse(res, data, {
+    const fetched = await this.httpClient.fetchWithStatus({ options, resource: this.resource });
+    return parseFetched(res, fetched, {
       dataPath: this.resource,
-      status,
-      body,
       strict: this.httpClient.strict,
+      success: (result) => ({ data: result?.[this.resource] }),
     });
   }
 }
