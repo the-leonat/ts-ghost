@@ -12,8 +12,7 @@ export const baseEmailSchema = z.object({
   opened_count: z.number(),
   failed_count: z.number(),
   subject: z.string(),
-  // Null on an email whose sender and source Ghost did not store (e.g. a failed one).
-  from: z.string().nullable(),
+  from: z.string().meta({ description: "(nullable) Null when Ghost stored no sender, e.g. a failed email" }).nullable(),
   reply_to: z.string().nullable(),
   source: z.string().nullable(), // lexical format
   html: z.string().nullable(),
@@ -22,11 +21,10 @@ export const baseEmailSchema = z.object({
   submitted_at: z.string(),
   created_at: z.string(),
   updated_at: z.string().nullable(),
-  // Sent by Ghost 6; optional for older Ghost versions.
-  post_id: z.string().optional(),
-  newsletter_id: z.string().nullish(),
-  source_type: z.string().nullish(),
-  track_clicks: z.boolean().optional(),
-  feedback_enabled: z.boolean().optional(),
-  csd_email_count: z.number().nullish(),
+  post_id: z.string(),
+  newsletter_id: z.string().nullable(),
+  source_type: z.string(),
+  track_clicks: z.boolean(),
+  feedback_enabled: z.boolean(),
+  csd_email_count: z.number().meta({ description: "(nullable) Sent by Ghost 6.x after 6.0" }).nullish(),
 });
