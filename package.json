@@ -1,0 +1,33 @@
+{
+  "name": "@ts-ghost/core-api",
+  "author": "Philippe L'ATTENTION <https://github.com/PhilDL>",
+  "license": "MIT",
+  "access": "public",
+  "private": false,
+  "description": "TypeScript utilities to build type-safe queries and fetchers for the Ghost API based on Zod schemas.",
+  "keywords": [
+    "ghost",
+    "typescript",
+    "blog",
+    "api",
+    "zod"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/PhilDL/ts-ghost/tree/main/packages/ts-ghost-core-api"
+  },
+  "version": "7.0.0",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist/**"
+  ],
+  "dependencies": {
+    "jose": "^6.0.0",
+    "zod": "4.3.5"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
