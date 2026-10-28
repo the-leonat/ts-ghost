@@ -32,16 +32,17 @@ import { adminWebhookCreateSchema, adminWebhookSchema, adminWebhookUpdateSchema 
 export type { AdminAPICredentials, APIVersions } from "@ts-ghost/core-api";
 
 /** A read by id, plus a read by slug for a resource Ghost has no read-by-slug route for. */
-type ReadByIdOnly<Read extends (options: never) => unknown> = {
-  (options: { id: string }): ReturnType<Read>;
+type ReadByIdOnly<Fetcher> = {
+  (options: { id: string }): Fetcher;
   /** @deprecated Ghost has no read-by-slug route for this resource, so this always fails; use `read({ id })`. */
-  (options: { slug: string }): ReturnType<Read>;
-  (options: { id: string } | { slug: string }): ReturnType<Read>;
+  (options: { slug: string }): Fetcher;
+  (options: { id: string } | { slug: string }): Fetcher;
 };
 
 /** Types a composer's slug read as deprecated (newsletters, tiers, offers: Ghost reads them by id only). */
-const readByIdOnly = <C extends { read: (options: never) => unknown }>(composer: C) =>
-  composer as unknown as Omit<C, "read"> & { read: ReadByIdOnly<C["read"]> };
+const readByIdOnly = <C extends object, Fetcher>(
+  composer: C & { read: (options: { id: string } | { slug: string }) => Fetcher },
+): Omit<C, "read"> & { read: ReadByIdOnly<Fetcher> } => composer;
 
 export class TSGhostAdminAPI<Version extends `v5.${string}` | `v6.${string}` = any> {
   private httpClientFactory: HTTPClientFactory;
