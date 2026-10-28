@@ -113,6 +113,7 @@ export async function recordClientCalls(target: SchemaTarget = "v6-compat"): Pro
   const [version, options] = TARGET_CLIENT[target];
   const api = new TSGhostAdminAPI(BASE, KEY, version as `v6.${string}`, options as {});
   const { calls, fetch, send } = recorder();
+  // A manual swap, not vi.spyOn: the coverage CLI calls this outside Vitest.
   const realFetch = globalThis.fetch;
   globalThis.fetch = fetch;
   try {

@@ -1,8 +1,9 @@
-import { assert, describe, expect, test } from "vitest";
+import { describe, expect } from "vitest";
 
 import { STRIPE_SEED } from "../seeds/stripe.ts";
 import { undeclaredKeys } from "../unknown-keys.ts";
-import { adminApi, liveResponses } from "./ghost.ts";
+import { adminApi } from "./ghost.ts";
+import { assertOk, liveTest } from "./live-test.ts";
 
 /** Id of a member by email; selects only `id` so members the client can't parse still resolve. */
 async function memberId(email: string): Promise<string> {
@@ -15,14 +16,10 @@ async function memberId(email: string): Promise<string> {
 }
 
 describe("paid members", () => {
-  liveResponses();
+  liveTest("a paid member reads with an active Stripe subscription on the paid tier", async ({ api }) => {
+    const result = await api.members.read({ id: await memberId(STRIPE_SEED.members.paid) }).fetch();
 
-  test("a paid member reads with an active Stripe subscription on the paid tier", async () => {
-    const result = await adminApi()
-      .members.read({ id: await memberId(STRIPE_SEED.members.paid) })
-      .fetch();
-
-    assert(result.success);
+    assertOk(result);
     expect(result.data).toMatchObject({ status: "paid", comped: false });
     expect(result.data.subscriptions).toEqual([
       expect.objectContaining({
@@ -44,12 +41,10 @@ describe("paid members", () => {
     ]);
   });
 
-  test("a subscription with a null customer email and price nickname parses", async () => {
-    const result = await adminApi()
-      .members.read({ id: await memberId(STRIPE_SEED.members.nulls) })
-      .fetch();
+  liveTest("a subscription with a null customer email and price nickname parses", async ({ api }) => {
+    const result = await api.members.read({ id: await memberId(STRIPE_SEED.members.nulls) }).fetch();
 
-    assert(result.success);
+    assertOk(result);
     expect(result.data.subscriptions).toEqual([
       expect.objectContaining({
         id: STRIPE_SEED.subscriptions.nulls,
@@ -63,31 +58,29 @@ describe("paid members", () => {
     ]);
   });
 
-  test("browsing paid members parses", async () => {
-    const result = await adminApi().members.browse({ filter: "status:paid" }).fetch();
+  liveTest("browsing paid members parses", async ({ api }) => {
+    const result = await api.members.browse({ filter: "status:paid" }).fetch();
 
-    assert(result.success);
+    assertOk(result);
     expect(result.data.map((member) => member.email).sort()).toEqual(
       [STRIPE_SEED.members.nulls, STRIPE_SEED.members.paid].sort(),
     );
   });
 
-  test("a paid member's tiers come with the include", async () => {
-    const result = await adminApi()
-      .members.read({ id: await memberId(STRIPE_SEED.members.paid) })
+  liveTest("a paid member's tiers come with the include", async ({ api }) => {
+    const result = await api.members
+      .read({ id: await memberId(STRIPE_SEED.members.paid) })
       .include({ tiers: true })
       .fetch();
 
-    assert(result.success);
+    assertOk(result);
     expect(result.data.tiers).toEqual([expect.objectContaining({ slug: "default-product", type: "paid" })]);
   });
 
-  test("a subscription carries no key the client's schema lacks", async () => {
-    const result = await adminApi()
-      .members.read({ id: await memberId(STRIPE_SEED.members.paid) })
-      .fetch();
+  liveTest("a subscription carries no key the client's schema lacks", async ({ api }) => {
+    const result = await api.members.read({ id: await memberId(STRIPE_SEED.members.paid) }).fetch();
 
     expect(undeclaredKeys(result).filter((k) => k.startsWith("members[].subscriptions["))).toEqual([]);
-    expect(result.success).toBe(true);
+    assertOk(result);
   });
 });

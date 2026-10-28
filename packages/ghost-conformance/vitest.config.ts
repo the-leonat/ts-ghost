@@ -7,14 +7,12 @@ import tsconfigPaths from "vite-tsconfig-paths";
 export default defineConfig({
   plugins: [tsconfigPaths()],
   test: {
-    globals: true,
     include: ["src/**/*.test.ts"],
     exclude: ["src/**/*.live.test.ts"],
     setupFiles: ["./src/expected-failures.ts"],
-    // With --typecheck, unit test files are also type-checked; live files are left to `tsc`.
+    // Only type tests: runtime files are type-checked by `tsc` and would otherwise be reported twice.
     typecheck: {
-      include: ["src/**/*.test.ts"],
-      exclude: ["src/**/*.live.test.ts"],
+      include: ["src/**/*.test-d.ts"],
       tsconfig: "./tsconfig.json",
     },
   },

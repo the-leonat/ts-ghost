@@ -1,60 +1,59 @@
-import { beforeAll, describe, expect, inject, test } from "vitest";
+import { beforeAll, describe, expect, inject } from "vitest";
 
 import { seedUsers, STAFF_PROFILE, TOUR } from "../seeds/users.ts";
 import { undeclaredKeys } from "../unknown-keys.ts";
-import { adminApi, liveResponses } from "./ghost.ts";
+import { assertOk, liveTest } from "./live-test.ts";
 
 describe("users", () => {
-  liveResponses();
   let seeded: Awaited<ReturnType<typeof seedUsers>>;
   beforeAll(async () => {
     seeded = await seedUsers();
   });
 
-  test("GET /users/:id/ and /users/email/:email/ return the same user", async () => {
-    const api = adminApi();
+  liveTest("GET /users/:id/ and /users/email/:email/ return the same user", async ({ api }) => {
     const owner = await api.users.read({ email: inject("ghost").owner.email }).fetch();
-    if (!owner.success) throw new Error(JSON.stringify(owner.errors));
+    assertOk(owner);
 
     for (const { id, email } of [{ id: owner.data.id, email: owner.data.email! }, seeded.staff]) {
       const byId = await api.users.read({ id }).fetch();
       const byEmail = await api.users.read({ email }).fetch();
-      if (!byId.success || !byEmail.success) throw new Error("user read failed");
+      assertOk(byId);
+      assertOk(byEmail);
       expect(byEmail.data).toEqual(byId.data);
     }
   });
 
-  test("GET /users/:id/ returns profile fields both null and set", async () => {
-    const api = adminApi();
+  liveTest("GET /users/:id/ returns profile fields both null and set", async ({ api }) => {
     const owner = await api.users.read({ email: inject("ghost").owner.email }).fetch();
     const staff = await api.users.read({ id: seeded.staff.id }).fetch();
-    if (!owner.success || !staff.success) throw new Error("user read failed");
+    assertOk(owner);
+    assertOk(staff);
 
     expect(owner.data.bio).toBeNull();
     expect(staff.data).toMatchObject({ ...STAFF_PROFILE, status: "active" });
     expect(staff.data.last_seen).toEqual(expect.any(String));
   });
 
-  test("GET /users/:id/ returns a user's tour", async () => {
-    const result = await adminApi().users.read({ id: seeded.toured.id }).fetch();
-    if (!result.success) throw new Error(JSON.stringify(result.errors));
+  liveTest("GET /users/:id/ returns a user's tour", async ({ api }) => {
+    const result = await api.users.read({ id: seeded.toured.id }).fetch();
+    assertOk(result);
     expect(result.data.tour).toBe(TOUR);
   });
 
-  test("GET /users/ lists an inactive user", async () => {
+  liveTest("GET /users/ lists an inactive user", async ({ api }) => {
     const filter = `slug:[${seeded.suspended.slug},${seeded.staff.slug}]` as const;
-    const result = await adminApi().users.browse({ filter }).fetch();
-    if (!result.success) throw new Error(JSON.stringify(result.errors));
+    const result = await api.users.browse({ filter }).fetch();
+    assertOk(result);
 
     expect(result.data.find((u) => u.id === seeded.suspended.id)?.status).toBe("inactive");
     expect(result.data.map((u) => u.id)).toEqual(expect.arrayContaining([seeded.staff.id]));
   });
 
-  test("user responses send no key the client's schema lacks", async () => {
-    const api = adminApi();
+  liveTest("user responses send no key the client's schema lacks", async ({ api }) => {
     const read = await api.users.read({ id: seeded.staff.id }).fetch();
     const byEmail = await api.users.read({ email: seeded.staff.email }).fetch();
     expect(undeclaredKeys(read, byEmail)).toEqual([]);
-    expect([read.success, byEmail.success]).toEqual([true, true]);
+    assertOk(read);
+    assertOk(byEmail);
   });
 });

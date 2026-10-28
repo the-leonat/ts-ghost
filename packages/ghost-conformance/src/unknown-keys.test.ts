@@ -19,11 +19,10 @@ const site = {
 };
 
 function ghostReturns(body: unknown) {
+  // A plain function, not vi.fn(): recordResponses() spies on whatever fetch it finds.
   vi.stubGlobal(
     "fetch",
-    vi.fn(
-      async () => new Response(JSON.stringify(body), { headers: { "content-type": "application/json" } }),
-    ),
+    async () => new Response(JSON.stringify(body), { headers: { "content-type": "application/json" } }),
   );
 }
 

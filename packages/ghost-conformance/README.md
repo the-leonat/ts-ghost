@@ -15,7 +15,7 @@ The live suite runs as one of four **legs**, chosen with `GHOST_LEG` (default `p
 
 `GHOST_LEG_VERSION=6.30.0` runs a leg's target against another Ghost, e.g. to check older minors. The client version is `v<major>.<minor>` of the leg's Ghost (`clientVersion()`), plus `{ schema: "latest" }` on the `pin` leg.
 
-Whether a Ghost has a route comes from its committed manifest: `manifestFor(version).has("GET /members/metafields/:namespace/")` in seeds, `requireRoute(context, route)` to skip a test with the reason, and `describeResource(name, tests)` to run a resource's tests only where `GET /<name>/` exists, asserting the 404 elsewhere. Where the route exists everywhere but behaves differently, [`src/ghost/behaviours.ts`](./src/ghost/behaviours.ts) names the first version (`GHOST_BEHAVIOURS`), and `requireBehaviour(context, behaviour)` skips with the reason. `ghostAtLeast("6.13.0")` guards an assertion on a field only later Ghost sends. `deprecatedApi()` is `adminApi()` typed as v6-compat, for tests of deprecated forms that v6-latest's types leave out.
+Whether a Ghost has a route comes from its committed manifest: `manifestFor(version).has("GET /members/metafields/:namespace/")` in seeds, `requireRoute({ skip }, route)` to skip a test with the reason, and `describeResource(name, tests)` to run a resource's tests only where `GET /<name>/` exists, asserting the 404 elsewhere. Where the route exists everywhere but behaves differently, [`src/ghost/behaviours.ts`](./src/ghost/behaviours.ts) names the first version (`GHOST_BEHAVIOURS`), and `requireBehaviour({ skip }, behaviour)` skips with the reason. `ghostAtLeast("6.13.0")` guards an assertion on a field only later Ghost sends. `liveTest`'s `deprecatedApi` is its `api` typed as v6-compat, for tests of deprecated forms that v6-latest's types leave out.
 
 ## The manifest
 
@@ -50,7 +50,7 @@ The live suite's global setup:
 
 Every other record is seeded by the tests through the client itself. The suite follows three rules:
 
-- every response is checked for keys the client's schema doesn't declare, at any depth: `adminApi()` builds the client with `{ strict: true }`, so such a key fails the result with a `ResponseSchemaError` naming its path, and `undeclaredKeys(result)` lists those paths;
+- every response is checked for keys the client's schema doesn't declare, at any depth: `liveTest`'s `api` (and `apiFor(key)`) builds the client with `strict`, so such a key fails the result with a `ResponseSchemaError` naming its path, and `undeclaredKeys(result)` lists those paths;
 - every add and edit is read back and compared with what was sent;
 - every nullable field is seeded both null and set.
 
@@ -88,9 +88,9 @@ Every place where the client and Ghost currently disagree is an expected failure
 - **`test.fails`**: the test is expected to fail. When the client is fixed, it passes, so Vitest fails it until the marker is removed. Each one has a single cause. A marker that holds on some legs only uses `test.fails` behind a leg check, e.g. `(inject("ghost").leg.target === "v5" ? test.fails : test)(...)`.
 - **`// @ts-expect-error <reason>`**: the test calls the client in a way its types don't allow yet (a missing input key, include or method). Once the type allows it, the typecheck fails until the comment is removed.
 - **Pending keys** ([`src/live/pending-keys.ts`](./src/live/pending-keys.ts)): unknown keys Ghost sends that are waiting for a schema fix, per schema target, since each leg checks its own. Each group belongs to a resource's "carries no key the client's schema lacks" `test.fails`. Remove the keys when that test turns green.
-- **Ignored keys**: keys the client deliberately doesn't model. Pass them to the file's `liveResponses({ ignore: [...] })`, e.g. `ignore: ["posts[].frontmatter"]`. These are permanent, unlike pending keys; no file needs any yet.
+- **Ignored keys**: keys the client deliberately doesn't model. Set them in the describe with `liveTest.override({ ignore: [...] })`, e.g. `ignore: ["posts[].frontmatter"]`. These are permanent, unlike pending keys; no file needs any yet.
 
-Both lists are paths with `[]` for any index, e.g. `posts[].email.new_key`. `adminApi()` passes them to the client as `strict: { ignore }`, so those keys pass through instead of failing the result.
+Both lists are paths with `[]` for any index, e.g. `posts[].email.new_key`. `liveTest`'s `api` passes them to the client as `strict: { ignore }`, so those keys pass through instead of failing the result.
 
 - **`EXPECTED_FAILURES`** in [`client-manifest.test.ts`](./src/client-routes/client-manifest.test.ts): client calls to routes the manifest doesn't have.
 - **`DEPRECATED`** in the same file: deprecated client calls kept callable although Ghost lacks their route; the test asserts the route is missing. These are permanent until the call is removed.

@@ -1,3 +1,5 @@
+import { assert, vi } from "vitest";
+
 export type RecordedResponse = {
   method: string;
   url: string;
@@ -12,11 +14,13 @@ export type ResponseRecorder = {
   restore(): void;
 };
 
-/** Wraps global fetch on the test side to keep each raw JSON body; the client gets no hooks. */
+/** Spies on global fetch on the test side to keep each raw JSON body; the client gets no hooks. */
 export function recordResponses(): ResponseRecorder {
+  // spyOn would hand back an existing mock, and wrapping it would call itself.
+  assert(!vi.isMockFunction(globalThis.fetch), "recordResponses() needs an unmocked fetch to wrap");
   const original = globalThis.fetch;
   const recorded: RecordedResponse[] = [];
-  globalThis.fetch = async (input, init) => {
+  const spy = vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
     const fetched = await original(input, init);
     const url = input instanceof Request ? input.url : input.toString();
     const method = init?.method ?? (input instanceof Request ? input.method : "GET");
@@ -32,7 +36,7 @@ export function recordResponses(): ResponseRecorder {
     }
     recorded.push({ method, url, status: response.status, body });
     return response;
-  };
+  });
   return {
     all: () => [...recorded],
     last(pathPart) {
@@ -40,9 +44,7 @@ export function recordResponses(): ResponseRecorder {
       if (!hit) throw new Error(`No response recorded for a path containing "${pathPart}"`);
       return hit.body;
     },
-    restore() {
-      globalThis.fetch = original;
-    },
+    restore: () => spy.mockRestore(),
   };
 }
 

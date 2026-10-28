@@ -1,9 +1,10 @@
-import { assert, beforeAll, describe, expect, inject, test } from "vitest";
+import { beforeAll, describe, expect, inject } from "vitest";
 
 import { FULL_HTML, fullScalars, seedPages } from "../seeds/posts-and-pages.ts";
 import { uniqueSuffix } from "../seeds/unique-suffix.ts";
 import { undeclaredKeys } from "../unknown-keys.ts";
-import { adminApi, deprecatedApi, liveResponses } from "./ghost.ts";
+import { adminApi } from "./ghost.ts";
+import { assertOk, liveTest, type LiveContext } from "./live-test.ts";
 
 let seed: Awaited<ReturnType<typeof seedPages>>;
 beforeAll(async () => {
@@ -11,24 +12,22 @@ beforeAll(async () => {
 });
 
 describe("pages", () => {
-  liveResponses();
+  liveTest("browse returns the seeded pages", async ({ api }) => {
+    const result = await api.pages.browse({ limit: "all" }).fetch();
 
-  test("browse returns the seeded pages", async () => {
-    const result = await adminApi().pages.browse({ limit: "all" }).fetch();
-
-    assert(result.success);
+    assertOk(result);
     const byId = new Map(result.data.map((page) => [page.id, page]));
     expect(byId.get(seed.full.id)?.status).toBe("published");
     expect(byId.get(seed.bare.id)?.status).toBe("draft");
   });
 
-  test("browse with authors, tags and tiers included populates every relation", async () => {
-    const result = await adminApi()
-      .pages.browse({ limit: "all" })
+  liveTest("browse with authors, tags and tiers included populates every relation", async ({ api }) => {
+    const result = await api.pages
+      .browse({ limit: "all" })
       .include({ authors: true, tags: true, tiers: true })
       .fetch();
 
-    assert(result.success);
+    assertOk(result);
     expect(result.data.every((page) => page.authors.length > 0)).toBe(true);
     const full = result.data.find((page) => page.id === seed.full.id);
     expect(full?.tags?.map((tag) => tag.name)).toEqual([`Page tag ${seed.suffix}`]);
@@ -36,52 +35,56 @@ describe("pages", () => {
     expect(full?.primary_tag?.name).toBe(`Page tag ${seed.suffix}`);
   });
 
-  test("browse with the html format returns content", async () => {
-    const result = await adminApi().pages.browse({ limit: "all" }).formats({ html: true }).fetch();
+  liveTest("browse with the html format returns content", async ({ api }) => {
+    const result = await api.pages.browse({ limit: "all" }).formats({ html: true }).fetch();
 
-    assert(result.success);
+    assertOk(result);
     expect(result.data.find((page) => page.id === seed.full.id)?.html).toBe(FULL_HTML);
   });
 
-  test("browse with the plaintext format returns content", async () => {
-    const result = await adminApi().pages.browse({ limit: "all" }).formats({ plaintext: true }).fetch();
+  liveTest("browse with the plaintext format returns content", async ({ api }) => {
+    const result = await api.pages.browse({ limit: "all" }).formats({ plaintext: true }).fetch();
 
-    assert(result.success);
+    assertOk(result);
     expect(result.data.find((page) => page.id === seed.full.id)?.plaintext).toBe("Hello world");
   });
 
-  test("read with the plaintext format returns content", async () => {
-    const result = await adminApi().pages.read({ id: seed.full.id }).formats({ plaintext: true }).fetch();
+  liveTest("read with the plaintext format returns content", async ({ api }) => {
+    const result = await api.pages.read({ id: seed.full.id }).formats({ plaintext: true }).fetch();
 
-    assert(result.success);
+    assertOk(result);
     expect(result.data.plaintext).toBe("Hello world");
   });
 
-  test("read by slug equals read by id", async () => {
-    const byId = await adminApi().pages.read({ id: seed.full.id }).fetch();
-    const bySlug = await adminApi().pages.read({ slug: seed.full.slug }).fetch();
+  liveTest("read by slug equals read by id", async ({ api }) => {
+    const byId = await api.pages.read({ id: seed.full.id }).fetch();
+    const bySlug = await api.pages.read({ slug: seed.full.slug }).fetch();
 
-    assert(byId.success && bySlug.success);
+    assertOk(byId);
+
+    assertOk(bySlug);
     expect(byId.data.id).toBe(seed.full.id);
     // A page lists every tier, which the tiers seed adds and renames concurrently; compare all else.
     expect(bySlug.data).toEqual({ ...byId.data, tiers: expect.any(Array) });
   });
 
-  test("nullable fields come back null on a bare page and set on a full page", async () => {
-    const bare = await adminApi().pages.read({ id: seed.bare.id }).fetch();
-    const full = await adminApi().pages.read({ id: seed.full.id }).fetch();
+  liveTest("nullable fields come back null on a bare page and set on a full page", async ({ api }) => {
+    const bare = await api.pages.read({ id: seed.bare.id }).fetch();
+    const full = await api.pages.read({ id: seed.full.id }).fetch();
 
-    assert(bare.success && full.success);
+    assertOk(bare);
+
+    assertOk(full);
     for (const key of NULLABLE) {
       expect.soft(bare.data[key], `bare ${key}`).toBeNull();
       expect.soft(full.data[key], `full ${key}`).not.toBeNull();
     }
   });
 
-  test("add reads back every value sent", async () => {
+  liveTest("add reads back every value sent", async ({ api }) => {
     const suffix = uniqueSuffix();
     const owner = inject("ghost").owner.email;
-    const added = await adminApi().pages.add(
+    const added = await api.pages.add(
       {
         ...fullScalars(suffix),
         visibility: "tiers",
@@ -92,10 +95,10 @@ describe("pages", () => {
       },
       { source: "html" },
     );
-    assert(added.success);
+    assertOk(added);
 
-    const read = await adminApi().pages.read({ id: added.data.id }).formats({ html: true }).fetch();
-    assert(read.success);
+    const read = await api.pages.read({ id: added.data.id }).formats({ html: true }).fetch();
+    assertOk(read);
     expect(read.data).toMatchObject({ ...fullScalars(suffix), visibility: "tiers" });
     expect(read.data.tiers?.map((tier) => tier.id)).toEqual([seed.tierId]);
     expect(read.data.tags?.map((tag) => tag.name)).toEqual([`Added tag ${suffix}`]);
@@ -104,21 +107,21 @@ describe("pages", () => {
   });
 
   // locale input is deprecated: pages have no locale in Ghost.
-  test("add ignores the deprecated locale", async () => {
-    const added = await deprecatedApi().pages.add({ title: `Locale ${uniqueSuffix()}`, locale: "de" });
-    assert(added.success);
+  liveTest("add ignores the deprecated locale", async ({ api, deprecatedApi }) => {
+    const added = await deprecatedApi.pages.add({ title: `Locale ${uniqueSuffix()}`, locale: "de" });
+    assertOk(added);
 
-    const read = await adminApi().pages.read({ id: added.data.id }).fetch();
-    assert(read.success);
+    const read = await api.pages.read({ id: added.data.id }).fetch();
+    assertOk(read);
     expect(read.data).not.toHaveProperty("locale");
   });
 
-  test("edit persists every value sent", async () => {
+  liveTest("edit persists every value sent", async ({ api }) => {
     const suffix = uniqueSuffix();
-    const added = await adminApi().pages.add({ title: `To edit ${suffix}` });
-    assert(added.success);
+    const added = await api.pages.add({ title: `To edit ${suffix}` });
+    assertOk(added);
 
-    const edited = await adminApi().pages.edit(
+    const edited = await api.pages.edit(
       added.data.id,
       {
         ...fullScalars(suffix),
@@ -129,29 +132,27 @@ describe("pages", () => {
       },
       { source: "html" },
     );
-    assert(edited.success);
+    assertOk(edited);
 
-    const read = await adminApi().pages.read({ id: added.data.id }).formats({ html: true }).fetch();
-    assert(read.success);
+    const read = await api.pages.read({ id: added.data.id }).formats({ html: true }).fetch();
+    assertOk(read);
     expect(read.data).toMatchObject({ ...fullScalars(suffix), visibility: "members" });
     expect(read.data.tags?.map((tag) => tag.name)).toEqual([`Edited tag ${suffix}`]);
     expect(read.data.html).toBe(FULL_HTML);
   });
 
-  test("delete removes the page", async () => {
-    const added = await adminApi().pages.add({ title: `To delete ${uniqueSuffix()}` });
-    assert(added.success);
+  liveTest("delete removes the page", async ({ api }) => {
+    const added = await api.pages.add({ title: `To delete ${uniqueSuffix()}` });
+    assertOk(added);
 
-    expect(await adminApi().pages.delete(added.data.id)).toEqual({ success: true });
-    const read = await adminApi().pages.read({ id: added.data.id }).fetch();
+    expect(await api.pages.delete(added.data.id)).toEqual({ success: true });
+    const read = await api.pages.read({ id: added.data.id }).fetch();
     expect(read).toMatchObject({ success: false, status: 404 });
   });
 });
 
 describe("pages: unknown keys", () => {
-  liveResponses();
-  const unknownAfterEveryOperation = async () => {
-    const api = adminApi();
+  const unknownAfterEveryOperation = async (api: LiveContext["api"]) => {
     const browsed = await api.pages
       .browse({ limit: "all" })
       .include({ authors: true, tags: true, tiers: true })
@@ -172,12 +173,12 @@ describe("pages: unknown keys", () => {
   };
   const isAuthorKey = (k: string) => /^pages\[\]\.(authors\[\]|primary_author)\./.test(k);
 
-  test("authors carry no key the client's schema lacks", async () => {
-    expect((await unknownAfterEveryOperation()).filter(isAuthorKey)).toEqual([]);
+  liveTest("authors carry no key the client's schema lacks", async ({ api }) => {
+    expect((await unknownAfterEveryOperation(api)).filter(isAuthorKey)).toEqual([]);
   });
 
-  test("pages carry no key the client's schema lacks", async () => {
-    expect((await unknownAfterEveryOperation()).filter((k) => !isAuthorKey(k))).toEqual([]);
+  liveTest("pages carry no key the client's schema lacks", async ({ api }) => {
+    expect((await unknownAfterEveryOperation(api)).filter((k) => !isAuthorKey(k))).toEqual([]);
   });
 });
 
