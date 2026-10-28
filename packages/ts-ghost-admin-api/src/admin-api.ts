@@ -161,7 +161,8 @@ export class TSGhostAdminAPI<Version extends `v5.${string}` | `v6.${string}` = a
     const tiers = new APIComposer(
       "tiers",
       {
-        schema: adminTiersSchema,
+        // The tiers endpoint always sends benefits; a member's or post's embedded tier doesn't.
+        schema: adminTiersSchema.required({ benefits: true }),
         identitySchema: slugOrIdSchema,
         include: tiersIncludeSchema,
         createSchema: adminTiersCreateSchema,
