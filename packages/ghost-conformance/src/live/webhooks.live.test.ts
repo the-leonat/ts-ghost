@@ -79,6 +79,15 @@ describe("webhooks", () => {
     expect((await readBack(added.data.id))?.secret).toBe(secret);
   });
 
+  test("POST /webhooks/ takes an event outside the known list and a relative target, and reads them back", async () => {
+    const input = { event: "ts_ghost.custom_event", target_url: `/hook/${uniqueSuffix()}` };
+    const added = await adminApi().webhooks.add(input);
+    if (!added.success) throw new Error(JSON.stringify(added.errors));
+
+    expect(added.data).toMatchObject(input);
+    expect(await readBack(added.data.id)).toMatchObject(input);
+  });
+
   test("DELETE /webhooks/:id/ removes the webhook", async () => {
     const api = adminApi();
     const added = await api.webhooks.add(newWebhook());

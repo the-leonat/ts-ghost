@@ -190,6 +190,55 @@ describe("posts", () => {
     expect(read.data.html).toBe(FULL_HTML);
   });
 
+  // An email-only post can't be scheduled on add: Ghost reads the newsletter only from edit's option.
+  test("add can't schedule an email-only post: Ghost answers that it needs a newsletter", async () => {
+    const added = await adminApi().posts.add({
+      title: `Email only ${uniqueSuffix()}`,
+      email_only: true,
+      status: "scheduled",
+      published_at: new Date("2099-01-01T00:00:00.000Z"),
+    });
+    expect(added).toMatchObject({ success: false, status: 422, errors: [{ type: "ValidationError" }] });
+  });
+
+  test("edit's newsletter option schedules an email-only post", async () => {
+    const draft = await adminApi().posts.add({ title: `Email only ${uniqueSuffix()}`, email_only: true });
+    assert(draft.success);
+
+    const scheduled = await adminApi().posts.edit(
+      draft.data.id,
+      {
+        status: "scheduled",
+        published_at: new Date("2099-01-01T00:00:00.000Z"),
+        updated_at: new Date(draft.data.updated_at ?? ""),
+      },
+      { newsletter: "default-newsletter" },
+    );
+    assert(scheduled.success);
+    expect(scheduled.data).toMatchObject({ status: "scheduled", email_only: true });
+    expect(scheduled.data.newsletter?.slug).toBe("default-newsletter");
+  });
+
+  // PhilDL/ts-ghost#320: an explicit include dropped Ghost's default authors, and a sent post's status failed.
+  test("read by slug with tags included parses an email-only post Ghost has sent", async () => {
+    const draft = await adminApi().posts.add({ title: `Email only ${uniqueSuffix()}`, email_only: true });
+    assert(draft.success);
+    const sent = await adminApi().posts.edit(
+      draft.data.id,
+      { status: "published", updated_at: new Date(draft.data.updated_at ?? "") },
+      // A segment no member matches, so the email reaches no other file's members.
+      { newsletter: "default-newsletter", email_segment: "label:ts-ghost-nobody" },
+    );
+    assert(sent.success);
+    expect(sent.data.status).toBe("sent");
+
+    const result = await adminApi().posts.read({ slug: sent.data.slug }).include({ tags: true }).fetch();
+    assert(result.success, JSON.stringify(!result.success && result.errors));
+    expect(result.data.status).toBe("sent");
+    expect(result.data.authors.map((author) => author.email)).toEqual([inject("ghost").owner.email]);
+    expect(result.data.primary_author.email).toBe(inject("ghost").owner.email);
+  });
+
   test("delete removes the post", async () => {
     const added = await adminApi().posts.add({ title: `To delete ${uniqueSuffix()}` });
     assert(added.success);

@@ -85,6 +85,17 @@ describe("offers", () => {
     expect(byCode.get(seed.trial.code)).toMatchObject({ tier: { id: seed.tierId } });
   });
 
+  // PhilDL/ts-ghost#314: a retention offer's null tier failed the whole browse.
+  test("browse of active offers parses with a retention offer among them", async () => {
+    const result = await adminApi().offers.browse({ filter: "status:active" }).fetch();
+
+    assert(result.success, JSON.stringify(!result.success && result.errors));
+    expect(result.data.find((offer) => offer.code === seed.retention.code)).toMatchObject({
+      redemption_type: "retention",
+      tier: null,
+    });
+  });
+
   test("add creates a trial offer of a number of trial days on a tier", async () => {
     const code = `trial-${uniqueSuffix()}`;
     const trial = {
