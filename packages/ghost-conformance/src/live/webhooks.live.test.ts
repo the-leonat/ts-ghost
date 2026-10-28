@@ -6,9 +6,6 @@ import { conformanceIntegration, WEBHOOK_TARGET } from "../seeds/webhooks.ts";
 import { undeclaredKeys } from "../unknown-keys.ts";
 import { adminApi, liveResponses } from "./ghost.ts";
 
-// Keys Ghost sends that the client deliberately doesn't model.
-const IGNORED: string[] = [];
-
 // Events no other test file fires: a concurrent delivery writes the old webhook back over an edit.
 const newWebhook = () => ({
   event: "page.rescheduled" as const,
@@ -22,7 +19,7 @@ async function readBack(id: string) {
 }
 
 describe("webhooks", () => {
-  liveResponses({ ignore: IGNORED });
+  liveResponses();
 
   test("POST /webhooks/ ties the webhook to the calling integration and stores what it was sent", async () => {
     const input = newWebhook();

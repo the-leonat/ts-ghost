@@ -7,9 +7,6 @@ import { sessionRequest } from "../seeds/session.ts";
 import { undeclaredKeys } from "../unknown-keys.ts";
 import { adminApi, liveResponses } from "./ghost.ts";
 
-// Keys Ghost sends that the client deliberately doesn't model.
-const IGNORED: string[] = [];
-
 type Seeded = Awaited<ReturnType<typeof seedMembers>>;
 let seeded: Seeded;
 beforeAll(async () => {
@@ -27,7 +24,7 @@ async function memberId(email: string): Promise<string> {
 }
 
 describe("members", () => {
-  const responses = liveResponses({ ignore: IGNORED });
+  const responses = liveResponses();
 
   test("browse returns the seeded member with its labels and newsletters", async () => {
     const result = await adminApi()

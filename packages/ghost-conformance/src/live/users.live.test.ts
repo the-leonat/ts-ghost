@@ -4,11 +4,8 @@ import { seedUsers, STAFF_PROFILE, TOUR } from "../seeds/users.ts";
 import { undeclaredKeys } from "../unknown-keys.ts";
 import { adminApi, liveResponses } from "./ghost.ts";
 
-// Keys Ghost sends that the client deliberately doesn't model.
-const IGNORED: string[] = [];
-
 describe("users", () => {
-  liveResponses({ ignore: IGNORED });
+  liveResponses();
   let seeded: Awaited<ReturnType<typeof seedUsers>>;
   beforeAll(async () => {
     seeded = await seedUsers();

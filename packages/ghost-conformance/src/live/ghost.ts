@@ -26,11 +26,11 @@ export function adminApi(
  * Records raw responses for each test in the calling `describe`, and lets `adminApi()` in those tests pass
  * through the keys in `ignore` (deliberately unmodelled, as `posts[].key`).
  */
-export function liveResponses(keys: { ignore: string[] }): Pick<ResponseRecorder, "all" | "last"> {
+export function liveResponses(keys: { ignore?: string[] } = {}): Pick<ResponseRecorder, "all" | "last"> {
   let current: ResponseRecorder | undefined;
   beforeEach(() => {
     current = recordResponses();
-    ignoredInTest = keys.ignore;
+    ignoredInTest = keys.ignore ?? [];
   });
   afterEach(() => {
     current?.restore();

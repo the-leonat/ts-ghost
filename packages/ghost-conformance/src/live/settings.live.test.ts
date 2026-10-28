@@ -6,11 +6,8 @@ import { adminApi, liveResponses } from "./ghost.ts";
 // Title the bootstrap gives the site at first-run setup.
 const BLOG_TITLE = "ts-ghost conformance";
 
-// Keys Ghost sends that the client deliberately doesn't model.
-const IGNORED: string[] = [];
-
 describe("settings", () => {
-  liveResponses({ ignore: IGNORED });
+  liveResponses();
 
   test("GET /settings/ returns every setting as key and value", async () => {
     const result = await adminApi().settings.fetch();

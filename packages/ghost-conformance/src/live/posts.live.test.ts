@@ -15,7 +15,7 @@ const seededOnly = (): `id:[${string}]` =>
   `id:[${[seed.full, seed.bare, seed.scheduled, seed.paid, seed.emailed].map((p) => p.id).join(",")}]`;
 
 describe("posts", () => {
-  liveResponses({ ignore: IGNORED });
+  liveResponses();
 
   test("browse returns every status and a paid post", async () => {
     const result = await adminApi().posts.browse({ limit: "all", filter: seededOnly() }).fetch();
@@ -260,7 +260,7 @@ describe("posts", () => {
 });
 
 describe("posts: unknown keys", () => {
-  liveResponses({ ignore: IGNORED });
+  liveResponses();
 
   test("authors carry no key the client's schema lacks", async () => {
     const api = adminApi();
@@ -292,9 +292,6 @@ describe("posts: unknown keys", () => {
     expect(unknown.filter((k) => k.startsWith("posts[].newsletter."))).toEqual([]);
   });
 });
-
-// Keys Ghost sends that the client deliberately doesn't model.
-const IGNORED: string[] = [];
 
 const MOBILEDOC = JSON.stringify({
   version: "0.3.1",

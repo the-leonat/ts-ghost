@@ -5,11 +5,8 @@ import { uniqueSuffix } from "../seeds/unique-suffix.ts";
 import { undeclaredKeys } from "../unknown-keys.ts";
 import { adminApi, liveResponses } from "./ghost.ts";
 
-// Keys Ghost sends that the client deliberately doesn't model.
-const IGNORED: string[] = [];
-
 describe("tags", () => {
-  liveResponses({ ignore: IGNORED });
+  liveResponses();
   let seeded: Awaited<ReturnType<typeof seedTags>>;
   beforeAll(async () => {
     seeded = await seedTags();

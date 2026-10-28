@@ -2,7 +2,7 @@
 
 Private package that checks `@ts-ghost/admin-api` against a real Ghost. It runs the public client against the official Ghost Docker image (with MySQL 8) at a pinned version, and it keeps a manifest of every Admin API route. Nothing here is published, and the client packages don't import from it.
 
-The pinned Ghost version is in [`ghost-version`](./ghost-version). The compose setup, the client version, the manifest and the drift job all read it from there.
+The pinned Ghost version is in [`ghost-version`](./ghost-version). The compose setup, the manifest, the drift job and the client version all read it from there. The client version is the `v<major>.<minor>` string the live suite passes to `TSGhostAdminAPI` (`clientVersion()` in [`src/ghost/pin.ts`](./src/ghost/pin.ts)), e.g. `v6.72` for Ghost 6.72.0; the client only supports Ghost 6 so far.
 
 ## The manifest
 
@@ -27,13 +27,12 @@ pnpm --filter @ts-ghost/ghost-conformance test:live  # live suite (Docker)
 pnpm --filter @ts-ghost/ghost-conformance manifest   # regenerate manifest.json (Docker)
 ```
 
-The live suite and the manifest need a running Docker with `docker compose`. Each run starts its own compose project (Ghost plus MySQL on tmpfs) on a free local port and removes it afterwards, so runs never share state and leave nothing behind.
+The `manifest` and `drift` scripts run TypeScript directly with Node's type stripping, so they need Node ≥ 22.18. The live suite and the manifest need a running Docker with `docker compose`. Each run starts its own compose project (Ghost plus MySQL on tmpfs) on a free local port and removes it afterwards, so runs never share state and leave nothing behind.
 
 The live suite's global setup:
 
 1. runs Ghost's first-run setup to create the Owner, signs in, creates an integration and fetches the Owner's staff token, all through Ghost's public API;
-2. applies a small SQL seed for data the API can't create (sent and failed emails, email recipients and suppressions, Stripe customers and subscriptions);
-3. turns commenting on for the whole run.
+2. applies a small SQL seed for data the API can't create (sent and failed emails, email recipients and suppressions, Stripe customers and subscriptions).
 
 Every other record is seeded by the tests through the client itself. The suite follows three rules:
 
@@ -49,10 +48,10 @@ CI runs the live suite on every PR to `main` ([`.github/workflows/conformance.ym
 
 1. bumps `ghost-version` and regenerates the manifest,
 2. runs the client → manifest check and the live suite against the new Ghost,
-3. opens (or updates) a PR from `conformance/ghost-<version>` with the manifest diff, the test results and links to the Ghost release notes since the old pin,
+3. opens (or updates) a PR from `conformance/ghost-<version>` with the manifest diff, the test results and links to the Ghost release notes since the old pin, next to the resources the client covers,
 4. fails the job if either suite failed, so a breaking release doesn't show up as a green PR.
 
-The release notes matter because the suite can't see everything, such as new query options.
+The release notes matter because the suite can't see everything, such as new query options. If the new Ghost has a major the client doesn't support yet, the live suite doesn't run, and the PR and the job say so.
 
 The workflow needs **Settings → Actions → General → Workflow permissions → "Allow GitHub Actions to create and approve pull requests"**. Without it, the job fails with a message pointing to that setting. The steps live in [`src/drift/cli.ts`](./src/drift/cli.ts) and can be run locally with `pnpm drift <step>`.
 
@@ -63,7 +62,7 @@ Every place where the client and Ghost currently disagree is an expected failure
 - **`test.fails`**: the test is expected to fail. When the client is fixed, it passes, so Vitest fails it until the marker is removed. Each one has a single cause.
 - **`// @ts-expect-error <reason>`**: the test calls the client in a way its types don't allow yet (a missing input key, include or method). Once the type allows it, the typecheck fails until the comment is removed.
 - **Pending keys** ([`src/live/pending-keys.ts`](./src/live/pending-keys.ts)): unknown keys Ghost sends that are waiting for a schema fix. Each group belongs to a resource's "carries no key the client's schema lacks" `test.fails`. Remove the keys when that test turns green.
-- **`IGNORED`** (top of each live test file, passed to `liveResponses({ ignore })`): keys the client deliberately doesn't model. These are permanent, unlike pending keys.
+- **Ignored keys**: keys the client deliberately doesn't model. Pass them to the file's `liveResponses({ ignore: [...] })`, e.g. `ignore: ["posts[].frontmatter"]`. These are permanent, unlike pending keys; no file needs any yet.
 
 Both lists are paths with `[]` for any index, e.g. `posts[].email.new_key`. `adminApi()` passes them to the client as `strict: { ignore }`, so those keys pass through instead of failing the result.
 
