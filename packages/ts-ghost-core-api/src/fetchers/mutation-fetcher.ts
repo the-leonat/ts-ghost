@@ -111,6 +111,11 @@ export class MutationFetcher<
         data: response?.[this.resource]?.[0],
       };
     }
-    return parseResponse(schema, result, { dataPath: `${this.resource}[0]`, status, body });
+    return parseResponse(schema, result, {
+      dataPath: `${this.resource}[0]`,
+      status,
+      body,
+      strict: this.httpClient.strict,
+    });
   }
 }

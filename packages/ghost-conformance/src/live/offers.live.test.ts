@@ -2,7 +2,7 @@ import { assert, beforeAll, describe, expect, inject, test } from "vitest";
 
 import { seedOffers } from "../seeds/offers.ts";
 import { uniqueSuffix } from "../seeds/unique-suffix.ts";
-import { unknownKeys } from "../unknown-keys.ts";
+import { undeclaredKeys } from "../unknown-keys.ts";
 import { adminApi, liveResponses } from "./ghost.ts";
 
 let seed: Awaited<ReturnType<typeof seedOffers>>;
@@ -144,9 +144,7 @@ describe("offers", () => {
 
   test("an offer carries no key the client's schema lacks", async () => {
     const result = await adminApi().offers.read({ id: seed.trial.id }).fetch();
-
-    assert(result.success);
-    const raw = responses.last("/offers/") as { offers: unknown[] };
-    expect(unknownKeys(raw.offers[0], result.data, { at: "offer" })).toEqual([]);
+    expect(undeclaredKeys(result)).toEqual([]);
+    expect(result.success).toBe(true);
   });
 });

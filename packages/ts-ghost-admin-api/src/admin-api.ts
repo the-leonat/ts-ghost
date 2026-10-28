@@ -11,6 +11,7 @@ import {
   HTTPClientFactory,
   ignoredInclude,
   slugOrIdSchema,
+  type StrictOption,
 } from "@ts-ghost/core-api";
 
 import { adminTiersCreateSchema, adminTiersSchema } from "./schemas";
@@ -52,6 +53,8 @@ export class TSGhostAdminAPI<Version extends `v5.${string}` | `v6.${string}` = a
     protected readonly options?: DebugOption & {
       /** Request options for every request, mutations included; per-call options win, headers merge. */
       defaultRequestOptions?: RequestInit;
+      /** Fail a result carrying a key the client's schema doesn't declare; by default such keys pass through. */
+      strict?: StrictOption;
     },
   ) {
     const apiCredentials = adminAPICredentialsSchema.parse({

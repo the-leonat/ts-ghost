@@ -37,7 +37,7 @@ The live suite's global setup:
 
 Every other record is seeded by the tests through the client itself. The suite follows three rules:
 
-- every response is checked for keys the client's schema doesn't declare, at any depth, and fails with their paths;
+- every response is checked for keys the client's schema doesn't declare, at any depth: `adminApi()` builds the client with `{ strict: true }`, so such a key fails the result with a `ResponseSchemaError` naming its path, and `undeclaredKeys(result)` lists those paths;
 - every add and edit is read back and compared with what was sent;
 - every nullable field is seeded both null and set.
 
@@ -63,7 +63,10 @@ Every place where the client and Ghost currently disagree is an expected failure
 - **`test.fails`**: the test is expected to fail. When the client is fixed, it passes, so Vitest fails it until the marker is removed. Each one has a single cause.
 - **`// @ts-expect-error <reason>`**: the test calls the client in a way its types don't allow yet (a missing input key, include or method). Once the type allows it, the typecheck fails until the comment is removed.
 - **Pending keys** ([`src/live/pending-keys.ts`](./src/live/pending-keys.ts)): unknown keys Ghost sends that are waiting for a schema fix. Each group belongs to a resource's "carries no key the client's schema lacks" `test.fails`. Remove the keys when that test turns green.
-- **`IGNORED`** (top of each live test file): keys the client deliberately doesn't model. These are permanent, unlike pending keys.
+- **`IGNORED`** (top of each live test file, passed to `liveResponses({ ignore })`): keys the client deliberately doesn't model. These are permanent, unlike pending keys.
+
+Both lists are paths with `[]` for any index, e.g. `posts[].email.new_key`. `adminApi()` passes them to the client as `strict: { ignore }`, so those keys pass through instead of failing the result.
+
 - **`EXPECTED_FAILURES`** in [`client-manifest.test.ts`](./src/client-routes/client-manifest.test.ts): client calls to routes the manifest doesn't have.
 - **`DEPRECATED`** in the same file: deprecated client calls kept callable although Ghost lacks their route; the test asserts the route is missing. These are permanent until the call is removed.
 

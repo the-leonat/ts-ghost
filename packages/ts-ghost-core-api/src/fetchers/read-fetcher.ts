@@ -4,7 +4,7 @@ import { DebugOption } from "../helpers/debug";
 import type { HTTPClient } from "../helpers/http-client";
 import { filterSendableIncludes, requiredIncludes } from "../helpers/includes";
 import { sanitizeFormatMask, sanitizeMask } from "../helpers/masks";
-import { parseResponse } from "../helpers/response-schema";
+import { dropUnselected, parseResponse } from "../helpers/response-schema";
 import { type APIResource, type GhostIdentityInput } from "../schemas/shared";
 import type { Exactly, Mask, NoUnrecognizedKeys } from "../utils";
 import { contentFormats, withEmptyFormats, type ContentFormats } from "./formats";
@@ -212,9 +212,14 @@ export class ReadFetcher<
     } else {
       data = {
         success: true,
-        data: result?.[this.resource]?.[0],
+        data: dropUnselected(result?.[this.resource]?.[0], this.config.schema, this.config.output),
       };
     }
-    return parseResponse(res, data, { dataPath: `${this.resource}[0]`, status, body });
+    return parseResponse(res, data, {
+      dataPath: `${this.resource}[0]`,
+      status,
+      body,
+      strict: this.httpClient.strict,
+    });
   }
 }

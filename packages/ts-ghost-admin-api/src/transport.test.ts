@@ -46,4 +46,23 @@ describe("admin-api transport", () => {
     await api.site.fetch();
     expect(api.getServerVersion()).toBe("v6.73");
   });
+
+  test("keys the schema doesn't declare pass through by default", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementationOnce(
+      async () => new Response(JSON.stringify({ site: { ...site, brand: { color: "#fff" } } })),
+    );
+    const result = await new TSGhostAdminAPI("https://ghost.org", KEY, "v6.72").site.fetch();
+    expect(result).toEqual({ success: true, data: { ...site, brand: { color: "#fff" } } });
+  });
+
+  test("the strict option fails a result carrying an undeclared key, naming its path", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementationOnce(
+      async () => new Response(JSON.stringify({ site: { ...site, brand: { color: "#fff" } } })),
+    );
+    const api = new TSGhostAdminAPI("https://ghost.org", KEY, "v6.72", { strict: true });
+    expect(await api.site.fetch()).toMatchObject({
+      success: false,
+      errors: [{ type: "ResponseSchemaError", message: expect.stringContaining("site.brand") }],
+    });
+  });
 });

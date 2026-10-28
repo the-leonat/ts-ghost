@@ -2,7 +2,7 @@ import { assert, beforeAll, describe, expect, inject, test } from "vitest";
 
 import { FULL_HTML, fullScalars, seedPages } from "../seeds/posts-and-pages.ts";
 import { uniqueSuffix } from "../seeds/unique-suffix.ts";
-import { unknownKeysOfResponses } from "../unknown-keys.ts";
+import { undeclaredKeys } from "../unknown-keys.ts";
 import { adminApi, liveResponses } from "./ghost.ts";
 
 let seed: Awaited<ReturnType<typeof seedPages>>;
@@ -149,7 +149,7 @@ describe("pages", () => {
 });
 
 describe("pages: unknown keys", () => {
-  const responses = liveResponses({ ignore: IGNORED });
+  liveResponses({ ignore: IGNORED });
   const unknownAfterEveryOperation = async () => {
     const api = adminApi();
     const browsed = await api.pages
@@ -162,13 +162,13 @@ describe("pages: unknown keys", () => {
       title: `Unknown keys ${uniqueSuffix()}`,
       tags: [{ name: "Unknown keys" }],
     });
-    assert(browsed.success && read.success && added.success);
-    const edited = await api.pages.edit(added.data.id, {
-      title: "Edited",
-      updated_at: new Date(added.data.updated_at ?? ""),
-    });
-    assert(edited.success);
-    return unknownKeysOfResponses(responses.all(), IGNORED);
+    const edited =
+      added.success &&
+      (await api.pages.edit(added.data.id, {
+        title: "Edited",
+        updated_at: new Date(added.data.updated_at ?? ""),
+      }));
+    return undeclaredKeys(browsed, read, added, edited);
   };
   const isAuthorKey = (k: string) => /^pages\[\]\.(authors\[\]|primary_author)\./.test(k);
 

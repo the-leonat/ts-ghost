@@ -1,7 +1,7 @@
 import { assert, beforeAll, describe, expect, inject, test } from "vitest";
 
 import { seedTiers } from "../seeds/tiers.ts";
-import { unknownKeys } from "../unknown-keys.ts";
+import { undeclaredKeys } from "../unknown-keys.ts";
 import { adminApi, liveResponses } from "./ghost.ts";
 
 let seed: Awaited<ReturnType<typeof seedTiers>>;
@@ -103,9 +103,7 @@ describe("tiers", () => {
 
   test("tiers carry no key the client's schema lacks", async () => {
     const result = await adminApi().tiers.browse({ limit: "all" }).fetch();
-
-    assert(result.success);
-    const raw = responses.last("/tiers/") as { tiers: unknown[] };
-    expect(unknownKeys(raw.tiers, result.data, { at: "tiers" })).toEqual([]);
+    expect(undeclaredKeys(result)).toEqual([]);
+    expect(result.success).toBe(true);
   });
 });

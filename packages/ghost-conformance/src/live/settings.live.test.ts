@@ -1,6 +1,6 @@
 import { describe, expect, inject, test } from "vitest";
 
-import { unknownKeys } from "../unknown-keys.ts";
+import { undeclaredKeys } from "../unknown-keys.ts";
 import { adminApi, liveResponses } from "./ghost.ts";
 
 // Title the bootstrap gives the site at first-run setup.
@@ -10,16 +10,15 @@ const BLOG_TITLE = "ts-ghost conformance";
 const IGNORED: string[] = [];
 
 describe("settings", () => {
-  const responses = liveResponses({ ignore: IGNORED });
+  liveResponses({ ignore: IGNORED });
 
   test("GET /settings/ returns every setting as key and value", async () => {
     const result = await adminApi().settings.fetch();
+    expect(undeclaredKeys(result)).toEqual([]);
     if (!result.success) throw new Error(JSON.stringify(result.errors));
 
     expect(result.data.find((s) => s.key === "title")?.value).toBe(BLOG_TITLE);
     expect(result.data.some((s) => s.value === null)).toBe(true);
-    const raw = responses.last("/settings/") as { settings: unknown };
-    expect(unknownKeys(raw.settings, result.data, { at: "settings", ignore: IGNORED })).toEqual([]);
   });
 });
 

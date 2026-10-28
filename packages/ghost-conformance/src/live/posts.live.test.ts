@@ -2,7 +2,7 @@ import { assert, beforeAll, describe, expect, inject, onTestFinished, test } fro
 
 import { FULL_HTML, fullScalars, seedPosts, seedPostWithInactiveAuthor } from "../seeds/posts-and-pages.ts";
 import { uniqueSuffix } from "../seeds/unique-suffix.ts";
-import { unknownKeysOfResponses } from "../unknown-keys.ts";
+import { undeclaredKeys } from "../unknown-keys.ts";
 import { adminApi, liveResponses } from "./ghost.ts";
 
 let seed: Awaited<ReturnType<typeof seedPosts>>;
@@ -211,7 +211,7 @@ describe("posts", () => {
 });
 
 describe("posts: unknown keys", () => {
-  const responses = liveResponses({ ignore: IGNORED });
+  liveResponses({ ignore: IGNORED });
 
   test("authors carry no key the client's schema lacks", async () => {
     const api = adminApi();
@@ -222,26 +222,24 @@ describe("posts: unknown keys", () => {
       .fetch();
     const read = await api.posts.read({ id: seed.full.id }).fetch();
     const added = await api.posts.add({ title: `Unknown keys ${uniqueSuffix()}` });
-    assert(browsed.success && read.success && added.success);
-    const edited = await api.posts.edit(added.data.id, {
-      title: "Edited",
-      updated_at: new Date(added.data.updated_at ?? ""),
-    });
-    assert(edited.success);
+    const edited =
+      added.success &&
+      (await api.posts.edit(added.data.id, {
+        title: "Edited",
+        updated_at: new Date(added.data.updated_at ?? ""),
+      }));
 
-    const unknown = unknownKeysOfResponses(responses.all(), IGNORED);
+    const unknown = undeclaredKeys(browsed, read, added, edited);
     expect(unknown.filter((k) => /^posts\[\]\.(authors\[\]|primary_author)\./.test(k))).toEqual([]);
   });
 
   test("a sent post's email carries no key the client's schema lacks", async () => {
-    assert((await adminApi().posts.read({ id: seed.emailed.id }).fetch()).success);
-    const unknown = unknownKeysOfResponses(responses.all(), IGNORED);
+    const unknown = undeclaredKeys(await adminApi().posts.read({ id: seed.emailed.id }).fetch());
     expect(unknown.filter((k) => k.startsWith("posts[].email."))).toEqual([]);
   });
 
   test("a sent post's newsletter carries no key the client's schema lacks", async () => {
-    assert((await adminApi().posts.read({ id: seed.emailed.id }).fetch()).success);
-    const unknown = unknownKeysOfResponses(responses.all(), IGNORED);
+    const unknown = undeclaredKeys(await adminApi().posts.read({ id: seed.emailed.id }).fetch());
     expect(unknown.filter((k) => k.startsWith("posts[].newsletter."))).toEqual([]);
   });
 });

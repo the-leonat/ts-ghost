@@ -1,14 +1,14 @@
 import { beforeAll, describe, expect, inject, test } from "vitest";
 
 import { seedUsers, STAFF_PROFILE, TOUR } from "../seeds/users.ts";
-import { unknownKeys } from "../unknown-keys.ts";
+import { undeclaredKeys } from "../unknown-keys.ts";
 import { adminApi, liveResponses } from "./ghost.ts";
 
 // Keys Ghost sends that the client deliberately doesn't model.
 const IGNORED: string[] = [];
 
 describe("users", () => {
-  const responses = liveResponses({ ignore: IGNORED });
+  liveResponses({ ignore: IGNORED });
   let seeded: Awaited<ReturnType<typeof seedUsers>>;
   beforeAll(async () => {
     seeded = await seedUsers();
@@ -56,14 +56,8 @@ describe("users", () => {
   test("user responses send no key the client's schema lacks", async () => {
     const api = adminApi();
     const read = await api.users.read({ id: seeded.staff.id }).fetch();
-    const readRaw = responses.last(`/users/${seeded.staff.id}/`) as { users: unknown[] };
     const byEmail = await api.users.read({ email: seeded.staff.email }).fetch();
-    const emailRaw = responses.last(`/users/email/`) as { users: unknown[] };
-    if (!read.success || !byEmail.success) throw new Error("user read failed");
-
-    expect([
-      ...unknownKeys(readRaw.users[0], read.data, { at: "read.user", ignore: IGNORED }),
-      ...unknownKeys(emailRaw.users[0], byEmail.data, { at: "email.user", ignore: IGNORED }),
-    ]).toEqual([]);
+    expect(undeclaredKeys(read, byEmail)).toEqual([]);
+    expect([read.success, byEmail.success]).toEqual([true, true]);
   });
 });

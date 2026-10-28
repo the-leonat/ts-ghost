@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import { TSGhostContentAPI } from "./content-api";
 
@@ -80,5 +80,55 @@ describe("content-api", () => {
     expect(api.settings.read).toBeUndefined();
     // @ts-expect-error
     expect(api.settings.browse).toBeUndefined();
+  });
+});
+
+describe("content-api undeclared keys", () => {
+  const KEY = "59d4bf56c73c04a18c867dc3ba";
+  const tag = {
+    id: "1",
+    name: "n",
+    slug: "s",
+    description: null,
+    feature_image: null,
+    visibility: "public",
+    meta_title: null,
+    meta_description: null,
+    og_image: null,
+    og_title: null,
+    og_description: null,
+    twitter_image: null,
+    twitter_title: null,
+    twitter_description: null,
+    codeinjection_head: null,
+    codeinjection_foot: null,
+    canonical_url: null,
+    accent_color: null,
+    url: "https://ghost.org/tag/s/",
+    extra: { nested: 1 },
+  };
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+  const respond = () =>
+    vi
+      .spyOn(globalThis, "fetch")
+      .mockImplementationOnce(async () => new Response(JSON.stringify({ tags: [tag] })));
+
+  test("pass through by default", async () => {
+    respond();
+    const result = await new TSGhostContentAPI("https://ghost.org", KEY, "v6.0").tags
+      .read({ id: "1" })
+      .fetch();
+    expect(result).toEqual({ success: true, data: expect.objectContaining({ extra: { nested: 1 } }) });
+  });
+
+  test("fail the result with the strict option, naming the path", async () => {
+    respond();
+    const api = new TSGhostContentAPI("https://ghost.org", KEY, "v6.0", { strict: true });
+    expect(await api.tags.read({ id: "1" }).fetch()).toMatchObject({
+      success: false,
+      errors: [{ type: "ResponseSchemaError", message: expect.stringContaining("tags[0].extra") }],
+    });
   });
 });

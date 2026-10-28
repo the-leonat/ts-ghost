@@ -2,14 +2,14 @@ import { beforeAll, describe, expect, test } from "vitest";
 
 import { fullNewsletterInput, seedNewsletters } from "../seeds/newsletters.ts";
 import { uniqueSuffix } from "../seeds/unique-suffix.ts";
-import { unknownKeys } from "../unknown-keys.ts";
+import { undeclaredKeys } from "../unknown-keys.ts";
 import { adminApi, liveResponses } from "./ghost.ts";
 
 // Keys Ghost sends that the client deliberately doesn't model.
 const IGNORED: string[] = [];
 
 describe("newsletters", () => {
-  const responses = liveResponses({ ignore: IGNORED });
+  liveResponses({ ignore: IGNORED });
   let seeded: Awaited<ReturnType<typeof seedNewsletters>>;
   beforeAll(async () => {
     seeded = await seedNewsletters();
@@ -83,22 +83,12 @@ describe("newsletters", () => {
     const api = adminApi();
     const id = seeded.full.id;
     const browsed = await api.newsletters.browse({ limit: "all" }).fetch();
-    const browseRaw = responses.last("/newsletters/") as { newsletters: unknown };
     const read = await api.newsletters.read({ id }).fetch();
-    const readRaw = responses.last(`/newsletters/${id}/`) as { newsletters: unknown[] };
     const edited = await api.newsletters.edit(id, { description: "Edited for the key check" });
-    const editRaw = responses.last(`/newsletters/${id}/`) as { newsletters: unknown[] };
     const name = `Key check ${uniqueSuffix()}`;
     const added = await api.newsletters.add({ name, sender_name: "Key check" });
-    const addRaw = responses.last("/newsletters/") as { newsletters: unknown[] };
-    if (!browsed.success || !read.success || !edited.success || !added.success)
-      throw new Error("request failed");
 
-    expect([
-      ...unknownKeys(browseRaw.newsletters, browsed.data, { at: "browse.newsletters", ignore: IGNORED }),
-      ...unknownKeys(readRaw.newsletters[0], read.data, { at: "read.newsletter", ignore: IGNORED }),
-      ...unknownKeys(editRaw.newsletters[0], edited.data, { at: "edit.newsletter", ignore: IGNORED }),
-      ...unknownKeys(addRaw.newsletters[0], added.data, { at: "add.newsletter", ignore: IGNORED }),
-    ]).toEqual([]);
+    expect(undeclaredKeys(browsed, read, edited, added)).toEqual([]);
+    expect([browsed, read, edited, added].map((r) => r.success)).toEqual([true, true, true, true]);
   });
 });

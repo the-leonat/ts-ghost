@@ -2,9 +2,10 @@ import {
   APIComposer,
   BasicFetcher,
   contentAPICredentialsSchema,
-  type DebugOption,
   HTTPClientFactory,
   slugOrIdSchema,
+  type DebugOption,
+  type StrictOption,
 } from "@ts-ghost/core-api";
 
 import { authorsIncludeSchema, authorsSchema } from "./authors/schemas";
@@ -32,7 +33,10 @@ export class TSGhostContentAPI<Version extends `v5.${string}` | `v6.${string}` =
     protected readonly url: string,
     protected readonly key: string,
     protected readonly version: Version,
-    protected readonly options?: DebugOption,
+    protected readonly options?: DebugOption & {
+      /** Fail a result carrying a key the client's schema doesn't declare; by default such keys pass through. */
+      strict?: StrictOption;
+    },
   ) {
     const apiCredentials = contentAPICredentialsSchema.parse({
       key,

@@ -2,6 +2,7 @@ import { SignJWT } from "jose";
 
 import type { APICredentials, APIResource } from "../schemas";
 import { DebugOption, resolveDebugLogger } from "./debug";
+import type { StrictOption } from "./response-schema";
 
 export type FetchWithStatusResult<T = unknown> = {
   data: T;
@@ -21,6 +22,8 @@ export type HTTPClientOptions = {
    * them, and their headers are merged like per-call headers.
    */
   defaultRequestOptions?: RequestInit;
+  /** Fail results carrying keys the schema doesn't declare; by default they pass through. */
+  strict?: StrictOption;
 } & DebugOption;
 
 /**
@@ -126,6 +129,10 @@ export class HTTPClient<const Options extends HTTPClientOptions = any> implement
 
   get baseURL() {
     return this._baseURL;
+  }
+
+  get strict(): StrictOption {
+    return this.config.strict ?? false;
   }
 
   get jwt() {

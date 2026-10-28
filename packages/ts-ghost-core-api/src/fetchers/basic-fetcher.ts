@@ -56,6 +56,11 @@ export class BasicFetcher<const Resource extends APIResource = any, OutputShape 
         data: result?.[this.resource],
       };
     }
-    return parseResponse(res, data, { dataPath: this.resource, status, body });
+    return parseResponse(res, data, {
+      dataPath: this.resource,
+      status,
+      body,
+      strict: this.httpClient.strict,
+    });
   }
 }

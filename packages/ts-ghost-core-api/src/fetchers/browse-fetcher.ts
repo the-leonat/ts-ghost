@@ -5,7 +5,7 @@ import { DebugOption } from "../helpers/debug";
 import type { HTTPClient } from "../helpers/http-client";
 import { filterSendableIncludes, requiredIncludes } from "../helpers/includes";
 import { sanitizeFormatMask, sanitizeMask } from "../helpers/masks";
-import { parseResponse } from "../helpers/response-schema";
+import { dropUnselected, parseResponse } from "../helpers/response-schema";
 import { ghostMetaSchema, type APIResource } from "../schemas/shared";
 import type { Exactly, Mask, NoUnrecognizedKeys } from "../utils";
 import { contentFormats, withEmptyFormats, type ContentFormats } from "./formats";
@@ -240,10 +240,15 @@ export class BrowseFetcher<
             next: null,
           },
         },
-        data: result?.[this.resource],
+        data: dropUnselected(result?.[this.resource], this.config.schema, this.config.output),
       };
     }
-    return parseResponse(resultSchema, data, { dataPath: this.resource, status, body });
+    return parseResponse(resultSchema, data, {
+      dataPath: this.resource,
+      status,
+      body,
+      strict: this.httpClient.strict,
+    });
   }
 
   public async paginate(options?: RequestInit & DebugOption) {
@@ -284,14 +289,19 @@ export class BrowseFetcher<
             next: null,
           },
         },
-        data: result?.[this.resource],
+        data: dropUnselected(result?.[this.resource], this.config.schema, this.config.output),
       };
     }
     const response: {
       current: z.infer<typeof resultSchema>;
       next: BrowseFetcher<Resource, Params, Fields, BaseShape, OutputShape, IncludeShape> | undefined;
     } = {
-      current: parseResponse(resultSchema, data, { dataPath: this.resource, status, body }),
+      current: parseResponse(resultSchema, data, {
+        dataPath: this.resource,
+        status,
+        body,
+        strict: this.httpClient.strict,
+      }),
       next: undefined,
     };
     if (response.current.success === false) return response;

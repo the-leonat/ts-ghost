@@ -1,7 +1,7 @@
 import { assert, describe, expect, test } from "vitest";
 
 import { STRIPE_SEED } from "../seeds/stripe.ts";
-import { unknownKeys } from "../unknown-keys.ts";
+import { undeclaredKeys } from "../unknown-keys.ts";
 import { adminApi, liveResponses } from "./ghost.ts";
 
 /** Id of a member by email; selects only `id` so members the client can't parse still resolve. */
@@ -18,7 +18,7 @@ async function memberId(email: string): Promise<string> {
 const IGNORED: string[] = [];
 
 describe("paid members", () => {
-  const responses = liveResponses({ ignore: IGNORED });
+  liveResponses({ ignore: IGNORED });
 
   test("a paid member reads with an active Stripe subscription on the paid tier", async () => {
     const result = await adminApi()
@@ -90,10 +90,7 @@ describe("paid members", () => {
       .members.read({ id: await memberId(STRIPE_SEED.members.paid) })
       .fetch();
 
-    assert(result.success);
-    const raw = responses.last("/members/") as { members: { subscriptions: unknown }[] };
-    expect(
-      unknownKeys(raw.members[0]?.subscriptions, result.data.subscriptions, { at: "subscriptions" }),
-    ).toEqual([]);
+    expect(undeclaredKeys(result).filter((k) => k.startsWith("members[].subscriptions["))).toEqual([]);
+    expect(result.success).toBe(true);
   });
 });

@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 
 import { EMAIL_SEED } from "../seeds/emails.ts";
-import { unknownKeys } from "../unknown-keys.ts";
+import { undeclaredKeys } from "../unknown-keys.ts";
 import { adminApi, liveResponses } from "./ghost.ts";
 
 // Keys Ghost sends that the client deliberately doesn't model.
@@ -53,21 +53,12 @@ describe("emailed posts", () => {
   });
 
   test("an emailed post's email carries no key the client's schema lacks", async () => {
-    const result = await adminApi().posts.read({ slug: submitted }).fetch();
-    if (!result.success) throw new Error("read failed");
-    const raw = responses.last("/posts/") as { posts: { email: unknown }[] };
-    expect(
-      unknownKeys(raw.posts[0]!.email, result.data.email, { at: "post.email", ignore: IGNORED }),
-    ).toEqual([]);
+    const unknown = undeclaredKeys(await adminApi().posts.read({ slug: submitted }).fetch());
+    expect(unknown.filter((k) => k.startsWith("posts[].email."))).toEqual([]);
   });
 
   test("an emailed post's newsletter carries no key the client's schema lacks", async () => {
-    const result = await adminApi().posts.read({ slug: submitted }).fetch();
-    if (!result.success) throw new Error("read failed");
-    const raw = responses.last("/posts/") as { posts: { newsletter: unknown }[] };
-    const post = raw.posts[0]!;
-    expect(
-      unknownKeys(post.newsletter, result.data.newsletter, { at: "post.newsletter", ignore: IGNORED }),
-    ).toEqual([]);
+    const unknown = undeclaredKeys(await adminApi().posts.read({ slug: submitted }).fetch());
+    expect(unknown.filter((k) => k.startsWith("posts[].newsletter."))).toEqual([]);
   });
 });

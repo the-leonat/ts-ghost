@@ -4,7 +4,7 @@ import { adminMembersSchema } from "@ts-ghost/admin-api";
 import { EMAIL_SEED } from "../seeds/emails.ts";
 import { MEMBER_SEED, seedMembers } from "../seeds/members.ts";
 import { sessionRequest } from "../seeds/session.ts";
-import { unknownKeys } from "../unknown-keys.ts";
+import { undeclaredKeys } from "../unknown-keys.ts";
 import { adminApi, liveResponses } from "./ghost.ts";
 
 // Keys Ghost sends that the client deliberately doesn't model.
@@ -214,8 +214,7 @@ describe("members", () => {
 
   test("a member carries no key the client's schema lacks", async () => {
     const result = await adminApi().members.read({ id: seeded.plain.id }).fetch();
-    if (!result.success) throw new Error("read failed");
-    const raw = responses.last("/members/") as { members: unknown[] };
-    expect(unknownKeys(raw.members[0], result.data, { at: "member", ignore: IGNORED })).toEqual([]);
+    expect(undeclaredKeys(result)).toEqual([]);
+    expect(result.success).toBe(true);
   });
 });
