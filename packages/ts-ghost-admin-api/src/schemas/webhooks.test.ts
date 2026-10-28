@@ -7,7 +7,15 @@ const stored = {
   id: "6ae1fb7504a5250001f19621",
   event: "some.custom_event",
   target_url: "/relative/hook",
+  name: null,
+  secret: null,
+  api_version: "v6",
+  integration_id: "6ae1fb7504a5250001f19620",
+  last_triggered_at: null,
+  last_triggered_status: null,
+  last_triggered_error: null,
   created_at: "2026-10-28T13:41:09.000Z",
+  updated_at: "2026-10-28T13:41:09.000Z",
 };
 
 describe("webhook schemas accept what Ghost accepts", () => {

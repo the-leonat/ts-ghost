@@ -1,6 +1,7 @@
-import { TSGhostAdminAPI } from "@ts-ghost/admin-api";
+import { GHOST_FIELDS, TSGhostAdminAPI } from "@ts-ghost/admin-api";
 
 import { ADMIN_API_PATH } from "../ghost/admin-api.ts";
+import type { SchemaTarget } from "../ghost/pin.ts";
 import type { ClientCall } from "./route-check.ts";
 
 const KEY = "1efedd9db174adee2d23d982:4b74dca0219bad629852191af326a45037346c2231240e0f7aec1f9371cc14e8";
@@ -94,16 +95,31 @@ function recorder() {
   return { calls, fetch, send };
 }
 
-/** Every request the public admin client makes, found by calling each method against a recording fetch. */
-export async function recordClientCalls(): Promise<ClientCall[]> {
-  const api = new TSGhostAdminAPI(BASE, KEY, "v6.0");
+/** The client version and options of each schema target. */
+const TARGET_CLIENT = {
+  v5: ["v5.130", {}],
+  "v6-compat": ["v6.0", {}],
+  "v6-latest": ["v6.72", { schema: "latest" }],
+} as const;
+
+/** Whether `target`'s client type leaves `resource` out (its `resource.<name>` since/until entry). */
+function absentIn(target: SchemaTarget, resource: string): boolean {
+  const range = (GHOST_FIELDS as Record<string, { since?: string; until?: string }>)[`resource.${resource}`];
+  return target === "v5" ? !!range?.since : target === "v6-latest" ? !!range?.until : false;
+}
+
+/** Every request the public admin client of `target` makes, found by calling each method against a recording fetch. */
+export async function recordClientCalls(target: SchemaTarget = "v6-compat"): Promise<ClientCall[]> {
+  const [version, options] = TARGET_CLIENT[target];
+  const api = new TSGhostAdminAPI(BASE, KEY, version as `v6.${string}`, options as {});
   const { calls, fetch, send } = recorder();
   const realFetch = globalThis.fetch;
   globalThis.fetch = fetch;
   try {
     const resources = Object.entries(Object.getOwnPropertyDescriptors(TSGhostAdminAPI.prototype))
       .filter(([, descriptor]) => descriptor.get)
-      .map(([resource]) => resource);
+      .map(([resource]) => resource)
+      .filter((resource) => !absentIn(target, resource));
     for (const resource of resources) {
       const methods = api[resource as keyof TSGhostAdminAPI] as unknown as Record<string, Method>;
       if (typeof methods.fetch === "function") {

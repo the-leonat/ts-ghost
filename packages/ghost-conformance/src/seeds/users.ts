@@ -1,6 +1,6 @@
 import { inject } from "vitest";
 
-import { ghostId, insert, mysqlExec, raw } from "./sql.ts";
+import { createdBy, ghostId, insert, mysqlExec, raw } from "./sql.ts";
 import { uniqueSuffix } from "./unique-suffix.ts";
 
 /** Profile fields the seeded staff user has set; the Owner and the suspended user leave them null. */
@@ -48,6 +48,7 @@ export async function seedUsers() {
     email: u.email,
     status,
     created_at: raw("NOW()"),
+    ...createdBy(inject("ghost").version),
   });
   const contributor = raw("(SELECT id FROM roles WHERE name = 'Contributor')");
   await mysqlExec(inject("ghost").composeProject, [

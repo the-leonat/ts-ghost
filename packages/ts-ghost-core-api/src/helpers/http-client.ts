@@ -20,6 +20,8 @@ export type HTTPClientOptions = {
   defaultRequestOptions?: RequestInit;
   /** Fail results carrying keys the schema doesn't declare; by default they pass through. */
   strict?: StrictOption;
+  /** Called with every response Ghost sends, before it is read. */
+  onResponse?: (response: Response) => void;
 } & DebugOption;
 
 /** Merges caller headers over generated ones; a caller header replaces a same-named one, case-insensitively. */
@@ -188,7 +190,9 @@ export class HTTPClient<const Options extends HTTPClientOptions = any> implement
     const headers = await this.genHeaders();
     debug("url", url.toString(), "headers", headers, "options", options);
     try {
-      result = await (await fetch(url.toString(), this.requestInit(options, headers))).json();
+      const response = await fetch(url.toString(), this.requestInit(options, headers));
+      this.config.onResponse?.(response);
+      result = await response.json();
       debug("result", result, "status", result.status);
     } catch (e) {
       debug("error", e);
@@ -220,6 +224,7 @@ export class HTTPClient<const Options extends HTTPClientOptions = any> implement
     const headers = await this.genHeaders();
     try {
       const response = await fetch(url.toString(), this.requestInit(options, headers));
+      this.config.onResponse?.(response);
       const status = response.status;
       const body = await response.text();
       try {
@@ -267,6 +272,8 @@ export class HTTPClient<const Options extends HTTPClientOptions = any> implement
   }) {
     const url = this.urlFor(resource, pathnameIdentity, searchParams);
     const headers = await this.genHeaders();
-    return await fetch(url.toString(), this.requestInit(options, headers));
+    const response = await fetch(url.toString(), this.requestInit(options, headers));
+    this.config.onResponse?.(response);
+    return response;
   }
 }

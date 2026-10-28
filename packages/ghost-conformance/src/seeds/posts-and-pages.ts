@@ -3,7 +3,7 @@ import type { TSGhostAdminAPI } from "@ts-ghost/admin-api";
 
 import { must } from "./seed-result.ts";
 import { sessionRequest } from "./session.ts";
-import { ghostId, insert, mysqlExec, raw } from "./sql.ts";
+import { createdBy, ghostId, insert, mysqlExec, raw } from "./sql.ts";
 import { uniqueSuffix } from "./unique-suffix.ts";
 
 /** Every scalar a post and a page share, set, so each nullable output field comes back non-null. */
@@ -130,6 +130,7 @@ export async function seedPostWithInactiveAuthor(api: TSGhostAdminAPI) {
         email,
         status: "active",
         created_at: raw("NOW()"),
+        ...createdBy(ghost.version),
       },
     ]),
     insert("roles_users", [

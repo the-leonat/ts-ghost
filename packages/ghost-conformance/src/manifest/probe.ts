@@ -1,6 +1,7 @@
 import { createHmac } from "node:crypto";
 
 import { adminApiUrl } from "../ghost/admin-api.ts";
+import { versionAtLeast } from "../ghost/behaviours.ts";
 import { readStaffToken, signIn, type GhostCredentials } from "../ghost/bootstrap.ts";
 import {
   classifyRoute,
@@ -13,7 +14,12 @@ import type { RouteDefinition } from "./ghost-router.ts";
 
 const PROBE_TIMEOUT_MS = 10_000;
 
-type Hazard = { route: string; repair?: (creds: GhostCredentials, url: string) => Promise<void> };
+/** `since`: the first Ghost with the route, so an older one may lack it. */
+type Hazard = {
+  route: string;
+  since?: string;
+  repair?: (creds: GhostCredentials, url: string) => Promise<void>;
+};
 
 /** Probes that kill or change a credential run last, in this order, each followed by its repair. */
 const HAZARDS: Hazard[] = [
@@ -30,7 +36,7 @@ const HAZARDS: Hazard[] = [
   // Wipes content; credentials survive.
   { route: "DELETE /db" },
   // Rotates every key and ends every session, so nothing can follow it.
-  { route: "POST /authentication/reset" },
+  { route: "POST /authentication/reset", since: "6.41.0" },
 ];
 
 /** Calls every route without a body, once anonymously and once per credential, and classifies the answers. */
@@ -38,10 +44,15 @@ export async function probeRoutes(
   url: string,
   routes: RouteDefinition[],
   credentials: GhostCredentials,
+  version: string,
 ): Promise<(RouteDefinition & { access: RouteAccess })[]> {
   const creds = { ...credentials };
   const hazardOf = (r: RouteDefinition) => HAZARDS.findIndex((h) => h.route === `${r.method} ${r.path}`);
-  const missing = HAZARDS.filter((h) => !routes.some((r) => `${r.method} ${r.path}` === h.route));
+  const missing = HAZARDS.filter(
+    (h) =>
+      (!h.since || versionAtLeast(version, h.since)) &&
+      !routes.some((r) => `${r.method} ${r.path}` === h.route),
+  );
   if (missing.length)
     throw new Error(`Hazard routes not found in Ghost: ${missing.map((h) => h.route).join(", ")}`);
   const ordered = [

@@ -12,6 +12,19 @@ describe("content-api", () => {
     expect(api).toBeDefined();
   });
 
+  test("selects its schema target from the version and the schema option", () => {
+    const key = "59d4bf56c73c04a18c867dc3ba";
+    expect(new TSGhostContentAPI("https://ghost.org", key, "v5.130").target).toBe("v5");
+    expect(api.target).toBe("v6-compat");
+    expect(new TSGhostContentAPI("https://ghost.org", key, "v6.72", { schema: "latest" }).target).toBe(
+      "v6-latest",
+    );
+    // @ts-expect-error Ghost 5 has one schema target
+    expect(() => new TSGhostContentAPI("https://ghost.org", key, "v5.130", { schema: "latest" })).toThrow(
+      /Ghost 6 version/,
+    );
+  });
+
   test("content-api shouldn't instantiate with an incorrect url", () => {
     assert.throws(() => {
       const api = new TSGhostContentAPI("ghost.org", "59d4bf56c73c04a18c867dc3ba", "v6.0");

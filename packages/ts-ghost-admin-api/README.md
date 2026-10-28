@@ -32,10 +32,31 @@ It is made to interract with the Ghost Admin API with authentication by key. Fil
 
 ## Requirements
 
-This client is only compatible with Ghost versions 5.x and 6x.
+This client works with Ghost 5 and Ghost 6. The version you pass picks the schema target it parses responses with:
 
-- Ghost 5.^ (Any Ghost version after 5.0)
-- Ghost 6.^ (Any Ghost version after 6.0)
+| Version you pass                     | Schema target         | Parses responses as                                         |
+| ------------------------------------ | --------------------- | ----------------------------------------------------------- |
+| `"v5.x"`, e.g. `"v5.130"`            | `v5`                  | the last Ghost 5 (5.130) sends them                         |
+| `"v6.x"`, e.g. `"v6.0"`              | `v6-compat` (default) | any Ghost 6 sends them: fields added after 6.0 are optional |
+| `"v6.x"` with `{ schema: "latest" }` | `v6-latest`           | Ghost 6.72 sends them: every field it sends is required     |
+
+The version is also sent to Ghost as `Accept-Version`. Optional (`field?:`) and nullable (`| null`) are separate: optional means some Ghost version leaves the field out, nullable means Ghost sends `null` for it. Use `v6-latest` when you run that Ghost and want exact types; it follows the Ghost version this client is tested against, so it changes when the client moves to a newer Ghost.
+
+```ts
+const v5 = new TSGhostAdminAPI(url, key, "v5.130"); // Ghost 5
+const compat = new TSGhostAdminAPI(url, key, "v6.0"); // any Ghost 6
+const latest = new TSGhostAdminAPI(url, key, "v6.72", { schema: "latest" }); // Ghost 6.72
+```
+
+The exported types take the target too, e.g. `Post<"v5">`, `Member<"v6-latest">` (default `"v6-compat"`).
+
+What differs per target:
+
+- **Fields.** v5 has no field Ghost 6 added. v6-compat has every field any Ghost 6.x sends; one added after 6.0 (or removed since) is optional, e.g. `newsletter.show_share_button?: boolean` (Ghost 6.23). v6-latest requires every field Ghost 6.72 sends and leaves out ones it no longer sends.
+- **Resources.** A resource Ghost added in 6.x is missing from a v5 client's type (`v5.automations` is a type error), and a resource Ghost removed is missing from v6-latest. v6-compat keeps resources added later; on an older Ghost they return Ghost's 404 as an error result. No resource the client covers today is newer than Ghost 5.
+- **Deprecated forms.** v5 and v6-compat keep the `@deprecated` inputs Ghost drops (`locale`, `mobiledoc`, a post's body `newsletter`, members' `geolocation`, edit's `stripe_customer_id`, the tiers price and benefit includes) and the read-by-slug on newsletters, tiers and offers. v6-latest leaves them out of its types.
+- **Version check.** A v6-latest client warns once (`console.warn`) when Ghost's `content-version` header names another minor than 6.72. It never fails a request, in strict mode neither.
+
 - Node.js 16+
   - We rely on global `fetch` being available, so you can bring your own
     polyfill and if you run Node 16, you'll need to run with the
@@ -72,7 +93,7 @@ To know which Ghost Version you are using go in the Settings and click on top ri
 
 ![Ghost Version](https://github.com/PhilDL/ts-ghost/assets/4941205/c46034a5-844e-4d8c-b525-a47e26d941c6)
 
-Here the version is **"v5.47.0"**
+Here the version is **"v6.72.0"**: pass `"v6.72"` (or any `"v6.x"`) for Ghost 6, `"v5.x"` for Ghost 5. See the schema targets under Requirements.
 
 ### Installation
 
@@ -92,11 +113,7 @@ GHOST_ADMIN_API_KEY="1efedd9db174adee2d23d982:4b74dca0219bad629852191af326a45037
 ```ts title="ghost-queries.ts"
 import { TSGhostAdminAPI } from "@ts-ghost/admin-api";
 
-const api = new TSGhostAdminAPI(
-  process.env.GHOST_URL || "",
-  process.env.GHOST_ADMIN_API_KEY || "",
-  "v5.47.0",
-);
+const api = new TSGhostAdminAPI(process.env.GHOST_URL || "", process.env.GHOST_ADMIN_API_KEY || "", "v6.0");
 
 export async function getBlogPosts() {
   const response = await api.posts
@@ -245,17 +262,19 @@ Alternatively, coming from a `browse` query you also have access to the `paginat
 The result is a **discriminated union** with the Boolean `success` as a discriminator, so a check on `success` will let you know if the query was successful or not. The shape of the "OK" path depends on the query you made and the output modifiers you used.
 
 ```ts
-const result: {
-    success: true;
-    data: Member; // Shape depends on resource + browse | read + output modifiers
-    // contains aditionnal metadata for browse queries
-} | {
-    success: false;
-    errors: {
+const result:
+  | {
+      success: true;
+      data: Member; // Shape depends on resource + browse | read + output modifiers
+      // contains aditionnal metadata for browse queries
+    }
+  | {
+      success: false;
+      errors: {
         message: string;
         type: string;
-    }[];
-}
+      }[];
+    };
 ```
 
 ## Mutations (Add / Edit / Delete)
@@ -451,26 +470,28 @@ The `data` property of the result will be an array of objects of the resource yo
 
 ```ts
 // example for the browse query (the data is an array of objects)
-const result: {
-    success: true;
-    data: Post[];
-    meta: {
+const result:
+  | {
+      success: true;
+      data: Post[];
+      meta: {
         pagination: {
-            pages: number;
-            limit: number;
-            page: number;
-            total: number;
-            prev: number | null;
-            next: number | null;
+          pages: number;
+          limit: number;
+          page: number;
+          total: number;
+          prev: number | null;
+          next: number | null;
         };
-    };
-} | {
-    success: false;
-    errors: {
+      };
+    }
+  | {
+      success: false;
+      errors: {
         message: string;
         type: string;
-    }[];
-}
+      }[];
+    };
 ```
 
 ### Result type of `.paginate()`
@@ -478,28 +499,30 @@ const result: {
 Paginate is a method that will return a cursor and a `next` fetcher to directly have the next query with the same parameters but on page n + 1. See a complete example in the [Common Recipes](/docs/admin-api/common-recipes) section.
 
 ```ts
-const result: {
-    success: true;
-    data: Post[];
-    meta: {
+const result:
+  | {
+      success: true;
+      data: Post[];
+      meta: {
         pagination: {
-            pages: number;
-            limit: number | "all";
-            page: number;
-            total: number;
-            prev: number | null;
-            next: number | null;
+          pages: number;
+          limit: number | "all";
+          page: number;
+          total: number;
+          prev: number | null;
+          next: number | null;
         };
-    };
-    next: BrowseFetcher | undefined; // the next page fetcher if it is defined
-} | {
-    success: false;
-    errors: {
+      };
+      next: BrowseFetcher | undefined; // the next page fetcher if it is defined
+    }
+  | {
+      success: false;
+      errors: {
         message: string;
         type: string;
-    }[];
-    next: undefined; // the next page fetcher is undefined here
-}
+      }[];
+      next: undefined; // the next page fetcher is undefined here
+    };
 ```
 
 Here you can use the `next` property to get the next page fetcher if it is defined.
@@ -527,17 +550,17 @@ import { TSGhostAdminAPI } from "@ts-ghost/admin-api";
 const api = new TSGhostAdminAPI(
   "https://demo.ghost.io",
   "1efedd9db174adee2d23d982:4b74dca0219bad629852191af326a45037346c2231240e0f7aec1f9371cc14e8",
-  "v6.0"
+  "v6.0",
 );
 
 let query = api.users.read({
-  email: "philippe@ts-ghost.com"
+  email: "philippe@ts-ghost.com",
 });
 
 // or
 
 let query = api.users.read({
-  id: "edHks74hdKqhs34izzahd45"
+  id: "edHks74hdKqhs34izzahd45",
 });
 ```
 
@@ -584,16 +607,18 @@ The `data` property of the result will be an object corresponding to the resourc
 
 ```ts
 // example for the read query (the data is an object)
-const result: {
-    success: true;
-    data: Post; // parsed by the Zod Schema and modified by the fields selected
-} | {
-    success: false;
-    errors: {
+const result:
+  | {
+      success: true;
+      data: Post; // parsed by the Zod Schema and modified by the fields selected
+    }
+  | {
+      success: false;
+      errors: {
         message: string;
         type: string;
-    }[];
-}
+      }[];
+    };
 ```
 
 <ContentNavigation
@@ -609,10 +634,10 @@ The result type from the subsequent `fetch` will be modified to match your selec
 
 ```ts /fields({ title: true })/
 // Example with read...
-let result = await api.posts.read({ slug: "slug"}).fields({ title: true }).fetch();
+let result = await api.posts.read({ slug: "slug" }).fields({ title: true }).fetch();
 
 // ... and with browse
-let result = await api.posts.browse({limit: 2}).fields({ title: true }).fetch();
+let result = await api.posts.browse({ limit: 2 }).fields({ title: true }).fetch();
 ```
 
 ## Select specific fields with `.fields()`
@@ -826,16 +851,18 @@ The result will be parsed and typed with the `output` schema and represent the n
 
 ```ts
 // return from the `add` method
-const result: {
-    success: true;
-    data: Member; // parsed by the Zod Schema given in the config
-} | {
-    success: false;
-    errors: {
+const result:
+  | {
+      success: true;
+      data: Member; // parsed by the Zod Schema given in the config
+    }
+  | {
+      success: false;
+      errors: {
         message: string;
         type: string;
-    }[];
-}
+      }[];
+    };
 ```
 
 <ContentNavigation
@@ -877,16 +904,18 @@ The result will be parsed and typed with the `output` schema and represent the n
 
 ```ts
 // return from the `edit` method
-const result: {
-    success: true;
-    data: Member;
-} | {
-    success: false;
-    errors: {
+const result:
+  | {
+      success: true;
+      data: Member;
+    }
+  | {
+      success: false;
+      errors: {
         message: string;
         type: string;
-    }[];
-}
+      }[];
+    };
 ```
 
 <ContentNavigation
@@ -922,15 +951,17 @@ The response will not contain any data since Ghost API just return a 204 empty r
 
 ```ts
 // return from the `delete` method
-const result: {
-    success: true;
-} | {
-    success: false;
-    errors: {
+const result:
+  | {
+      success: true;
+    }
+  | {
+      success: false;
+      errors: {
         message: string;
         type: string;
-    }[];
-}
+      }[];
+    };
 ```
 
 <ContentNavigation
@@ -1066,10 +1097,7 @@ let key = "1efedd9db174adee2d23d982:4b74dca0219bad629852191af326a45037346c223124
 const api = new TSGhostAdminAPI(url, key, "v6.0");
 
 const posts: Post[] = [];
-let cursor = await api.posts
-  .browse()
-  .include({ authors: true, tags: true })
-  .paginate();
+let cursor = await api.posts.browse().include({ authors: true, tags: true }).paginate();
 if (cursor.current.success) posts.push(...cursor.current.data);
 while (cursor.next) {
   cursor = await cursor.next.paginate();

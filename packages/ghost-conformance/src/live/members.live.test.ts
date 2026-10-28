@@ -5,7 +5,7 @@ import { EMAIL_SEED } from "../seeds/emails.ts";
 import { MEMBER_SEED, seedMembers } from "../seeds/members.ts";
 import { sessionRequest } from "../seeds/session.ts";
 import { undeclaredKeys } from "../unknown-keys.ts";
-import { adminApi, liveResponses } from "./ghost.ts";
+import { adminApi, deprecatedApi, liveResponses, requireRoute } from "./ghost.ts";
 
 type Seeded = Awaited<ReturnType<typeof seedMembers>>;
 let seeded: Seeded;
@@ -85,7 +85,7 @@ describe("members", () => {
   });
 
   test("Ghost drops geolocation on add and edit, and stripe_customer_id on edit", async () => {
-    const api = adminApi();
+    const api = deprecatedApi();
     const geolocation = '{"country":"Germany"}';
     const added = await api.members.add({ email: "member-dropped@conformance.test", geolocation });
     assert(added.success);
@@ -189,7 +189,8 @@ describe("members", () => {
     expect(recipients.filter((r) => r.delivered_at === null)).toHaveLength(1);
   });
 
-  test("metafields come only when included, and only for members that have them", async () => {
+  test("metafields come only when included, and only for members that have them", async (context) => {
+    requireRoute(context, "GET /members/metafields/:namespace/");
     const { namespace, key, value } = MEMBER_SEED.metafield;
     const result = await adminApi()
       .members.browse({ filter: `email:['${MEMBER_SEED.metafields}','${MEMBER_SEED.plain}']` })

@@ -4,8 +4,6 @@ import { createServer } from "node:net";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 
-import { ghostVersion } from "./pin.ts";
-
 const run = promisify(execFile);
 const COMPOSE_FILE = fileURLToPath(new URL("../../docker/compose.yaml", import.meta.url));
 
@@ -22,8 +20,8 @@ export type GhostInstance = {
  * Starts a fresh official Ghost + MySQL 8 under its own compose project and waits until Ghost answers.
  * Every call gets a new project, so the live suite and a throwaway manifest instance never share state.
  */
-export async function startGhost(opts: { name: string; version?: string }): Promise<GhostInstance> {
-  const version = opts.version ?? ghostVersion();
+export async function startGhost(opts: { name: string; version: string }): Promise<GhostInstance> {
+  const version = opts.version;
   const project = `${opts.name}-${randomBytes(4).toString("hex")}`;
   const port = await freePort();
   const env = { ...process.env, GHOST_VERSION: version, GHOST_PORT: String(port) };

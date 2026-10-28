@@ -1,29 +1,38 @@
 import { z } from "zod";
-import { basePagesSchema } from "@ts-ghost/core-api";
+import { basePagesSchema, ghostObject, perTarget, type SchemaTarget } from "@ts-ghost/core-api";
 
-import { adminAuthorsSchema } from "./authors";
+import { adminAuthorsSchemaFor } from "./authors";
 import { droppedByGhost } from "./dropped-by-ghost";
+import { DEFAULT_FORMATS, DEFAULT_INCLUDES } from "./reasons";
 import { adminTiersSchema } from "./tiers";
 
-export const adminPagesSchema = basePagesSchema.merge(
-  z.object({
+/** A page as the Admin API sends it, for a schema target. */
+export const adminPagesSchemaFor = perTarget(<T extends SchemaTarget>(target: T) =>
+  ghostObject(target, "admin.pages", {
+    ...basePagesSchema.shape,
     uuid: z.string(),
-    mobiledoc: z.string().nullish(),
+    mobiledoc: z
+      .string()
+      .meta({ description: `(nullable) Null for a lexical page; ${DEFAULT_FORMATS}` })
+      .nullish(),
     status: z.union([z.literal("draft"), z.literal("published"), z.literal("scheduled")]),
-    frontmatter: z.string().nullish(),
+    frontmatter: z.string().nullable(),
     show_title_and_feature_image: z.boolean(),
-    tiers: z.array(adminTiersSchema).nullish(),
+    tiers: z
+      .array(adminTiersSchema)
+      .meta({ description: "Sent by default or with include: tiers" })
+      .optional(),
     count: z
       .object({
-        clicks: z.number().nullish(),
-        positive_feedback: z.number().nullish(),
-        negative_feedback: z.number().nullish(),
-        paid_conversions: z.number().nullish(),
-        signups: z.number().nullish(),
+        positive_feedback: z.number(),
+        negative_feedback: z.number(),
+        paid_conversions: z.number(),
+        signups: z.number(),
       })
-      .nullish(),
-    authors: z.array(adminAuthorsSchema),
-    primary_author: adminAuthorsSchema,
+      .meta({ description: DEFAULT_INCLUDES })
+      .optional(),
+    authors: z.array(adminAuthorsSchemaFor(target)),
+    primary_author: adminAuthorsSchemaFor(target),
     lexical: z
       .string()
       .catch(
@@ -35,7 +44,10 @@ export const adminPagesSchema = basePagesSchema.merge(
   }),
 );
 
-export type Page = z.infer<typeof adminPagesSchema>;
+/** The v6-compat page schema. */
+export const adminPagesSchema = adminPagesSchemaFor("v6-compat");
+
+export type Page<T extends SchemaTarget = "v6-compat"> = z.infer<ReturnType<typeof adminPagesSchemaFor<T>>>;
 
 export const adminPagesCreateSchema = z.object({
   title: z.string().min(1).max(2000),

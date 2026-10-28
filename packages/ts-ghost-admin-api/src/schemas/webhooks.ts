@@ -82,22 +82,21 @@ export const adminWebhookSchema = z.object({
   id: z.string().meta({ description: "The ID of the webhook" }),
   event: webhookEventSchema,
   target_url: webhookTargetUrlSchema,
-  name: z.string().meta({ description: "The name of the webhook" }).nullish(),
-  secret: z.string().meta({ description: "The secret of the webhook" }).nullish(),
-  api_version: z.string().meta({ description: "The API version of the webhook" }).nullish(),
-  integration_id: z.string().meta({ description: "The ID of the integration" }).nullish(),
-  status: z.string().meta({ description: "The status of the webhook" }).nullish(),
+  name: z.string().meta({ description: "The name of the webhook" }).nullable(),
+  secret: z.string().meta({ description: "The secret of the webhook" }).nullable(),
+  api_version: z.string().meta({ description: "The API version of the webhook" }),
+  integration_id: z.string().meta({ description: "The ID of the integration" }),
   last_triggered_at: z
     .string()
     .meta({ description: "The date and time of the last webhook trigger" })
-    .nullish(),
+    .nullable(),
   last_triggered_status: z
     .string()
     .meta({ description: "The status of the last webhook trigger" })
-    .nullish(),
-  last_triggered_error: z.string().meta({ description: "The error of the last webhook trigger" }).nullish(),
+    .nullable(),
+  last_triggered_error: z.string().meta({ description: "The error of the last webhook trigger" }).nullable(),
   created_at: z.string().meta({ description: "The date and time of the webhook creation" }),
-  updated_at: z.string().meta({ description: "The date and time of the webhook update" }).nullish(),
+  updated_at: z.string().meta({ description: "The date and time of the webhook update" }).nullable(),
 });
 
 export const adminWebhookCreateSchema = z.object({

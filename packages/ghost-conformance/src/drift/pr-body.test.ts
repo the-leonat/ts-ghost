@@ -182,6 +182,22 @@ describe("renderPrBody", () => {
     expect(body()).toContain("`6.72.0` → `6.73.0`");
   });
 
+  test("lists the schema fields the new Ghost added or removed, as since/until entries", () => {
+    const text = renderPrBody({
+      plan: { from: "6.72.0", to: "6.73.0" },
+      releases,
+      diff: diffManifests(before, after),
+      suite: passing,
+      client: passing,
+      resources: [],
+      coverage,
+      fields: { added: ["admin.posts.new_key"], removed: ["site.timezone"], untracked: ["settings.x"] },
+    });
+    expect(text).toMatch(/admin\.posts\.new_key.*since: "6\.73"/);
+    expect(text).toMatch(/site\.timezone.*until: "6\.73"/);
+    expect(text).toContain("settings.x");
+  });
+
   test("shows each manifest change on its own line, with the auth columns that changed", () => {
     const text = body();
     expect(text).toMatch(/\+ POST \/new\/ .*labs: newFlag/);

@@ -1,33 +1,53 @@
 import { z } from "zod";
-import { baseEmailSchema, basePostsSchema } from "@ts-ghost/core-api";
+import {
+  baseEmailSchemaFor,
+  basePostsSchema,
+  ghostObject,
+  perTarget,
+  type SchemaTarget,
+} from "@ts-ghost/core-api";
 
-import { adminAuthorsSchema } from "./authors";
+import { adminAuthorsSchemaFor } from "./authors";
 import { droppedByGhost } from "./dropped-by-ghost";
-import { adminNewsletterSchema } from "./newsletters";
+import { adminNewsletterSchemaFor } from "./newsletters";
+import { DEFAULT_FORMATS, DEFAULT_INCLUDES } from "./reasons";
 import { adminTiersSchema } from "./tiers";
 
-export const adminPostsSchema = basePostsSchema.merge(
-  z.object({
+/** A post as the Admin API sends it, for a schema target. */
+export const adminPostsSchemaFor = perTarget(<T extends SchemaTarget>(target: T) =>
+  ghostObject(target, "admin.posts", {
+    ...basePostsSchema.shape,
     uuid: z.string(),
-    mobiledoc: z.string().nullish(),
+    mobiledoc: z
+      .string()
+      .meta({ description: `(nullable) Null for a lexical post; ${DEFAULT_FORMATS}` })
+      .nullish(),
     email_only: z.boolean(),
     status: z
       .union([z.literal("draft"), z.literal("published"), z.literal("scheduled"), z.literal("sent")])
       .meta({ description: "sent: an email-only post Ghost has emailed" }),
-    email_segment: z.string().nullish(),
-    frontmatter: z.string().nullish(),
-    tiers: z.array(adminTiersSchema).optional(),
-    email: baseEmailSchema.nullish(),
-    newsletter: adminNewsletterSchema.nullish(),
+    email_segment: z.string(),
+    frontmatter: z.string().nullable(),
+    tiers: z
+      .array(adminTiersSchema)
+      .meta({ description: `Sent by default or with include: tiers` })
+      .optional(),
+    email: baseEmailSchemaFor(target)
+      .meta({ description: `(nullable) ${DEFAULT_INCLUDES}` })
+      .nullish(),
+    newsletter: adminNewsletterSchemaFor(target)
+      .meta({ description: `(nullable) ${DEFAULT_INCLUDES}` })
+      .nullish(),
     count: z
       .object({
-        clicks: z.number().nullish(),
-        positive_feedback: z.number().nullish(),
-        negative_feedback: z.number().nullish(),
+        clicks: z.number(),
+        positive_feedback: z.number(),
+        negative_feedback: z.number(),
       })
-      .nullish(),
-    authors: z.array(adminAuthorsSchema),
-    primary_author: adminAuthorsSchema,
+      .meta({ description: DEFAULT_INCLUDES })
+      .optional(),
+    authors: z.array(adminAuthorsSchemaFor(target)),
+    primary_author: adminAuthorsSchemaFor(target),
     lexical: z
       .string()
       .catch(
@@ -39,7 +59,10 @@ export const adminPostsSchema = basePostsSchema.merge(
   }),
 );
 
-export type Post = z.infer<typeof adminPostsSchema>;
+/** The v6-compat post schema. */
+export const adminPostsSchema = adminPostsSchemaFor("v6-compat");
+
+export type Post<T extends SchemaTarget = "v6-compat"> = z.infer<ReturnType<typeof adminPostsSchemaFor<T>>>;
 
 const basePostsCreateSchema = z.object({
   title: z.string().min(1).max(2000),

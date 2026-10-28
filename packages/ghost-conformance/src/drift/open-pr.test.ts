@@ -20,7 +20,7 @@ const pr = {
   base: "main",
   title: "chore(conformance): bump Ghost pin 6.72.0 → 6.73.0",
   bodyFile: "/state/pr-body.md",
-  files: ["packages/ghost-conformance/ghost-version", "packages/ghost-conformance/manifest.json"],
+  files: ["packages/ghost-conformance/ghost-versions.json", "packages/ghost-conformance/manifest.json"],
 };
 
 describe("openDriftPr", () => {
@@ -32,7 +32,7 @@ describe("openDriftPr", () => {
     await expect(openDriftPr(pr, run)).resolves.toBe("https://github.com/o/r/pull/7");
     expect(calls).toEqual([
       "git switch -C conformance/drift",
-      "git add packages/ghost-conformance/ghost-version packages/ghost-conformance/manifest.json",
+      "git add packages/ghost-conformance/ghost-versions.json packages/ghost-conformance/manifest.json",
       `git commit -m ${pr.title}`,
       "git push --force origin conformance/drift",
       "gh pr list --head conformance/drift --base main --state open --json url",

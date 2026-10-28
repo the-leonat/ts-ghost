@@ -10,15 +10,13 @@ import {
 } from "./shared";
 import { baseTagsSchema } from "./tags";
 
-const postsAuthorSchema = baseAuthorsSchema.extend({
-  url: z.string().nullish(),
-});
+const postsAuthorSchema = baseAuthorsSchema;
 export const basePostsSchema = z.object({
   ...ghostIdentitySchema.shape,
   ...ghostMetadataSchema.shape,
   title: z.string(),
-  html: z.string().nullish(),
-  plaintext: z.string().nullish(),
+  html: z.string().meta({ description: "(nullable) Sent with formats: html" }).nullish(),
+  plaintext: z.string().meta({ description: "(nullable) Sent with formats: plaintext" }).nullish(),
   comment_id: z.string().nullable(),
   feature_image: z.string().nullable(),
   feature_image_alt: z.string().nullable(),
@@ -32,14 +30,14 @@ export const basePostsSchema = z.object({
   canonical_url: z.string().nullable(),
   authors: z.array(postsAuthorSchema).optional(),
   tags: z.array(baseTagsSchema).optional(),
-  primary_author: postsAuthorSchema.nullish(),
-  primary_tag: baseTagsSchema.nullish(),
+  primary_author: postsAuthorSchema.nullable(),
+  primary_tag: baseTagsSchema.nullable(),
   url: z.string(),
   excerpt: z.string().nullable(),
   reading_time: z.number().optional().default(0),
   created_at: z.string(),
-  updated_at: z.string().nullish(),
+  updated_at: z.string().nullable(),
   published_at: z.string().nullable(),
-  email_subject: z.string().nullish(),
+  email_subject: z.string().nullable(),
   is_page: z.boolean().default(false),
 });

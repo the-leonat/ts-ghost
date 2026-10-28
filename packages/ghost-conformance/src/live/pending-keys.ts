@@ -1,4 +1,9 @@
-// Unknown keys awaiting a client schema fix (Ghost 6.72). Each resource's "carries no key the client's
-// schema lacks" test.fails owns its keys; drop them here when that test turns green.
+import type { SchemaTarget } from "../ghost/pin.ts";
 
-export const PENDING_KEYS: string[] = [];
+// Unknown keys awaiting a client schema fix, per schema target (each leg checks its own). Each resource's
+// "carries no key the client's schema lacks" test.fails owns its keys; drop them when that test turns green.
+export const PENDING_KEYS: Record<SchemaTarget, string[]> = {
+  v5: [],
+  "v6-compat": [],
+  "v6-latest": [],
+};

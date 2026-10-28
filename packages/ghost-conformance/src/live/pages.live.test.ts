@@ -3,7 +3,7 @@ import { assert, beforeAll, describe, expect, inject, test } from "vitest";
 import { FULL_HTML, fullScalars, seedPages } from "../seeds/posts-and-pages.ts";
 import { uniqueSuffix } from "../seeds/unique-suffix.ts";
 import { undeclaredKeys } from "../unknown-keys.ts";
-import { adminApi, liveResponses } from "./ghost.ts";
+import { adminApi, deprecatedApi, liveResponses } from "./ghost.ts";
 
 let seed: Awaited<ReturnType<typeof seedPages>>;
 beforeAll(async () => {
@@ -105,7 +105,7 @@ describe("pages", () => {
 
   // locale input is deprecated: pages have no locale in Ghost.
   test("add ignores the deprecated locale", async () => {
-    const added = await adminApi().pages.add({ title: `Locale ${uniqueSuffix()}`, locale: "de" });
+    const added = await deprecatedApi().pages.add({ title: `Locale ${uniqueSuffix()}`, locale: "de" });
     assert(added.success);
 
     const read = await adminApi().pages.read({ id: added.data.id }).fetch();

@@ -1,13 +1,15 @@
 import { beforeAll, describe, expect, inject, test } from "vitest";
 
+import { ghostHas } from "../ghost/behaviours.ts";
 import { startGhost, type GhostInstance } from "../ghost/instance.ts";
 import { generateManifest } from "./generate.ts";
 import type { Manifest, ManifestRoute } from "./manifest.ts";
+import { manifestFor } from "./manifests.ts";
 
 describe("manifest generation", () => {
   let manifest: Manifest;
   beforeAll(async () => {
-    const ghost = await startGhost({ name: "ts-ghost-manifest-test" });
+    const ghost = await startGhost({ name: "ts-ghost-manifest-test", version: inject("ghost").version });
     try {
       manifest = await generateManifest(ghost);
     } finally {
@@ -23,7 +25,7 @@ describe("manifest generation", () => {
 
   test("records the pinned Ghost version and a sorted, unique route list", () => {
     expect(manifest.ghost).toMatch(/^\d+\.\d+\.\d+$/);
-    expect(manifest.routes.length).toBeGreaterThan(200);
+    expect(manifest.routes.length).toBeGreaterThan(150);
     const keys = manifest.routes.map((r) => `${r.path} ${r.method}`);
     expect(keys).toEqual([...new Set(keys)].sort());
   });
@@ -32,12 +34,23 @@ describe("manifest generation", () => {
     expect(route("GET", "/site/")).toMatchObject({ public: true, integration: true, staff: true });
   });
 
-  test("editing settings refuses integration tokens and accepts staff tokens", () => {
-    expect(route("PUT", "/settings/")).toMatchObject({ public: false, integration: false, staff: true });
+  // Ghost 6 added an integration allowlist; Ghost 5 lets an integration reach these staff routes.
+  const integrationAllowlist = () => ghostHas("integrationAllowlist", inject("ghost").version);
+
+  test("editing settings refuses integration tokens (Ghost 6) and accepts staff tokens", () => {
+    expect(route("PUT", "/settings/")).toMatchObject({
+      public: false,
+      integration: !integrationAllowlist(),
+      staff: true,
+    });
   });
 
-  test("wiping the database refuses both token kinds", () => {
-    expect(route("DELETE", "/db/")).toMatchObject({ integration: false, staff: false, session: true });
+  test("wiping the database refuses staff tokens, and integration tokens on Ghost 6", () => {
+    expect(route("DELETE", "/db/")).toMatchObject({
+      integration: !integrationAllowlist(),
+      staff: false,
+      session: true,
+    });
   });
 
   test("routes that take their token from the URL refuse every header credential", () => {
@@ -61,17 +74,22 @@ describe("manifest generation", () => {
       session: true,
     });
     expect(route("PUT", "/users/:id/token/")).toMatchObject({
-      integration: false,
+      integration: !integrationAllowlist(),
       staff: true,
       session: true,
     });
   });
 
-  test("records labs flags on routes and on sub-routers", () => {
+  test("records labs flags on routes and on sub-routers", (context) => {
+    expect(route("GET", "/posts/").labs).toBeNull();
+    // Which labs-gated routes this Ghost has comes from its committed manifest; Ghost 6.0 and 5 have none.
+    const committed = manifestFor(inject("ghost").version);
+    if (!committed.has("POST /members/metafields/:namespace/"))
+      context.skip(`Ghost ${inject("ghost").version} has no labs-gated metafields route`);
     expect(route("GET", "/members/metafields/:namespace/").labs).toBeNull();
     expect(route("POST", "/members/metafields/:namespace/").labs).toBe("membersCustomFields");
-    expect(route("GET", "/stripe/checkout/config/").labs).toBe("stripeCheckoutDesign");
-    expect(route("GET", "/posts/").labs).toBeNull();
+    if (committed.has("GET /stripe/checkout/config/"))
+      expect(route("GET", "/stripe/checkout/config/").labs).toBe("stripeCheckoutDesign");
   });
 });
 

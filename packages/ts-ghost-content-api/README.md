@@ -30,10 +30,22 @@ All the available options from the Ghost Content API are available here, filteri
 
 ## Requirements
 
-This client is only compatible with Ghost versions 5.x and 6x.
+This client works with Ghost 5 and Ghost 6. The version you pass picks the schema target it parses responses with:
 
-- Ghost 5.^ (Any Ghost version after 5.0)
-- Ghost 6.^ (Any Ghost version after 6.0)
+| Version you pass                     | Schema target         | Parses responses as                                         |
+| ------------------------------------ | --------------------- | ----------------------------------------------------------- |
+| `"v5.x"`, e.g. `"v5.130"`            | `v5`                  | the last Ghost 5 (5.130) sends them                         |
+| `"v6.x"`, e.g. `"v6.0"`              | `v6-compat` (default) | any Ghost 6 sends them: fields added after 6.0 are optional |
+| `"v6.x"` with `{ schema: "latest" }` | `v6-latest`           | Ghost 6.72 sends them: every field it sends is required     |
+
+The version is also sent to Ghost as `Accept-Version`. Optional (`field?:`) and nullable (`| null`) are separate: optional means some Ghost version leaves the field out, nullable means Ghost sends `null` for it. Use `v6-latest` when you run that Ghost and want exact types; it follows the Ghost version this client is tested against, so it changes when the client moves to a newer Ghost.
+
+```ts
+const api = new TSGhostContentAPI(url, key, "v6.0", { schema: "latest" });
+```
+
+The Content API's fields are the same in every target so far; the option is there so both clients select targets alike. Like the admin client, a v6-latest client warns once when Ghost's `content-version` names another minor than 6.72.
+
 - Node.js 16+
   - We rely on global `fetch` being available, so you can bring your own
     polyfill and if you run Node 16, you'll need to run with the
@@ -58,7 +70,7 @@ To know which Ghost Version you are using go in the Settings and click on top ri
 
 ![Ghost Version](https://github.com/PhilDL/ts-ghost/assets/4941205/c46034a5-844e-4d8c-b525-a47e26d941c6)
 
-Here the version is **"v5.47.0"**
+Here the version is **"v6.72.0"**: pass `"v6.72"` (or any `"v6.x"`) for Ghost 6, `"v5.x"` for Ghost 5. See the schema targets under Requirements.
 
 ### Installation
 
@@ -81,7 +93,7 @@ import { TSGhostContentAPI } from "@ts-ghost/content-api";
 const api = new TSGhostContentAPI(
   process.env.GHOST_URL || "",
   process.env.GHOST_CONTENT_API_KEY || "",
-  "v5.47.0",
+  "v6.0",
 );
 
 export async function getBlogPosts() {
@@ -212,17 +224,19 @@ Alternatively, coming from a `browse` query you also have access to the `paginat
 The result is a **discriminated union** with the Boolean `success` as a discriminator, so a check on `success` will let you know if the query was successful or not. The shape of the "OK" path depends on the query you made and the output modifiers you used.
 
 ```ts
-const result: {
-    success: true;
-    data: Post; // Shape depends on resource + browse | read + output modifiers
-    // contains aditionnal metadata for browse queries
-} | {
-    success: false;
-    errors: {
+const result:
+  | {
+      success: true;
+      data: Post; // Shape depends on resource + browse | read + output modifiers
+      // contains aditionnal metadata for browse queries
+    }
+  | {
+      success: false;
+      errors: {
         message: string;
         type: string;
-    }[];
-}
+      }[];
+    };
 ```
 
 <ContentNavigation
@@ -344,26 +358,28 @@ The `data` property of the result will be an array of objects of the resource yo
 
 ```ts
 // example for the browse query (the data is an array of objects)
-const result: {
-    success: true;
-    data: Post[];
-    meta: {
+const result:
+  | {
+      success: true;
+      data: Post[];
+      meta: {
         pagination: {
-            pages: number;
-            limit: number | "all";
-            page: number;
-            total: number;
-            prev: number | null;
-            next: number | null;
+          pages: number;
+          limit: number | "all";
+          page: number;
+          total: number;
+          prev: number | null;
+          next: number | null;
         };
-    };
-} | {
-    success: false;
-    errors: {
+      };
+    }
+  | {
+      success: false;
+      errors: {
         message: string;
         type: string;
-    }[];
-}
+      }[];
+    };
 ```
 
 ### Result type of `.paginate()`
@@ -371,28 +387,30 @@ const result: {
 Paginate is a method that will return a cursor and a `next` fetcher to directly have the next query with the same parameters but on page n + 1. See a complete example in the [Common Recipes](/docs/content-api/common-recipes) section.
 
 ```ts
-const result: {
-    success: true;
-    data: Post[];
-    meta: {
+const result:
+  | {
+      success: true;
+      data: Post[];
+      meta: {
         pagination: {
-            pages: number;
-            limit: number | "all";
-            page: number;
-            total: number;
-            prev: number | null;
-            next: number | null;
+          pages: number;
+          limit: number | "all";
+          page: number;
+          total: number;
+          prev: number | null;
+          next: number | null;
         };
-    };
-    next: BrowseFetcher | undefined; // the next page fetcher if it is defined
-} | {
-    success: false;
-    errors: {
+      };
+      next: BrowseFetcher | undefined; // the next page fetcher if it is defined
+    }
+  | {
+      success: false;
+      errors: {
         message: string;
         type: string;
-    }[];
-    next: undefined; // the next page fetcher is undefined here
-}
+      }[];
+      next: undefined; // the next page fetcher is undefined here
+    };
 ```
 
 Here you can use the `next` property to get the next page fetcher if it is defined.
@@ -414,13 +432,13 @@ Options for the read method depends on the resource you are querying. Each resou
 
 ```ts
 let query = api.posts.read({
-  id: "edHks74hdKqhs34izzahd45"
+  id: "edHks74hdKqhs34izzahd45",
 });
 
 // or
 
 let query = api.posts.read({
-  slug: "typescript-is-awesome-in-2025"
+  slug: "typescript-is-awesome-in-2025",
 });
 ```
 
@@ -465,16 +483,18 @@ The `data` property of the result will be an object corresponding to the resourc
 
 ```ts
 // example for the read query (the data is an object)
-const result: {
-    success: true;
-    data: Post; // parsed by the Zod Schema and modified by the fields selected
-} | {
-    success: false;
-    errors: {
+const result:
+  | {
+      success: true;
+      data: Post; // parsed by the Zod Schema and modified by the fields selected
+    }
+  | {
+      success: false;
+      errors: {
         message: string;
         type: string;
-    }[];
-}
+      }[];
+    };
 ```
 
 <ContentNavigation
@@ -490,10 +510,10 @@ The result type from the subsequent `fetch` will be modified to match your selec
 
 ```ts /fields({ title: true })/
 // Example with read...
-let result = await api.posts.read({ slug: "slug"}).fields({ title: true }).fetch();
+let result = await api.posts.read({ slug: "slug" }).fields({ title: true }).fetch();
 
 // ... and with browse
-let result = await api.posts.browse({limit: 2}).fields({ title: true }).fetch();
+let result = await api.posts.browse({ limit: 2 }).fields({ title: true }).fetch();
 ```
 
 ## Select specific fields with `.fields()`
@@ -639,10 +659,7 @@ let key = "22444f78447824223cefc48062"; // Content API KEY
 const api = new TSGhostContentAPI(url, key, "v6.0");
 
 const posts: Post[] = [];
-let cursor = await api.posts
-  .browse()
-  .include({ authors: true, tags: true })
-  .paginate();
+let cursor = await api.posts.browse().include({ authors: true, tags: true }).paginate();
 if (cursor.current.success) posts.push(...cursor.current.data);
 while (cursor.next) {
   cursor = await cursor.next.paginate();

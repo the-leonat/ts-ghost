@@ -3,7 +3,7 @@ import { assert, beforeAll, describe, expect, inject, onTestFinished, test } fro
 import { FULL_HTML, fullScalars, seedPosts, seedPostWithInactiveAuthor } from "../seeds/posts-and-pages.ts";
 import { uniqueSuffix } from "../seeds/unique-suffix.ts";
 import { undeclaredKeys } from "../unknown-keys.ts";
-import { adminApi, liveResponses } from "./ghost.ts";
+import { adminApi, deprecatedApi, liveResponses, requireBehaviour } from "./ghost.ts";
 
 let seed: Awaited<ReturnType<typeof seedPosts>>;
 beforeAll(async () => {
@@ -114,7 +114,7 @@ describe("posts", () => {
       },
       { source: "html" },
     );
-    assert(added.success);
+    assert(added.success, JSON.stringify(!added.success && added.errors));
 
     const read = await adminApi().posts.read({ id: added.data.id }).formats({ html: true }).fetch();
     assert(read.success);
@@ -142,7 +142,10 @@ describe("posts", () => {
 
   // mobiledoc input is deprecated: Ghost 6 stores lexical only.
   test("add ignores the deprecated mobiledoc", async () => {
-    const added = await adminApi().posts.add({ title: `Mobiledoc ${uniqueSuffix()}`, mobiledoc: MOBILEDOC });
+    const added = await deprecatedApi().posts.add({
+      title: `Mobiledoc ${uniqueSuffix()}`,
+      mobiledoc: MOBILEDOC,
+    });
     assert(added.success);
 
     const read = await adminApi().posts.read({ id: added.data.id }).fetch();
@@ -152,7 +155,7 @@ describe("posts", () => {
 
   // locale input is deprecated: posts have no locale in Ghost.
   test("add ignores the deprecated locale", async () => {
-    const added = await adminApi().posts.add({ title: `Locale ${uniqueSuffix()}`, locale: "de" });
+    const added = await deprecatedApi().posts.add({ title: `Locale ${uniqueSuffix()}`, locale: "de" });
     assert(added.success);
 
     const read = await adminApi().posts.read({ id: added.data.id }).fetch();
@@ -191,7 +194,8 @@ describe("posts", () => {
   });
 
   // An email-only post can't be scheduled on add: Ghost reads the newsletter only from edit's option.
-  test("add can't schedule an email-only post: Ghost answers that it needs a newsletter", async () => {
+  test("add can't schedule an email-only post: Ghost answers that it needs a newsletter", async (context) => {
+    requireBehaviour(context, "emailOnlyScheduleNeedsNewsletter");
     const added = await adminApi().posts.add({
       title: `Email only ${uniqueSuffix()}`,
       email_only: true,

@@ -29,10 +29,16 @@ pnpm i @ts-ghost/core-api
 
 ### Requirements
 
-This client is only compatible with Ghost versions 5.x and 6x.
+This client works with Ghost 5 and Ghost 6. The version you pass picks the schema target it parses responses with:
 
-- Ghost 5.^ (Any Ghost version after 5.0)
-- Ghost 6.^ (Any Ghost version after 6.0)
+| Version you pass                     | Schema target         | Parses responses as                                         |
+| ------------------------------------ | --------------------- | ----------------------------------------------------------- |
+| `"v5.x"`, e.g. `"v5.130"`            | `v5`                  | the last Ghost 5 (5.130) sends them                         |
+| `"v6.x"`, e.g. `"v6.0"`              | `v6-compat` (default) | any Ghost 6 sends them: fields added after 6.0 are optional |
+| `"v6.x"` with `{ schema: "latest" }` | `v6-latest`           | Ghost 6.72 sends them: every field it sends is required     |
+
+The version is also sent to Ghost as `Accept-Version`. Optional (`field?:`) and nullable (`| null`) are separate: optional means some Ghost version leaves the field out, nullable means Ghost sends `null` for it. Use `v6-latest` when you run that Ghost and want exact types; it follows the Ghost version this client is tested against, so it changes when the client moves to a newer Ghost.
+
 - Node.js 16+
   - We rely on global `fetch` being available, so you can bring your own
     polyfill and if you run Node 16, you'll need to run with the
@@ -186,16 +192,16 @@ Read is meant to be used to fetch 1 object only by `id` or `slug`.
 ```ts
 const composedAPI = new APIComposer(
   { schema: simplifiedSchema, identitySchema: identitySchema, include: simplifiedIncludeSchema },
-  api
+  api,
 );
 let query = composedAPI.read({
-  id: "edHks74hdKqhs34izzahd45"
+  id: "edHks74hdKqhs34izzahd45",
 });
 
 // or
 
 let query = composedAPI.read({
-  slug: "typescript-is-awesome-in-2025"
+  slug: "typescript-is-awesome-in-2025",
 });
 ```
 
@@ -257,16 +263,18 @@ After using `.read` query, you will get a `ReadFetcher` with an `async fetch` me
 
 ```ts
 // example for the read query (the data is an object)
-const result: {
-    status: true;
-    data: z.infer<typeof simplifiedSchema>; // parsed by the Zod Schema and modified by the fields selected
-} | {
-    status: false;
-    errors: {
+const result:
+  | {
+      status: true;
+      data: z.infer<typeof simplifiedSchema>; // parsed by the Zod Schema and modified by the fields selected
+    }
+  | {
+      status: false;
+      errors: {
         message: string;
         type: string;
-    }[];
-}
+      }[];
+    };
 ```
 
 ### Browse Fetcher
@@ -282,53 +290,57 @@ That result is a discriminated union of 2 types:
 
 ```ts
 // example for the browse query (the data is an array of objects)
-const result: {
-    success: true;
-    data: z.infer<typeof simplifiedSchema>[];
-    meta: {
+const result:
+  | {
+      success: true;
+      data: z.infer<typeof simplifiedSchema>[];
+      meta: {
         pagination: {
-            pages: number;
-            limit: number;
-            page: number;
-            total: number;
-            prev: number | null;
-            next: number | null;
+          pages: number;
+          limit: number;
+          page: number;
+          total: number;
+          prev: number | null;
+          next: number | null;
         };
-    };
-} | {
-    success: false;
-    errors: {
+      };
+    }
+  | {
+      success: false;
+      errors: {
         message: string;
         type: string;
-    }[];
-}
+      }[];
+    };
 ```
 
 #### Browse `.paginate()`
 
 ```ts
-const result: {
-    success: true;
-    data: z.infer<typeof simplifiedSchema>[];
-    meta: {
+const result:
+  | {
+      success: true;
+      data: z.infer<typeof simplifiedSchema>[];
+      meta: {
         pagination: {
-            pages: number;
-            limit: number;
-            page: number;
-            total: number;
-            prev: number | null;
-            next: number | null;
+          pages: number;
+          limit: number;
+          page: number;
+          total: number;
+          prev: number | null;
+          next: number | null;
         };
-    };
-    next: BrowseFetcher | undefined; // the next page fetcher if it is defined
-} | {
-    success: false;
-    errors: {
+      };
+      next: BrowseFetcher | undefined; // the next page fetcher if it is defined
+    }
+  | {
+      success: false;
+      errors: {
         message: string;
         type: string;
-    }[];
-    next: undefined; // the next page fetcher is undefined here
-}
+      }[];
+      next: undefined; // the next page fetcher is undefined here
+    };
 ```
 
 Here you can use the `next` property to get the next page fetcher if it is defined.
@@ -491,16 +503,18 @@ The result will be parsed and typed with the `output` schema and represent the n
 
 ```ts
 // return from the `add` method
-const result: {
-    success: true;
-    data: z.infer<typeof simplifiedSchema>; // parsed by the Zod Schema given in the config
-} | {
-    success: false;
-    errors: {
+const result:
+  | {
+      success: true;
+      data: z.infer<typeof simplifiedSchema>; // parsed by the Zod Schema given in the config
+    }
+  | {
+      success: false;
+      errors: {
         message: string;
         type: string;
-    }[];
-}
+      }[];
+    };
 ```
 
 #### Edit record
@@ -520,16 +534,18 @@ The result will be parsed and typed with the `output` schema and represent the u
 
 ```ts
 // return from the `edit` method
-const result: {
-    success: true;
-    data: z.infer<typeof simplifiedSchema>; // parsed by the Zod Schema given in the config
-} | {
-    success: false;
-    errors: {
+const result:
+  | {
+      success: true;
+      data: z.infer<typeof simplifiedSchema>; // parsed by the Zod Schema given in the config
+    }
+  | {
+      success: false;
+      errors: {
         message: string;
         type: string;
-    }[];
-}
+      }[];
+    };
 ```
 
 #### Delete record
@@ -548,15 +564,17 @@ The response will not contain any data since Ghost API just return a 204 empty r
 
 ```ts
 // return from the `delete` method
-const result: {
-    success: true;
-} | {
-    success: false;
-    errors: {
+const result:
+  | {
+      success: true;
+    }
+  | {
+      success: false;
+      errors: {
         message: string;
         type: string;
-    }[];
-}
+      }[];
+    };
 ```
 
 ## Roadmap

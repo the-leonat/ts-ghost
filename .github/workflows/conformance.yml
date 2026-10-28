@@ -13,9 +13,18 @@ concurrency:
 
 jobs:
   live:
-    name: 👻 Live suite against pinned Ghost
+    # Each leg runs one Ghost image from packages/ghost-conformance/ghost-versions.json with one schema target.
+    name: 👻 Live suite (${{ matrix.leg }})
     runs-on: ubuntu-26.04
     timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - leg: v5 # last Ghost 5, v5 target
+          - leg: v6.0 # Ghost 6.0.0, v6-compat target
+          - leg: pin # pinned Ghost 6, v6-latest target
+          - leg: pin-compat # pinned Ghost 6, v6-compat target
     defaults:
       run:
         working-directory: packages/ghost-conformance
@@ -39,10 +48,12 @@ jobs:
 
       - name: 🧪 Live conformance suite
         run: pnpm test:live
+        env:
+          GHOST_LEG: ${{ matrix.leg }}
 
       # The Tests workflow gates on the client check; this run only records its calls for the summary.
       - name: 📊 Client coverage of the pinned manifest
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && matrix.leg == 'pin' }}
         run: |
           status=0
           pnpm exec vitest run src/client-routes/client-manifest.test.ts \

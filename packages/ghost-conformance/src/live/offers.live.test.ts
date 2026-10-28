@@ -3,7 +3,7 @@ import { assert, beforeAll, describe, expect, inject, test } from "vitest";
 import { seedOffers } from "../seeds/offers.ts";
 import { uniqueSuffix } from "../seeds/unique-suffix.ts";
 import { undeclaredKeys } from "../unknown-keys.ts";
-import { adminApi, liveResponses } from "./ghost.ts";
+import { adminApi, deprecatedApi, ghostAtLeast, liveResponses, requireBehaviour } from "./ghost.ts";
 
 let seed: Awaited<ReturnType<typeof seedOffers>>;
 beforeAll(async () => {
@@ -66,28 +66,31 @@ describe("offers", () => {
     });
   });
 
-  test("a retention offer reads with no tier", async () => {
-    const result = await adminApi().offers.read({ id: seed.retention.id }).fetch();
+  test("a retention offer reads with no tier", async (context) => {
+    requireBehaviour(context, "retentionOffers");
+    const result = await adminApi().offers.read({ id: seed.retention!.id }).fetch();
 
     assert(result.success);
-    expect(result.data).toMatchObject({ code: seed.retention.code, type: "percent", tier: null });
+    expect(result.data).toMatchObject({ code: seed.retention!.code, type: "percent", tier: null });
   });
 
-  test("browse lists the retention and the trial offer", async () => {
+  test("browse lists the retention and the trial offer", async (context) => {
+    requireBehaviour(context, "retentionOffers");
     const result = await adminApi().offers.browse({ limit: "all" }).fetch();
 
     assert(result.success);
     const byCode = new Map(result.data.map((offer) => [offer.code, offer]));
-    expect(byCode.get(seed.retention.code)).toMatchObject({ tier: null });
+    expect(byCode.get(seed.retention!.code)).toMatchObject({ tier: null });
     expect(byCode.get(seed.trial.code)).toMatchObject({ tier: { id: seed.tierId } });
   });
 
   // PhilDL/ts-ghost#314: a retention offer's null tier failed the whole browse.
-  test("browse of active offers parses with a retention offer among them", async () => {
+  test("browse of active offers parses with a retention offer among them", async (context) => {
+    requireBehaviour(context, "retentionOffers");
     const result = await adminApi().offers.browse({ filter: "status:active" }).fetch();
 
     assert(result.success, JSON.stringify(!result.success && result.errors));
-    expect(result.data.find((offer) => offer.code === seed.retention.code)).toMatchObject({
+    expect(result.data.find((offer) => offer.code === seed.retention!.code)).toMatchObject({
       redemption_type: "retention",
       tier: null,
     });
@@ -135,7 +138,8 @@ describe("offers", () => {
       type: "trial",
       duration: "trial",
       amount: 14,
-      redemption_type: "signup",
+      // Ghost sends redemption_type since 6.13.
+      ...(ghostAtLeast("6.13.0") && { redemption_type: "signup" }),
       tier: { id: seed.tierId, name: expect.any(String) },
       created_at: expect.stringMatching(ISO_MS),
       last_redeemed: null,
@@ -144,7 +148,7 @@ describe("offers", () => {
 
   // The deprecated slug read stays callable; Ghost has no /offers/slug/:slug/ route.
   test("the deprecated read by slug gets Ghost's 404", async () => {
-    const result = await adminApi().offers.read({ slug: seed.trial.code }).fetch();
+    const result = await deprecatedApi().offers.read({ slug: seed.trial.code }).fetch();
 
     assert(!result.success);
     expect(result.status).toBe(404);

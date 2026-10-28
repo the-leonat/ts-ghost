@@ -2,7 +2,7 @@ import { assert, beforeAll, describe, expect, inject, test } from "vitest";
 
 import { seedTiers } from "../seeds/tiers.ts";
 import { undeclaredKeys } from "../unknown-keys.ts";
-import { adminApi, liveResponses } from "./ghost.ts";
+import { adminApi, deprecatedApi, liveResponses } from "./ghost.ts";
 
 let seed: Awaited<ReturnType<typeof seedTiers>>;
 beforeAll(async () => {
@@ -83,8 +83,8 @@ describe("tiers", () => {
 
   test("the deprecated price and benefit includes are not sent", async () => {
     const include = { monthly_price: true, yearly_price: true, benefits: true } as const;
-    const browsed = await adminApi().tiers.browse({ limit: "all" }).include(include).fetch();
-    const read = await adminApi().tiers.read({ id: seed.full.id }).include(include).fetch();
+    const browsed = await deprecatedApi().tiers.browse({ limit: "all" }).include(include).fetch();
+    const read = await deprecatedApi().tiers.read({ id: seed.full.id }).include(include).fetch();
 
     assert(browsed.success && read.success);
     expect(responses.all().map((r) => new URL(r.url).searchParams.has("include"))).toEqual([false, false]);
@@ -92,7 +92,7 @@ describe("tiers", () => {
 
   // The deprecated slug read stays callable; Ghost has no /tiers/slug/:slug/ route.
   test("the deprecated read by slug gets Ghost's 404", async () => {
-    const result = await adminApi().tiers.read({ slug: "default-product" }).fetch();
+    const result = await deprecatedApi().tiers.read({ slug: "default-product" }).fetch();
 
     assert(!result.success);
     expect(result.status).toBe(404);

@@ -3,7 +3,7 @@ import { beforeAll, describe, expect, test } from "vitest";
 import { fullNewsletterInput, seedNewsletters } from "../seeds/newsletters.ts";
 import { uniqueSuffix } from "../seeds/unique-suffix.ts";
 import { undeclaredKeys } from "../unknown-keys.ts";
-import { adminApi, liveResponses } from "./ghost.ts";
+import { adminApi, deprecatedApi, liveResponses } from "./ghost.ts";
 
 describe("newsletters", () => {
   liveResponses();
@@ -33,7 +33,7 @@ describe("newsletters", () => {
 
   // Deprecated: Ghost has no /newsletters/slug/:slug/ route, so a read by slug always fails.
   test("the deprecated read by slug fails", async () => {
-    const result = await adminApi().newsletters.read({ slug: seeded.full.slug }).fetch();
+    const result = await deprecatedApi().newsletters.read({ slug: seeded.full.slug }).fetch();
     expect(result).toMatchObject({ success: false, status: 404 });
   });
 
