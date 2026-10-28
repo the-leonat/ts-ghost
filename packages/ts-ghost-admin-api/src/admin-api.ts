@@ -39,7 +39,10 @@ export class TSGhostAdminAPI<Version extends `v5.${string}` | `v6.${string}` = a
     protected readonly url: string,
     protected readonly key: string,
     protected readonly version: Version,
-    protected readonly options?: DebugOption,
+    protected readonly options?: DebugOption & {
+      /** Request options for every request, mutations included; per-call options win, headers merge. */
+      defaultRequestOptions?: RequestInit;
+    },
   ) {
     const apiCredentials = adminAPICredentialsSchema.parse({
       key,
@@ -52,6 +55,12 @@ export class TSGhostAdminAPI<Version extends `v5.${string}` | `v6.${string}` = a
       endpoint: "admin",
     });
   }
+
+  /** The server's `content-version` from the latest response; `undefined` before any. */
+  getServerVersion(): string | undefined {
+    return this.httpClientFactory.serverVersion;
+  }
+
   get posts() {
     const postsIncludeSchema = z.object({
       authors: z.literal(true).optional(),
@@ -237,7 +246,13 @@ export class TSGhostAdminAPI<Version extends `v5.${string}` | `v6.${string}` = a
         output: z.array(
           z.object({
             key: z.string(),
-            value: z.string().nullable().or(z.number().nullable()).or(z.boolean().nullable()),
+            // List-valued settings (e.g. all_blocked_email_domains) arrive as arrays.
+            value: z
+              .string()
+              .nullable()
+              .or(z.number().nullable())
+              .or(z.boolean().nullable())
+              .or(z.array(z.string())),
           }),
         ),
       },

@@ -14,9 +14,7 @@ describe("site", () => {
     expect(result.success).toBe(true);
   });
 
-  // Expected failure: the site schema lacks accent_color, allow_external_signup, cover_image, icon,
-  // locale, site_uuid and timezone (Ghost 6.72).
-  test.fails("GET /site/ sends no key the client's schema lacks", async () => {
+  test("GET /site/ sends no key the client's schema lacks", async () => {
     const result = await adminApi().site.fetch();
     if (!result.success) throw new Error("site fetch failed");
 

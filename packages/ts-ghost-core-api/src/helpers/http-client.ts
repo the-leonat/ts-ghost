@@ -6,6 +6,8 @@ import { DebugOption, resolveDebugLogger } from "./debug";
 export type FetchWithStatusResult<T = unknown> = {
   data: T;
   status: number;
+  /** The response body as received, before any parsing; absent when no response arrived. */
+  body?: string;
 };
 
 export type HTTPClientOptions = {
@@ -13,7 +15,32 @@ export type HTTPClientOptions = {
   version: APICredentials["version"];
   url: APICredentials["url"];
   endpoint: "content" | "admin";
+  /**
+   * Request options applied to every request this client makes, set once at
+   * construction (e.g. `{ redirect: "manual" }`). Per-call options win over
+   * them, and their headers are merged like per-call headers.
+   */
+  defaultRequestOptions?: RequestInit;
 } & DebugOption;
+
+/**
+ * Merges caller-supplied headers over generated ones. A caller header replaces
+ * the generated header of the same name, compared case-insensitively; every
+ * other generated header, authentication included, is kept.
+ */
+function mergeHeaders(generated: Record<string, string>, ...supplied: (HeadersInit | undefined)[]) {
+  const merged: Record<string, string> = { ...generated };
+  for (const init of supplied) {
+    if (init === undefined) continue;
+    new Headers(init).forEach((value, name) => {
+      for (const key of Object.keys(merged)) {
+        if (key.toLowerCase() === name) delete merged[key];
+      }
+      merged[name] = value;
+    });
+  }
+  return merged;
+}
 
 export interface IHTTPClient {
   get baseURL(): URL | undefined;
@@ -60,10 +87,23 @@ export interface IHTTPClientFactory {
 }
 
 export class HTTPClientFactory implements IHTTPClientFactory {
+  private _serverVersion: string | undefined;
+
   constructor(private config: HTTPClientOptions) {}
 
+  /**
+   * The version the server reported (its `content-version` header) on the latest
+   * response to any client this factory created; `undefined` before one arrives.
+   * Informational only: nothing in the client depends on it.
+   */
+  get serverVersion() {
+    return this._serverVersion;
+  }
+
   public create() {
-    return new HTTPClient(this.config);
+    return new HTTPClient(this.config, (version) => {
+      this._serverVersion = version;
+    });
   }
 }
 
@@ -72,7 +112,10 @@ export class HTTPClient<const Options extends HTTPClientOptions = any> implement
   private _jwtExpiresAt: number | undefined;
   protected _baseURL: URL | undefined = undefined;
 
-  constructor(protected config: Options) {
+  constructor(
+    protected config: Options,
+    private onServerVersion?: (version: string) => void,
+  ) {
     let prefixPath = new URL(config.url).pathname;
     if (prefixPath.slice(-1) === "/") {
       prefixPath = prefixPath.slice(0, -1);
@@ -87,6 +130,12 @@ export class HTTPClient<const Options extends HTTPClientOptions = any> implement
 
   get jwt() {
     return this._jwt;
+  }
+
+  private observe(response: Response) {
+    const version = response.headers.get("content-version");
+    if (version !== null) this.onServerVersion?.(version);
+    return response;
   }
 
   public async generateJWT(key: string) {
@@ -116,18 +165,8 @@ export class HTTPClient<const Options extends HTTPClientOptions = any> implement
     return headers;
   }
 
-  public async fetch({
-    resource,
-    searchParams,
-    options,
-    pathnameIdentity,
-  }: {
-    resource: APIResource;
-    searchParams?: URLSearchParams;
-    options?: RequestInit & DebugOption;
-    pathnameIdentity?: string;
-  }) {
-    const debug = resolveDebugLogger({ ...this.config, ...options });
+  /** A fresh URL for one request; the base URL is never changed. */
+  protected urlFor(resource: APIResource, pathnameIdentity?: string, searchParams?: URLSearchParams) {
     if (this._baseURL === undefined) throw new Error("URL is undefined");
     let path = `${resource}/`;
     if (pathnameIdentity !== undefined) {
@@ -142,16 +181,37 @@ export class HTTPClient<const Options extends HTTPClientOptions = any> implement
     if (this.config.endpoint === "content") {
       url.searchParams.append("key", this.config.key);
     }
+    return url;
+  }
+
+  /** The init for one request: per-call options over client defaults over generated headers. */
+  protected requestInit(options: RequestInit | undefined, generatedHeaders: Record<string, string>) {
+    const defaults = this.config.defaultRequestOptions;
+    return {
+      ...defaults,
+      ...options,
+      headers: mergeHeaders(generatedHeaders, defaults?.headers, options?.headers),
+    };
+  }
+
+  public async fetch({
+    resource,
+    searchParams,
+    options,
+    pathnameIdentity,
+  }: {
+    resource: APIResource;
+    searchParams?: URLSearchParams;
+    options?: RequestInit & DebugOption;
+    pathnameIdentity?: string;
+  }) {
+    const debug = resolveDebugLogger({ ...this.config, ...options });
+    const url = this.urlFor(resource, pathnameIdentity, searchParams);
     let result = undefined;
     const headers = await this.genHeaders();
     debug("url", url.toString(), "headers", headers, "options", options);
     try {
-      result = await (
-        await fetch(url.toString(), {
-          ...options,
-          headers,
-        })
-      ).json();
+      result = await this.observe(await fetch(url.toString(), this.requestInit(options, headers))).json();
       debug("result", result, "status", result.status);
     } catch (e) {
       debug("error", e);
@@ -179,30 +239,15 @@ export class HTTPClient<const Options extends HTTPClientOptions = any> implement
     options?: RequestInit;
     pathnameIdentity?: string;
   }): Promise<FetchWithStatusResult> {
-    if (this._baseURL === undefined) throw new Error("URL is undefined");
-    let path = `${resource}/`;
-    if (pathnameIdentity !== undefined) {
-      path += `${pathnameIdentity}/`;
-    }
-    const url = new URL(path, this._baseURL);
-    if (searchParams !== undefined) {
-      for (const [key, value] of searchParams.entries()) {
-        url.searchParams.append(key, value);
-      }
-    }
-    if (this.config.endpoint === "content") {
-      url.searchParams.append("key", this.config.key);
-    }
+    const url = this.urlFor(resource, pathnameIdentity, searchParams);
     const headers = await this.genHeaders();
     try {
-      const response = await fetch(url.toString(), {
-        ...options,
-        headers,
-      });
+      const response = this.observe(await fetch(url.toString(), this.requestInit(options, headers)));
       const status = response.status;
+      const body = await response.text();
       try {
-        const data = await response.json();
-        return { data, status };
+        const data = JSON.parse(body);
+        return { data, status, body };
       } catch (e) {
         return {
           data: {
@@ -214,6 +259,7 @@ export class HTTPClient<const Options extends HTTPClientOptions = any> implement
             ],
           },
           status,
+          body,
         };
       }
     } catch (e) {
@@ -242,23 +288,8 @@ export class HTTPClient<const Options extends HTTPClientOptions = any> implement
     options?: RequestInit;
     pathnameIdentity?: string;
   }) {
-    if (this._baseURL === undefined) throw new Error("URL is undefined");
-    this._baseURL.pathname += `${resource}/`;
-    if (pathnameIdentity !== undefined) {
-      this._baseURL.pathname += `${pathnameIdentity}/`;
-    }
-    if (searchParams !== undefined) {
-      for (const [key, value] of searchParams.entries()) {
-        this._baseURL.searchParams.append(key, value);
-      }
-    }
-    if (this.config.endpoint === "content") {
-      this._baseURL.searchParams.append("key", this.config.key);
-    }
+    const url = this.urlFor(resource, pathnameIdentity, searchParams);
     const headers = await this.genHeaders();
-    return await fetch(this._baseURL.toString(), {
-      ...options,
-      headers,
-    });
+    return this.observe(await fetch(url.toString(), this.requestInit(options, headers)));
   }
 }

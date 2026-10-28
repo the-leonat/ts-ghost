@@ -30,19 +30,9 @@ const SUBSCRIPTION = [
   "trial_start_at",
 ];
 const OFFER = ["created_at", "last_redeemed", "redemption_type"];
-const SITE = [
-  "accent_color",
-  "allow_external_signup",
-  "cover_image",
-  "icon",
-  "locale",
-  "site_uuid",
-  "timezone",
-];
 
 export const PENDING_KEYS: string[] = [
   ...MEMBER.map((k) => `members[].${k}`),
   ...SUBSCRIPTION.map((k) => `members[].subscriptions[].${k}`),
   ...OFFER.map((k) => `offers[].${k}`),
-  ...SITE.map((k) => `site.${k}`),
 ];

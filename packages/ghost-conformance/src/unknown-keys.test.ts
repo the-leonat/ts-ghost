@@ -24,7 +24,7 @@ function ghostReturns(body: unknown) {
 describe("unknown-key check", () => {
   let responses: ResponseRecorder;
   beforeEach(() => {
-    ghostReturns({ site: { ...site, locale: "en", accent_color: "#fff" } });
+    ghostReturns({ site: { ...site, language: "en", brand_color: "#fff" } });
     responses = recordResponses();
   });
   afterEach(() => {
@@ -38,7 +38,7 @@ describe("unknown-key check", () => {
     if (!result.success) return;
 
     const raw = responses.last("/site/") as { site: unknown };
-    expect(unknownKeys(raw.site, result.data, { at: "site" })).toEqual(["site.accent_color", "site.locale"]);
+    expect(unknownKeys(raw.site, result.data, { at: "site" })).toEqual(["site.brand_color", "site.language"]);
   });
 
   test("leaves out keys declared as deliberately ignored", async () => {
@@ -46,8 +46,8 @@ describe("unknown-key check", () => {
     if (!result.success) throw new Error("site fetch failed");
 
     const raw = responses.last("/site/") as { site: unknown };
-    expect(unknownKeys(raw.site, result.data, { at: "site", ignore: ["site.locale"] })).toEqual([
-      "site.accent_color",
+    expect(unknownKeys(raw.site, result.data, { at: "site", ignore: ["site.language"] })).toEqual([
+      "site.brand_color",
     ]);
   });
 });
@@ -79,11 +79,11 @@ describe("unknown keys of captured responses", () => {
   });
 
   test("checks each tracked client result against the response it parsed", async () => {
-    ghostReturns({ site: { ...site, locale: "en" } });
+    ghostReturns({ site: { ...site, language: "en" } });
     responses = recordResponses();
     const api = trackParsed(new TSGhostAdminAPI("http://localhost:2368", KEY, "v6.0"));
     expect((await api.site.fetch()).success).toBe(true);
-    expect(unknownKeysOfResponses(responses.all(), [])).toEqual(["site.locale"]);
+    expect(unknownKeysOfResponses(responses.all(), [])).toEqual(["site.language"]);
   });
 
   test("walks list resources as arrays and leaves out ignored paths", async () => {
@@ -130,7 +130,7 @@ describe("unknown keys of captured responses", () => {
   });
 
   test("skips responses no client result parsed", async () => {
-    ghostReturns({ site: { ...site, locale: "en" } });
+    ghostReturns({ site: { ...site, language: "en" } });
     responses = recordResponses();
     await fetch("http://localhost:2368/ghost/api/admin/site/");
     expect(unknownKeysOfResponses(responses.all(), [])).toEqual([]);
