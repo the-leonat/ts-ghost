@@ -3,7 +3,8 @@ import type { ManifestRoute } from "../manifest/manifest.ts";
 /** One request the client makes; `path` has every param segment erased to `:`. */
 export type ClientCall = { name: string; method: string; path: string };
 
-const erase = (path: string) => path.replace(/:[^/]+/g, ":");
+/** A route path with every param segment erased to `:`, as ClientCall paths are. */
+export const erase = (path: string) => path.replace(/:[^/]+/g, ":");
 
 /** Why Ghost would not serve this call to the client's integration token, or undefined if it would. */
 export function checkCall(routes: ManifestRoute[], call: ClientCall): string | undefined {
