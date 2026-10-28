@@ -128,7 +128,7 @@ export class APIComposer<
     const parsedOptions =
       this.config.updateOptionsSchema && options ? z.parse(this.config.updateOptionsSchema, options) : {};
 
-    if (Object.keys(parsedData).length === 0) {
+    if (Object.values(parsedData).every((value) => value === undefined)) {
       throw new Error("No data to edit");
     }
     const fetcher = new MutationFetcher(

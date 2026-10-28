@@ -26,4 +26,8 @@ describe("members input keys Ghost drops", () => {
     await api.members.edit("1", { name: "n", geolocation: "{}", stripe_customer_id: "cus_1" });
     expect(sentMember()).toEqual({ name: "n" });
   });
+
+  test("an edit of only dropped keys has no data to edit", async () => {
+    await expect(api.members.edit("1", { geolocation: "{}" })).rejects.toThrow("No data to edit");
+  });
 });

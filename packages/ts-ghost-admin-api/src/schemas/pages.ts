@@ -2,6 +2,7 @@ import { z } from "zod";
 import { basePagesSchema } from "@ts-ghost/core-api";
 
 import { adminAuthorsSchema } from "./authors";
+import { droppedByGhost } from "./dropped-by-ghost";
 import { adminTiersSchema } from "./tiers";
 
 export const adminPagesSchema = basePagesSchema.merge(
@@ -40,8 +41,8 @@ export type Page = z.infer<typeof adminPagesSchema>;
 export const adminPagesCreateSchema = z.object({
   title: z.string().min(1).max(2000),
   slug: z.string().max(191).optional(),
-  /** @deprecated Ghost 6 ignores mobiledoc input and stores lexical only; send `lexical` or `html`. */
-  mobiledoc: z.string().max(1000000000).optional(),
+  /** @deprecated Ghost 6 stores lexical only and drops it, so it is not sent; send `lexical` or `html`. */
+  mobiledoc: droppedByGhost(z.string().max(1000000000)),
   lexical: z.string().max(1000000000).optional(),
   html: z.string().max(1000000000).optional(),
   feature_image: z.string().max(2000).url().optional(),
@@ -49,8 +50,8 @@ export const adminPagesCreateSchema = z.object({
   feature_image_caption: z.string().max(65535).optional(),
   featured: z.boolean().optional(),
   status: z.union([z.literal("draft"), z.literal("published"), z.literal("scheduled")]).optional(),
-  /** @deprecated Ghost has no locale on posts and pages and drops it. */
-  locale: z.string().max(6).optional(),
+  /** @deprecated Ghost has no locale on posts and pages and drops it, so it is not sent. */
+  locale: droppedByGhost(z.string().max(6)),
   visibility: z
     .union([
       z.literal("public"),

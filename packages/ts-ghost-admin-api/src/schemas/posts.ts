@@ -2,6 +2,7 @@ import { z } from "zod";
 import { baseEmailSchema, basePostsSchema } from "@ts-ghost/core-api";
 
 import { adminAuthorsSchema } from "./authors";
+import { droppedByGhost } from "./dropped-by-ghost";
 import { adminNewsletterSchema } from "./newsletters";
 import { adminTiersSchema } from "./tiers";
 
@@ -41,8 +42,8 @@ export type Post = z.infer<typeof adminPostsSchema>;
 const basePostsCreateSchema = z.object({
   title: z.string().min(1).max(2000),
   slug: z.string().max(191).optional(),
-  /** @deprecated Ghost 6 ignores mobiledoc input and stores lexical only; send `lexical` or `html`. */
-  mobiledoc: z.string().max(1000000000).optional(),
+  /** @deprecated Ghost 6 stores lexical only and drops it, so it is not sent; send `lexical` or `html`. */
+  mobiledoc: droppedByGhost(z.string().max(1000000000)),
   lexical: z.string().max(1000000000).optional(),
   html: z.string().max(1000000000).optional(),
   feature_image: z.string().max(2000).url().optional(),
@@ -52,8 +53,8 @@ const basePostsCreateSchema = z.object({
   status: z
     .union([z.literal("draft"), z.literal("published"), z.literal("scheduled"), z.literal("sent")])
     .optional(),
-  /** @deprecated Ghost has no locale on posts and pages and drops it. */
-  locale: z.string().max(6).optional(),
+  /** @deprecated Ghost has no locale on posts and pages and drops it, so it is not sent. */
+  locale: droppedByGhost(z.string().max(6)),
   visibility: z
     .union([
       z.literal("public"),
@@ -141,38 +142,20 @@ const basePostsCreateSchema = z.object({
       description: `Specifying author via id, name or slug.`,
     })
     .optional(),
-  /** @deprecated Ghost ignores it in the body and the client no longer sends it; pass `edit`'s `newsletter` option. */
-  newsletter: z
-    .union([
+  /** @deprecated Ghost drops it from the body, so it is not sent; pass `edit`'s `newsletter` option. */
+  newsletter: droppedByGhost(
+    z.union([
       z.object({
         id: z.string().meta({ description: "The ID of the newsletter" }),
       }),
       z.object({
         slug: z.string().meta({ description: "The slug of the newsletter" }),
       }),
-    ])
-    .optional(),
+    ]),
+  ),
 });
 
-const emailOnlyNewsletterRefinement = (data: any) => {
-  // If email_only is true and status is scheduled, newsletter must be provided
-  if (data.email_only === true && data.status === "scheduled") {
-    return data.newsletter !== undefined;
-  }
-  return true;
-};
-
-const emailOnlyNewsletterRefinementOptions = {
-  message: "newsletter is required when scheduling an email_only post",
-  path: ["newsletter"],
-};
-
-// Ghost reads the newsletter only from the `?newsletter=` option, so the body key is dropped.
-const withoutNewsletter = <T extends { newsletter?: unknown }>({ newsletter: _, ...rest }: T) => rest as T;
-
-export const adminPostsCreateSchema = basePostsCreateSchema
-  .refine(emailOnlyNewsletterRefinement, emailOnlyNewsletterRefinementOptions)
-  .overwrite(withoutNewsletter);
+export const adminPostsCreateSchema = basePostsCreateSchema;
 
 export type CreatePost = z.infer<typeof adminPostsCreateSchema>;
 
@@ -182,8 +165,6 @@ export const adminPostsUpdateSchema = basePostsCreateSchema
     z.object({
       updated_at: z.date().transform((val) => val.toISOString()),
     }),
-  )
-  .refine(emailOnlyNewsletterRefinement, emailOnlyNewsletterRefinementOptions)
-  .overwrite(withoutNewsletter);
+  );
 
 export type UpdatePost = z.infer<typeof adminPostsUpdateSchema>;

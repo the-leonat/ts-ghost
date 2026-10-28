@@ -5,7 +5,6 @@ import { z } from "zod";
 import { BrowseFetcher } from "../fetchers/browse-fetcher";
 import { ReadFetcher } from "../fetchers/read-fetcher";
 import { HTTPClient } from "./http-client";
-import { ignoredInclude, sparseInclude } from "./includes";
 
 const fetchMocker = createFetchMock(vi);
 
@@ -16,8 +15,11 @@ const schema = z.object({
 });
 const include = z.object({
   tiers: z.literal(true).optional(),
-  benefits: ignoredInclude(),
-  metafields: sparseInclude(),
+  benefits: z
+    .literal(true)
+    .transform(() => undefined)
+    .optional(),
+  metafields: z.literal(true).optional().meta({ omittedWhenEmpty: true }),
 });
 const config = { schema, output: schema, include };
 const meta = { pagination: { pages: 1, page: 1, limit: 15, total: 2, prev: null, next: null } };
@@ -36,7 +38,7 @@ describe("include keys", () => {
   });
   afterEach(() => fetchMocker.resetMocks());
 
-  test("an ignored include is accepted but never sent", async () => {
+  test("an include that parses to undefined is accepted but never sent", async () => {
     fetchMocker.mockResponse(JSON.stringify({ tiers: [{ id: "1", tiers: [] }], meta }));
     await new ReadFetcher("tiers", config, { identity: { id: "1" } }, httpClient)
       .include({ benefits: true, tiers: true })
@@ -48,7 +50,7 @@ describe("include keys", () => {
     expect(browse?.has("include")).toBe(false);
   });
 
-  test("a sparse include is sent but does not make its key required", async () => {
+  test("an include flagged omittedWhenEmpty is sent but does not make its key required", async () => {
     fetchMocker.mockResponse(
       JSON.stringify({ members: [{ id: "1" }, { id: "2", metafields: { a: 1 } }], meta }),
     );

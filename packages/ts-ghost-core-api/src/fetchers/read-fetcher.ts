@@ -2,7 +2,7 @@ import { z, ZodRawShape } from "zod";
 
 import { DebugOption } from "../helpers/debug";
 import type { HTTPClient } from "../helpers/http-client";
-import { filterSendableIncludes, requiredIncludes } from "../helpers/includes";
+import { requiredIncludes, sendableIncludes } from "../helpers/includes";
 import { sanitizeFormatMask, sanitizeMask } from "../helpers/masks";
 import { dropUnselected, parseResponse } from "../helpers/response-schema";
 import { type APIResource, type GhostIdentityInput } from "../schemas/shared";
@@ -84,7 +84,7 @@ export class ReadFetcher<
     const parsedInclude = this.config.include.parse(include);
     const params = {
       ...this._params,
-      include: Object.keys(parsedInclude),
+      include: sendableIncludes(parsedInclude),
     };
     const requiredIncludeKeys = sanitizeMask(
       this.config.output,
@@ -152,9 +152,8 @@ export class ReadFetcher<
     if (inputKeys.length !== outputKeys.length && outputKeys.length > 0) {
       this._urlParams.fields = outputKeys.join(",");
     }
-    const include = filterSendableIncludes(this.config.include, this._params.include ?? []);
-    if (include.length > 0) {
-      this._urlParams.include = include.join(",");
+    if (this._params.include && this._params.include.length > 0) {
+      this._urlParams.include = this._params.include.join(",");
     }
     if (this._params.formats && this._params.formats.length > 0) {
       this._urlParams.formats = this._params.formats.join(",");

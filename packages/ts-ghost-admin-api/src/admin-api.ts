@@ -9,12 +9,12 @@ import {
   DebugOption,
   emailOrIdSchema,
   HTTPClientFactory,
-  ignoredInclude,
   slugOrIdSchema,
   type StrictOption,
 } from "@ts-ghost/core-api";
 
 import { adminTiersCreateSchema, adminTiersSchema } from "./schemas";
+import { droppedByGhost } from "./schemas/dropped-by-ghost";
 import {
   adminMembersCreateSchema,
   adminMembersIncludeSchema,
@@ -151,12 +151,12 @@ export class TSGhostAdminAPI<Version extends `v5.${string}` | `v6.${string}` = a
 
   get tiers() {
     const tiersIncludeSchema = z.object({
-      /** @deprecated Ghost ignores it and always sends a tier's monthly price, so it is not sent. */
-      monthly_price: ignoredInclude(),
-      /** @deprecated Ghost ignores it and always sends a tier's yearly price, so it is not sent. */
-      yearly_price: ignoredInclude(),
-      /** @deprecated Ghost ignores it and always sends a tier's benefits, so it is not sent. */
-      benefits: ignoredInclude(),
+      /** @deprecated Ghost always sends a tier's monthly price and drops the include, so it is not sent. */
+      monthly_price: droppedByGhost(z.literal(true)),
+      /** @deprecated Ghost always sends a tier's yearly price and drops the include, so it is not sent. */
+      yearly_price: droppedByGhost(z.literal(true)),
+      /** @deprecated Ghost always sends a tier's benefits and drops the include, so it is not sent. */
+      benefits: droppedByGhost(z.literal(true)),
     });
     const tiers = new APIComposer(
       "tiers",

@@ -1,27 +1,16 @@
 import { z } from "zod";
-import {
-  baseAttributionSchema,
-  baseMembersSchema,
-  baseSubscriptionsSchema,
-  sparseInclude,
-} from "@ts-ghost/core-api";
+import { baseAttributionSchema, baseMembersSchema, baseSubscriptionsSchema } from "@ts-ghost/core-api";
 
+import { droppedByGhost } from "./dropped-by-ghost";
 import { adminTiersSchema } from "./tiers";
 
-// Ghost's members input schema lacks the key, so Ghost drops it; the client no longer sends it.
-const droppedByGhost = (description: string) =>
-  z
-    .string()
-    .meta({ description, deprecated: true })
-    .optional()
-    .transform(() => undefined);
 
 export const adminMembersCreateSchema = z.object({
   email: z.email().meta({ description: "The email address of the member" }),
   name: z.string().meta({ description: "The name of the member" }).optional(),
   note: z.string().meta({ description: "(nullable) A note about the member" }).optional(),
-  /** @deprecated Ghost ignores it, so the client no longer sends it. */
-  geolocation: droppedByGhost("Ignored by Ghost and not sent"),
+  /** @deprecated Ghost drops it, so it is not sent. */
+  geolocation: droppedByGhost(z.string()),
   labels: z
     .array(
       z.union([
@@ -86,8 +75,8 @@ export const adminMembersCreateSchema = z.object({
 });
 
 export const adminMembersUpdateSchema = adminMembersCreateSchema.partial().extend({
-  /** @deprecated Ghost ignores it on edit, so the client no longer sends it. */
-  stripe_customer_id: droppedByGhost("Ignored by Ghost on edit and not sent"),
+  /** @deprecated Ghost drops it on edit, so it is not sent. */
+  stripe_customer_id: droppedByGhost(z.string()),
 });
 
 // Mailgun timestamps, null until the event arrives.
@@ -171,7 +160,7 @@ export const adminMembersIncludeSchema = z.object({
   tiers: z.literal(true).optional(),
   email_recipients: z.literal(true).optional(),
   // Ghost leaves `metafields` out for a member who has none, even when included.
-  metafields: sparseInclude(),
+  metafields: z.literal(true).optional().meta({ omittedWhenEmpty: true }),
 });
 
 export type Member = z.infer<typeof adminMembersSchema>;
