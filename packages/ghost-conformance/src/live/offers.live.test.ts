@@ -1,4 +1,4 @@
-import { assert, beforeAll, describe, expect, inject } from "vitest";
+import { beforeAll, describe, expect, inject } from "vitest";
 
 import { seedOffers } from "../seeds/offers.ts";
 import { uniqueSuffix } from "../seeds/unique-suffix.ts";
@@ -158,14 +158,6 @@ describe("offers", () => {
       });
     },
   );
-
-  // The deprecated slug read stays callable; Ghost has no /offers/slug/:slug/ route.
-  liveTest("the deprecated read by slug gets Ghost's 404", async ({ api }) => {
-    const result = await api.offers.read({ slug: seed.trial.code }).fetch();
-
-    assert(!result.success);
-    expect(result.status).toBe(404);
-  });
 
   liveTest("an offer carries no key the client's schema lacks", async ({ api }) => {
     const result = await api.offers.read({ id: seed.trial.id }).fetch();

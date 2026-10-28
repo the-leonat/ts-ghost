@@ -28,13 +28,6 @@ const EXPECTED_FAILURES: Record<SchemaTarget, Record<string, string>> = {
   "v6-latest": {},
 };
 
-/** Deprecated calls kept callable although Ghost lacks their route. */
-const DEPRECATED: Record<string, string> = {
-  "newsletters.read({slug})": "Ghost has no read-newsletter-by-slug route",
-  "offers.read({slug})": "Ghost has no read-offer-by-slug route",
-  "tiers.read({slug})": "Ghost has no read-tier-by-slug route",
-};
-
 for (const { target, leg } of CHECKS) {
   const { manifest } = manifestFor(ghostLeg(leg).ghost);
   const calls = await recordClientCalls(target);
@@ -42,13 +35,6 @@ for (const { target, leg } of CHECKS) {
   describe(`${target} client against the Ghost ${manifest.ghost} manifest`, () => {
     for (const call of calls) {
       const route = `${target}: ${call.method} ${call.path} (${call.name})`;
-      const deprecated = DEPRECATED[call.name];
-      if (deprecated) {
-        test(`${route}, deprecated: ${deprecated}`, () => {
-          expect(checkCall(manifest.routes, call)).toBeDefined();
-        });
-        continue;
-      }
       const reason = EXPECTED_FAILURES[target][call.name];
       (reason ? test.fails : test)(
         `${route}${reason ? `, expected failure: ${reason}` : ""}`,

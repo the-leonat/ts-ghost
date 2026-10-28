@@ -30,7 +30,7 @@ Whether a Ghost has a route comes from its committed manifest: `manifestFor(vers
 
 `pnpm manifest [v5|v6.0|pin]` generates a leg's manifest (default the pin) on a fresh, throwaway Ghost. Ghost publishes no OpenAPI spec, so the route list is read from Ghost's router inside the container ([`src/manifest/ghost-router.ts`](./src/manifest/ghost-router.ts) is the only code that touches Ghost internals). Auth is probed over HTTP: each route is called once per credential with ids that don't exist and no body, and 401 or 403 counts as refused. The output is sorted, so a diff between two Ghost versions shows routes that were added, removed or re-permissioned. The manifest is the only generated file; responses and request bodies are not recorded.
 
-The **client → manifest check** ([`src/client-routes/`](./src/client-routes/)) runs with the unit tests and needs no Docker. It calls every public client method against a fetch stub that records method and path, once per schema target, and checks each target's calls against its leg's manifest: v5 against Ghost 5.130.6, v6-compat against 6.0.0, v6-latest against the pin. A test names the target, method, route and call; each route must exist and accept an integration key. Deprecated calls must keep missing their route, except on v6-latest, whose types leave them out.
+The **client → manifest check** ([`src/client-routes/`](./src/client-routes/)) runs with the unit tests and needs no Docker. It calls every public client method against a fetch stub that records method and path, once per schema target, and checks each target's calls against its leg's manifest: v5 against Ghost 5.130.6, v6-compat against 6.0.0, v6-latest against the pin. A test names the target, method, route and call; each route must exist and accept an integration key.
 
 ## Running it
 
@@ -93,6 +93,5 @@ Every place where the client and Ghost currently disagree is an expected failure
 Both lists are paths with `[]` for any index, e.g. `posts[].email.new_key`. `liveTest`'s `api` passes them to the client as `strict: { ignore }`, so those keys pass through instead of failing the result.
 
 - **`EXPECTED_FAILURES`** in [`client-manifest.test.ts`](./src/client-routes/client-manifest.test.ts): client calls to routes the manifest doesn't have.
-- **`DEPRECATED`** in the same file: deprecated client calls kept callable although Ghost lacks their route; the test asserts the route is missing. These are permanent until the call is removed.
 
 The Vitest reporter counts expected failures separately (`N expected fail`), and the drift PR body does too.

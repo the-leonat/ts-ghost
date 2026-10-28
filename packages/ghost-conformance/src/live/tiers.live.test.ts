@@ -1,4 +1,4 @@
-import { assert, beforeAll, describe, expect, inject } from "vitest";
+import { beforeAll, describe, expect, inject } from "vitest";
 
 import { seedTiers } from "../seeds/tiers.ts";
 import { undeclaredKeys } from "../unknown-keys.ts";
@@ -90,14 +90,6 @@ describe("tiers", () => {
     assertOk(browsed);
     assertOk(read);
     expect(responses.all().map((r) => new URL(r.url).searchParams.has("include"))).toEqual([false, false]);
-  });
-
-  // The deprecated slug read stays callable; Ghost has no /tiers/slug/:slug/ route.
-  liveTest("the deprecated read by slug gets Ghost's 404", async ({ api }) => {
-    const result = await api.tiers.read({ slug: "default-product" }).fetch();
-
-    assert(!result.success);
-    expect(result.status).toBe(404);
   });
 
   liveTest("tiers carry no key the client's schema lacks", async ({ api }) => {

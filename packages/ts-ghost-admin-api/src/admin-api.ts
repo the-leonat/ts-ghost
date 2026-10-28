@@ -48,19 +48,6 @@ export type AdminAPIOptions = DebugOption &
 /** Ghost 5 has one schema target, so `schema` is a Ghost 6 option. */
 type OptionsFor<Version> = [Version] extends [`v5.${string}`] ? { schema?: "compat" } : {};
 
-/** A read by id, plus a read by slug for a resource Ghost has no read-by-slug route for. */
-type ReadByIdOnly<Fetcher> = {
-  (options: { id: string }): Fetcher;
-  /** @deprecated Ghost has no read-by-slug route for this resource, so this always fails; use `read({ id })`. */
-  (options: { slug: string }): Fetcher;
-  (options: { id: string } | { slug: string }): Fetcher;
-};
-
-/** Types a composer's slug read as deprecated (newsletters, tiers, offers: Ghost reads them by id only). */
-const readByIdOnly = <C extends object, Fetcher>(
-  composer: C & { read: (options: { id: string } | { slug: string }) => Fetcher },
-): Omit<C, "read"> & { read: ReadByIdOnly<Fetcher> } => composer as any;
-
 /**
  * The Admin API client. Its schema target follows `version` and `options.schema`: "v5.x" parses as the last
  * Ghost 5, "v6.x" as any Ghost 6 (v6-compat), and "v6.x" with `{ schema: "latest" }` as the pinned Ghost 6.
@@ -184,27 +171,26 @@ export class TSGhostAdminAPI<
       /** @deprecated Ghost always sends a tier's benefits and drops the include, so it is not sent. */
       benefits: droppedByGhost(z.literal(true)),
     });
-    const tiers = new APIComposer(
+    return new APIComposer(
       "tiers",
       {
         // The tiers endpoint always sends benefits; a member's or post's embedded tier doesn't.
         schema: adminTiersSchema.required({ benefits: true }),
-        identitySchema: slugOrIdSchema,
+        identitySchema: z.object({ id: z.string() }),
         include: tiersIncludeSchema,
         createSchema: adminTiersCreateSchema,
       },
       this.httpClientFactory,
     ).access(["browse", "read"]); // for now tiers mutations don't really work in the admin api
-    return readByIdOnly(tiers);
   }
 
   get newsletters() {
     const newslettersIncludeSchema = z.object({});
-    const newsletters = new APIComposer(
+    return new APIComposer(
       "newsletters",
       {
         schema: adminNewsletterSchemaFor(this.target),
-        identitySchema: slugOrIdSchema,
+        identitySchema: z.object({ id: z.string() }),
         include: newslettersIncludeSchema,
         createSchema: adminNewsletterCreateSchema,
         createOptionsSchema: z.object({
@@ -213,23 +199,21 @@ export class TSGhostAdminAPI<
       },
       this.httpClientFactory,
     ).access(["browse", "read", "add", "edit"]);
-    return readByIdOnly(newsletters);
   }
 
   get offers() {
     const offersIncludeSchema = z.object({});
-    const offers = new APIComposer(
+    return new APIComposer(
       "offers",
       {
         schema: baseOffersSchemaFor(this.target),
-        identitySchema: slugOrIdSchema,
+        identitySchema: z.object({ id: z.string() }),
         include: offersIncludeSchema,
         createSchema: adminOffersCreateSchema,
         updateSchema: adminOffersUpdateSchema,
       },
       this.httpClientFactory,
     ).access(["browse", "read", "add", "edit"]);
-    return readByIdOnly(offers);
   }
 
   get tags() {

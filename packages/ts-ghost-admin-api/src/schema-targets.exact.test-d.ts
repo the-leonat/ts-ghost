@@ -146,12 +146,25 @@ describe("a post's authors, exactly", () => {
 describe("deprecated forms", () => {
   test("every target keeps them, as @deprecated", () => {
     for (const api of [v5, compat, latest]) {
-      void api.offers.read({ slug: "black-friday" });
       void api.posts.add({ title: "t", locale: "de", newsletter: { id: "n" } });
       void api.pages.add({ title: "t", mobiledoc: "{}" });
       void api.members.add({ email: "a@b.co", geolocation: "{}" });
       void api.members.edit("1", { geolocation: "{}", stripe_customer_id: "cus_1" });
       void api.tiers.browse().include({ monthly_price: true });
+    }
+  });
+});
+
+describe("tiers, offers and newsletters", () => {
+  test("read by id only on every target: Ghost has no read-by-slug route for them", () => {
+    for (const api of [v5, compat, latest]) {
+      void api.tiers.read({ id: "1" });
+      // @ts-expect-error no tiers read by slug
+      void api.tiers.read({ slug: "gold" });
+      // @ts-expect-error no offers read by slug
+      void api.offers.read({ slug: "black-friday" });
+      // @ts-expect-error no newsletters read by slug
+      void api.newsletters.read({ slug: "weekly" });
     }
   });
 });
