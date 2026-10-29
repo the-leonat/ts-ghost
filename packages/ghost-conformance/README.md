@@ -41,7 +41,7 @@ GHOST_LEG=v5 pnpm --filter @ts-ghost/ghost-conformance test:live  # another leg
 pnpm --filter @ts-ghost/ghost-conformance manifest   # regenerate manifest.json (Docker)
 ```
 
-The `manifest` and `drift` scripts run TypeScript directly with Node's type stripping, so they need Node ≥ 22.18. The live suite and the manifest need a running Docker with `docker compose`. Each run starts its own compose project (Ghost plus MySQL on tmpfs) on a free local port and removes it afterwards, so runs never share state and leave nothing behind.
+The `manifest` and `drift` scripts run TypeScript directly with Node's type stripping, so they need Node ≥ 22.18. The live suite and the manifest need a running Docker with `docker compose`. Each run starts its own compose project (Ghost plus MySQL on tmpfs) on a free local port and removes it afterwards, so runs never share state. An interrupted run removes its Ghost on exit, and each live run first removes projects left by a killed run (their names carry the owning process id).
 
 The live suite's global setup:
 
