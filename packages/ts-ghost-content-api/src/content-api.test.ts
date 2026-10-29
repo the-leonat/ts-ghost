@@ -1,4 +1,5 @@
-import { beforeEach, describe, expect, test } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import { GHOST_LATEST } from "@ts-ghost/core-api";
 
 import { TSGhostContentAPI } from "./content-api";
 
@@ -10,6 +11,19 @@ describe("content-api", () => {
 
   test("content-api", () => {
     expect(api).toBeDefined();
+  });
+
+  test("selects its schema target from the version and the schema option", () => {
+    const key = "59d4bf56c73c04a18c867dc3ba";
+    expect(new TSGhostContentAPI("https://ghost.org", key, "v5.130").target).toBe("v5");
+    expect(api.target).toBe("v6-compat");
+    expect(
+      new TSGhostContentAPI("https://ghost.org", key, `v${GHOST_LATEST}`, { schema: "latest" }).target,
+    ).toBe("v6-latest");
+    // @ts-expect-error Ghost 5 has one schema target
+    expect(() => new TSGhostContentAPI("https://ghost.org", key, "v5.130", { schema: "latest" })).toThrow(
+      /Ghost 6 version/,
+    );
   });
 
   test("content-api shouldn't instantiate with an incorrect url", () => {
@@ -80,5 +94,73 @@ describe("content-api", () => {
     expect(api.settings.read).toBeUndefined();
     // @ts-expect-error
     expect(api.settings.browse).toBeUndefined();
+  });
+});
+
+describe("content-api client options", () => {
+  const KEY = "59d4bf56c73c04a18c867dc3ba";
+  const tag = {
+    id: "1",
+    name: "n",
+    slug: "s",
+    description: null,
+    feature_image: null,
+    visibility: "public",
+    meta_title: null,
+    meta_description: null,
+    og_image: null,
+    og_title: null,
+    og_description: null,
+    twitter_image: null,
+    twitter_title: null,
+    twitter_description: null,
+    codeinjection_head: null,
+    codeinjection_foot: null,
+    canonical_url: null,
+    accent_color: null,
+    url: "https://ghost.org/tag/s/",
+    extra: { nested: 1 },
+  };
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+  // One answer; a further request rejects instead of reaching the network.
+  const respond = () => {
+    const fetch = vi.fn<typeof globalThis.fetch>(async (input) => {
+      if (fetch.mock.calls.length > 1) throw new Error(`Unexpected fetch of ${String(input)}`);
+      return new Response(JSON.stringify({ tags: [tag] }));
+    });
+    vi.stubGlobal("fetch", fetch);
+    return fetch;
+  };
+
+  test("keys the schema doesn't declare pass through by default", async () => {
+    respond();
+    const result = await new TSGhostContentAPI("https://ghost.org", KEY, "v6.0").tags
+      .read({ id: "1" })
+      .fetch();
+    expect(result).toEqual({ success: true, data: expect.objectContaining({ extra: { nested: 1 } }) });
+  });
+
+  test("the strict option fails a result carrying an undeclared key, naming its path", async () => {
+    respond();
+    const api = new TSGhostContentAPI("https://ghost.org", KEY, "v6.0", { strict: true });
+    expect(await api.tags.read({ id: "1" }).fetch()).toMatchObject({
+      success: false,
+      errors: [{ type: "ResponseSchemaError", message: expect.stringContaining("tags[0].extra") }],
+    });
+  });
+
+  test("default request options apply to every request, next to the content key", async () => {
+    const fetch = respond();
+    const api = new TSGhostContentAPI("https://ghost.org", KEY, "v6.0", {
+      defaultRequestOptions: { redirect: "manual", headers: { "X-Client": "ts-ghost-test" } },
+    });
+    await api.tags.read({ id: "1" }).fetch();
+
+    const [url, init] = fetch.mock.calls[0]!;
+    expect(init?.redirect).toBe("manual");
+    expect(new Headers(init?.headers).get("x-client")).toBe("ts-ghost-test");
+    expect(new URL(String(url)).searchParams.get("key")).toBe(KEY);
   });
 });

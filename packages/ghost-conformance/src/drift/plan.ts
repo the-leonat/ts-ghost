@@ -1,3 +1,5 @@
+import { compareVersions } from "../ghost/pin.ts";
+
 type Fetch = (input: string, init?: RequestInit) => Promise<Response>;
 type GitHubRelease = { tag_name: string; html_url: string; prerelease: boolean; draft: boolean };
 
@@ -57,11 +59,4 @@ export async function resolveNewestGhost(opts: {
 /** Bump only when the newest release is ahead of the pin. */
 export function planDrift(pin: string, newest: string): DriftPlan {
   return { bump: compareVersions(newest, pin) > 0, from: pin, to: newest };
-}
-
-export function compareVersions(a: string, b: string): number {
-  const pa = a.split(".").map(Number);
-  const pb = b.split(".").map(Number);
-  for (let i = 0; i < 3; i++) if (pa[i] !== pb[i]) return (pa[i] ?? 0) - (pb[i] ?? 0);
-  return 0;
 }

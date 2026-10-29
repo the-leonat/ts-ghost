@@ -2,10 +2,12 @@ import { z, ZodRawShape } from "zod";
 
 import { DebugOption } from "../helpers/debug";
 import type { HTTPClient } from "../helpers/http-client";
+import { requiredIncludes, sendableIncludes } from "../helpers/includes";
 import { sanitizeFormatMask, sanitizeMask } from "../helpers/masks";
+import { dropUnselected, parseFetched, resultSchema } from "../helpers/response-schema";
 import { type APIResource, type GhostIdentityInput } from "../schemas/shared";
 import type { Exactly, Mask, NoUnrecognizedKeys } from "../utils";
-import { contentFormats, type ContentFormats } from "./formats";
+import { contentFormats, withEmptyFormats, type ContentFormats } from "./formats";
 
 export class ReadFetcher<
   const Resource extends APIResource = any,
@@ -49,11 +51,15 @@ export class ReadFetcher<
     formats: NoUnrecognizedKeys<Formats, OutputShape>,
   ) {
     const requiredFormats = sanitizeFormatMask(this.config.output, formats);
-    const newOutput = this.config.output.required(requiredFormats as Exactly<Formats, Formats>);
     const params = {
       ...this._params,
       formats: Object.keys(requiredFormats).filter((key) => contentFormats.includes(key)),
     };
+    const newOutput = withEmptyFormats(
+      this.config.output.required(requiredFormats as Exactly<Formats, Formats>),
+      this.config.output,
+      params.formats,
+    );
     return new ReadFetcher(
       this.resource,
       {
@@ -78,9 +84,13 @@ export class ReadFetcher<
     const parsedInclude = this.config.include.parse(include);
     const params = {
       ...this._params,
-      include: Object.keys(parsedInclude),
+      include: sendableIncludes(parsedInclude),
     };
-    const requiredIncludeKeys = sanitizeMask(this.config.output, parsedInclude, { excludeDotNotation: true });
+    const requiredIncludeKeys = sanitizeMask(
+      this.config.output,
+      requiredIncludes(this.config.include, parsedInclude),
+      { excludeDotNotation: true },
+    );
     return new ReadFetcher(
       this.resource,
       {
@@ -165,39 +175,19 @@ export class ReadFetcher<
   }
 
   public async fetch(options?: RequestInit & DebugOption) {
-    const res = z.discriminatedUnion("success", [
-      z.object({
-        success: z.literal(true),
-        data: this.config.output,
-      }),
-      z.object({
-        success: z.literal(false),
-        errors: z.array(
-          z.object({
-            type: z.string(),
-            message: z.string(),
-          }),
-        ),
-        status: z.number(),
-      }),
-    ]);
-    const { data: result, status } = (await this.httpClient.fetchWithStatus({
+    const res = resultSchema({ data: this.config.output });
+    const fetched = await this.httpClient.fetchWithStatus({
       resource: this.resource,
       pathnameIdentity: this._pathnameIdentity,
       searchParams: this._urlSearchParams,
       options,
-    })) as { data: any; status: number };
-    let data: any = {};
-    if (result.errors) {
-      data.success = false;
-      data.errors = result.errors;
-      data.status = status;
-    } else {
-      data = {
-        success: true,
-        data: result[this.resource][0],
-      };
-    }
-    return res.parse(data);
+    });
+    return parseFetched(res, fetched, {
+      dataPath: `${this.resource}[0]`,
+      strict: this.httpClient.strict,
+      success: (result) => ({
+        data: dropUnselected(result?.[this.resource]?.[0], this.config.schema, this.config.output),
+      }),
+    });
   }
 }

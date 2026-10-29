@@ -1,11 +1,16 @@
-import { writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { stripTypeScriptTypes } from "node:module";
+import { tmpdir } from "node:os";
+import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { adminApiUrl } from "../ghost/admin-api.ts";
 import { bootstrapGhost } from "../ghost/bootstrap.ts";
 import { startGhost, type GhostInstance } from "../ghost/instance.ts";
+import { ghostVersions, type GhostVersions } from "../ghost/pin.ts";
 import { OUTPUT_MARKER, type RouteDefinition } from "./ghost-router.ts";
-import { buildManifest, MANIFEST_FILE, serialiseManifest, type Manifest } from "./manifest.ts";
+import { buildManifest, serialiseManifest, type Manifest } from "./manifest.ts";
+import { manifestFile } from "./manifests.ts";
 import { probeRoutes } from "./probe.ts";
 
 const ROUTE_READER = fileURLToPath(new URL("./ghost-router.ts", import.meta.url));
@@ -18,7 +23,7 @@ export async function generateManifest(ghost: GhostInstance): Promise<Manifest> 
   await assertFresh(ghost.url);
   const definitions = await readRouteDefinitions(ghost);
   const credentials = await bootstrapGhost(ghost.url);
-  return buildManifest(ghost.version, await probeRoutes(ghost.url, definitions, credentials));
+  return buildManifest(ghost.version, await probeRoutes(ghost.url, definitions, credentials, ghost.version));
 }
 
 async function assertFresh(url: string) {
@@ -31,21 +36,38 @@ async function assertFresh(url: string) {
 }
 
 async function readRouteDefinitions(ghost: GhostInstance): Promise<RouteDefinition[]> {
-  const target = "/tmp/ts-ghost-router.mts";
-  await ghost.compose("cp", ROUTE_READER, `ghost:${target}`);
+  // Copied as plain JS: Ghost 5 images run Node 20, which can't strip types.
+  const dir = await mkdtemp(join(tmpdir(), "ts-ghost-router-"));
+  const reader = join(dir, "ts-ghost-router.mjs");
+  const target = "/tmp/ts-ghost-router.mjs";
+  try {
+    await writeFile(reader, stripTypeScriptTypes(await readFile(ROUTE_READER, "utf8")));
+    await ghost.compose("cp", reader, `ghost:${target}`);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
   const { stdout } = await ghost.compose("exec", "-T", "ghost", "node", target);
   const line = stdout.split("\n").find((l) => l.startsWith(OUTPUT_MARKER));
   if (!line) throw new Error(`The route reader printed no routes:\n${stdout}`);
   return JSON.parse(line.slice(OUTPUT_MARKER.length)) as RouteDefinition[];
 }
 
-/** CLI: starts a fresh pinned Ghost, generates the manifest, writes it to the repo, removes the Ghost. */
+/**
+ * CLI `pnpm manifest [v5|v6.0|pin]`: starts a fresh Ghost of that pinned image (default the pin), generates its
+ * manifest, writes it to the repo (manifestFile), removes the Ghost.
+ */
 async function main() {
-  const ghost = await startGhost({ name: "ts-ghost-manifest" });
+  const image = (process.argv[2] ?? "pin") as keyof GhostVersions;
+  const versions = ghostVersions();
+  if (!(image in versions))
+    throw new Error(`Unknown image "${image}"; use one of ${Object.keys(versions).join(", ")}`);
+  const file = manifestFile(image);
+  const ghost = await startGhost({ name: "ts-ghost-manifest", version: versions[image] });
   try {
     const manifest = await generateManifest(ghost);
-    await writeFile(MANIFEST_FILE, serialiseManifest(manifest));
-    console.log(`Wrote ${manifest.routes.length} routes for Ghost ${manifest.ghost} to ${MANIFEST_FILE}`);
+    await mkdir(dirname(file), { recursive: true });
+    await writeFile(file, serialiseManifest(manifest));
+    console.log(`Wrote ${manifest.routes.length} routes for Ghost ${manifest.ghost} to ${file}`);
   } finally {
     await ghost.stop();
   }

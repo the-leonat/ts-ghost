@@ -4,8 +4,7 @@ import { BLOG_TITLE } from "../ghost/bootstrap.ts";
 import { assertOk, liveTest } from "./live-test.ts";
 
 describe("settings", () => {
-  // Expected failure: the settings schema only allows scalar values; Ghost sends list values (all_blocked_email_domains).
-  liveTest.fails("GET /settings/ returns every setting as key and value", async ({ api }) => {
+  liveTest("GET /settings/ returns every setting as key and value", async ({ api }) => {
     const result = await api.settings.fetch();
     assertOk(result);
 

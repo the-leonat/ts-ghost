@@ -1,5 +1,6 @@
 import type { Manifest, ManifestRoute } from "../manifest/manifest.ts";
 import { renderCoverage, type Coverage } from "../route-coverage/coverage.ts";
+import type { FieldDrift } from "./fields.ts";
 import type { DriftPlan, GhostRelease } from "./plan.ts";
 
 export type ManifestDiff = {
@@ -135,8 +136,10 @@ export function renderPrBody(input: {
   /** Regenerating the manifest failed, so `diff` and the client check saw the old manifest. */
   manifestFailed?: boolean;
   runUrl?: string;
+  /** Schema fields the new Ghost added or removed, already written to the since/until table. */
+  fields?: FieldDrift;
 }): string {
-  const { plan, releases, diff, suite, client, resources, coverage, manifestFailed, runUrl } = input;
+  const { plan, releases, diff, suite, client, resources, coverage, manifestFailed, runUrl, fields } = input;
   const run = runUrl ? ` ([run](${runUrl}))` : "";
   const covered = resources.length ? resources.map((r) => `\`${r}\``).join(", ") : "none found";
   return [
@@ -175,6 +178,7 @@ export function renderPrBody(input: {
       ? [`❌ The manifest was not regenerated; see the manifest step's log${run}.`]
       : renderDiff(diff)),
     "",
+    ...(fields ? ["## Schema fields", "", ...renderFields(fields, plan.to), ""] : []),
     "## Client coverage",
     "",
     renderCoverage(coverage),
@@ -192,6 +196,16 @@ export function renderPrBody(input: {
   ].join("\n");
 }
 
+/** The since/until entries the drift job wrote, and keys outside the table. */
+function renderFields(fields: FieldDrift, version: string): string[] {
+  const minor = version.split(".").slice(0, 2).join(".");
+  const lines = [
+    ...fields.added.map((k) => `- \`${k}\`: since: "${minor}" (new; type it in its schema)`),
+    ...fields.removed.map((k) => `- \`${k}\`: until: "${minor}" (removed; a major changeset is written)`),
+    ...fields.untracked.map((p) => `- \`${p}\`: new, outside the since/until table`),
+  ];
+  return lines.length ? lines : ["No field added or removed."];
+}
 const HOW_IT_WORKS = [
   `There is one drift PR, from \`${DRIFT_BRANCH}\`. Every weekly run force-pushes it and rewrites this description, always from the default branch's pin to the newest Ghost. Merging it bumps the pin.`,
   "",

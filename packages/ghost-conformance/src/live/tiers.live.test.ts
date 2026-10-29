@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, inject } from "vitest";
 
 import { seedTiers } from "../seeds/tiers.ts";
-import { unknownKeys } from "../unknown-keys.ts";
+import { undeclaredKeys } from "../unknown-keys.ts";
 import { assertOk, liveTest } from "./live-test.ts";
 
 let seed: Awaited<ReturnType<typeof seedTiers>>;
@@ -82,30 +82,19 @@ describe("tiers", () => {
     },
   );
 
-  // Expected failure: the client still sends the price and benefit includes, which Ghost ignores.
-  liveTest.fails("the deprecated price and benefit includes are not sent", async ({ api, responses }) => {
+  liveTest("the deprecated price and benefit includes are not sent", async ({ api, responses }) => {
     const include = { monthly_price: true, yearly_price: true, benefits: true } as const;
     const browsed = await api.tiers.browse({ limit: "all" }).include(include).fetch();
     const read = await api.tiers.read({ id: seed.full.id }).include(include).fetch();
 
     assertOk(browsed);
-
     assertOk(read);
     expect(responses.all().map((r) => new URL(r.url).searchParams.has("include"))).toEqual([false, false]);
   });
 
-  // Expected failure: the client offers slug reads, but Ghost has no /tiers/slug/:slug/ route.
-  liveTest.fails("GET /tiers/slug/:slug/ returns the tier", async ({ api }) => {
-    const result = await api.tiers.read({ slug: "default-product" }).fetch();
-
-    assertOk(result);
-  });
-
-  liveTest("tiers carry no key the client's schema lacks", async ({ api, responses }) => {
+  liveTest("tiers carry no key the client's schema lacks", async ({ api }) => {
     const result = await api.tiers.browse({ limit: "all" }).fetch();
-
+    expect(undeclaredKeys(result)).toEqual([]);
     assertOk(result);
-    const raw = responses.last("/tiers/") as { tiers: unknown[] };
-    expect(unknownKeys(raw.tiers, result.data, { at: "tiers" })).toEqual([]);
   });
 });

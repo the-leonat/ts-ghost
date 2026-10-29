@@ -32,34 +32,33 @@ export type FilterQuerySetOperators = `-`;
 export type FieldOrSubField<S> = S extends `${infer Field}.${string}` ? Field : S;
 
 export type BrowseFilter<S, Shape> = S extends string
-  ? S extends `${infer Field}:'${infer Value}'`
+  ? S extends `${infer Field}:${infer Rest}`
     ? FieldOrSubField<Field> extends keyof Shape
-      ? Value extends string
-        ? S
-        : never
+      ? // A quoted value ends the clause at its closing quote, so it may hold separators.
+        Rest extends `'${infer Value}'${FilterQuerySeparator}${infer NextQuery}`
+        ? `${Field}:'${Value}'${FilterQuerySeparator}${BrowseFilter<NextQuery, Shape>}`
+        : Rest extends `'${string}'`
+          ? S
+          : Rest extends `${FilterQuerySetOperators}[${infer Values}]`
+            ? `${Field}:${FilterQuerySetOperators}[${Values}]`
+            : Rest extends `[${infer Values}]`
+              ? `${Field}:[${Values}]`
+              : Rest extends `${FilterQuerySetOperators}[${infer Values}]${FilterQuerySeparator}${infer NextQuery}`
+                ? `${Field}:${FilterQuerySetOperators}[${Values}]${FilterQuerySeparator}${BrowseFilter<
+                    NextQuery,
+                    Shape
+                  >}`
+                : Rest extends `[${infer Values}]${FilterQuerySeparator}${infer NextQuery}`
+                  ? `${Field}:[${Values}]${FilterQuerySeparator}${BrowseFilter<NextQuery, Shape>}`
+                  : Rest extends `${infer Value}${FilterQuerySeparator}${infer NextQuery}`
+                    ? `${Field}:${Value}${FilterQuerySeparator}${BrowseFilter<NextQuery, Shape>}`
+                    : Rest extends `${infer Value}`
+                      ? Value extends string
+                        ? `${Field}:${Value}`
+                        : never
+                      : S
       : never
-    : S extends `${infer Field}:${infer Rest}`
-      ? FieldOrSubField<Field> extends keyof Shape
-        ? Rest extends `${FilterQuerySetOperators}[${infer Values}]`
-          ? `${Field}:${FilterQuerySetOperators}[${Values}]`
-          : Rest extends `[${infer Values}]`
-            ? `${Field}:[${Values}]`
-            : Rest extends `${FilterQuerySetOperators}[${infer Values}]${FilterQuerySeparator}${infer NextQuery}`
-              ? `${Field}:${FilterQuerySetOperators}[${Values}]${FilterQuerySeparator}${BrowseFilter<
-                  NextQuery,
-                  Shape
-                >}`
-              : Rest extends `[${infer Values}]${FilterQuerySeparator}${infer NextQuery}`
-                ? `${Field}:[${Values}]${FilterQuerySeparator}${BrowseFilter<NextQuery, Shape>}`
-                : Rest extends `${infer Value}${FilterQuerySeparator}${infer NextQuery}`
-                  ? `${Field}:${Value}${FilterQuerySeparator}${BrowseFilter<NextQuery, Shape>}`
-                  : Rest extends `${infer Value}`
-                    ? Value extends string
-                      ? `${Field}:${Value}`
-                      : never
-                    : S
-        : never
-      : never
+    : never
   : never;
 
 export type BrowseParams<P, Shape> = P extends { order: infer Order }

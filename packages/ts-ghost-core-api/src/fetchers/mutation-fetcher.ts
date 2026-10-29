@@ -1,8 +1,8 @@
-import { z } from "zod";
 import * as z4 from "zod/v4/core";
 
 import { DebugOption } from "../helpers/debug";
 import { HTTPClient } from "../helpers/http-client";
+import { parseFetched, resultSchema } from "../helpers/response-schema";
 import type { APIResource } from "../schemas/shared";
 
 type ExplicitObjectKeys<T> = {
@@ -62,23 +62,7 @@ export class MutationFetcher<
   }
 
   public async submit(options?: RequestInit & DebugOption) {
-    const schema = z.discriminatedUnion("success", [
-      z.object({
-        success: z.literal(true),
-        data: this.config.output,
-      }),
-      z.object({
-        success: z.literal(false),
-        errors: z.array(
-          z.object({
-            type: z.string(),
-            message: z.string(),
-            context: z.string().nullish(),
-          }),
-        ),
-        status: z.number(),
-      }),
-    ]);
+    const schema = resultSchema({ data: this.config.output });
     // Ghost API is expecting a JSON object with a key that matches the resource name
     // e.g. { posts: [ { title: "Hello World" } ] }
     // https://ghost.org/docs/api/v3/content/#create-a-post
@@ -87,23 +71,16 @@ export class MutationFetcher<
     const createData = {
       [this.resource]: [this._options.body],
     };
-    const { data: response, status } = (await this.httpClient.fetchWithStatus({
+    const fetched = await this.httpClient.fetchWithStatus({
       resource: this.resource,
       searchParams: this._urlSearchParams,
       pathnameIdentity: this._pathnameIdentity,
       options: { ...options, method: this._options.method, body: JSON.stringify(createData) },
-    })) as { data: any; status: number };
-    let result: any = {};
-    if (response.errors) {
-      result.success = false;
-      result.errors = response.errors;
-      result.status = status;
-    } else {
-      result = {
-        success: true,
-        data: response[this.resource][0],
-      };
-    }
-    return schema.parse(result);
+    });
+    return parseFetched(schema, fetched, {
+      dataPath: `${this.resource}[0]`,
+      strict: this.httpClient.strict,
+      success: (response) => ({ data: response?.[this.resource]?.[0] }),
+    });
   }
 }

@@ -27,6 +27,18 @@ export const baseTiersSchema = z.object({
     .transform((v) => (v ? v : null)),
   benefits: z.array(z.string()).optional(),
   visibility: ghostVisibilitySchema,
-  currency: z.string().nullish(),
+  currency: z.string().meta({ description: "(nullable) Absent on the free tier under /tiers/" }).nullish(),
   trial_days: z.number().default(0),
+  monthly_price_id: z
+    .string()
+    .meta({ description: "(nullable) Monthly Stripe price id; absent under /tiers/" })
+    .nullish(),
+  yearly_price_id: z
+    .string()
+    .meta({ description: "(nullable) Yearly Stripe price id; absent under /tiers/" })
+    .nullish(),
+  expiry_at: z
+    .string()
+    .meta({ description: "(nullable) When a member's comped access ends; only on a member's tiers" })
+    .nullish(),
 });

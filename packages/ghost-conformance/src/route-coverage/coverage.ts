@@ -1,4 +1,4 @@
-import type { ClientCall } from "../client-routes/route-check.ts";
+import { erase, type ClientCall } from "../client-routes/route-check.ts";
 import type { VitestJsonReport } from "../drift/pr-body.ts";
 import type { Manifest, ManifestRoute } from "../manifest/manifest.ts";
 
@@ -15,7 +15,6 @@ export type Coverage = {
 
 type Call = Pick<ClientCall, "method" | "path">;
 
-const erase = (path: string) => path.replace(/:[^/]+/g, ":");
 const resourceOf = (route: ManifestRoute) => route.path.split("/")[1] ?? "";
 
 function tally(routes: ManifestRoute[], isCovered: (r: ManifestRoute) => boolean): Tally {

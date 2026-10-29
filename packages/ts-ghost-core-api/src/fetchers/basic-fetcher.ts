@@ -1,7 +1,8 @@
-import { z, ZodTypeAny } from "zod";
+import type { ZodTypeAny } from "zod";
 
 import { DebugOption } from "../helpers/debug";
 import type { HTTPClient } from "../helpers/http-client";
+import { parseFetched, resultSchema } from "../helpers/response-schema";
 import type { APIResource } from "../schemas/shared";
 
 export class BasicFetcher<const Resource extends APIResource = any, OutputShape extends ZodTypeAny = any> {
@@ -18,37 +19,12 @@ export class BasicFetcher<const Resource extends APIResource = any, OutputShape 
   }
 
   public async fetch(options?: RequestInit & DebugOption) {
-    const res = z.discriminatedUnion("success", [
-      z.object({
-        success: z.literal(true),
-        data: this.config.output,
-      }),
-      z.object({
-        success: z.literal(false),
-        errors: z.array(
-          z.object({
-            type: z.string(),
-            message: z.string(),
-          }),
-        ),
-        status: z.number(),
-      }),
-    ]);
-    const { data: result, status } = (await this.httpClient.fetchWithStatus({
-      options,
-      resource: this.resource,
-    })) as { data: any; status: number };
-    let data: any = {};
-    if (result.errors) {
-      data.success = false;
-      data.errors = result.errors;
-      data.status = status;
-    } else {
-      data = {
-        success: true,
-        data: result[this.resource],
-      };
-    }
-    return res.parse(data);
+    const res = resultSchema({ data: this.config.output });
+    const fetched = await this.httpClient.fetchWithStatus({ options, resource: this.resource });
+    return parseFetched(res, fetched, {
+      dataPath: this.resource,
+      strict: this.httpClient.strict,
+      success: (result) => ({ data: result?.[this.resource] }),
+    });
   }
 }

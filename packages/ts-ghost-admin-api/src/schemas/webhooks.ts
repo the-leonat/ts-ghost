@@ -58,33 +58,50 @@ export const ghostEventTypes = z.union([
   z.literal("member.deleted").meta({ description: "Triggered whenever a member is deleted from Ghost" }),
 ]);
 
+/** The events Ghost dispatches; kept as a type so editors autocomplete them. */
 export type GhostWebhookEventTypes = z.infer<typeof ghostEventTypes>;
+
+/** A webhook event: a known one, or any other string, as Ghost stores any lowercase event of up to 50 characters. */
+export type GhostWebhookEvent = GhostWebhookEventTypes | (string & {});
+
+const webhookEventSchema = z
+  .custom<GhostWebhookEvent>((event) => typeof event === "string", "The event must be a string")
+  .meta({ description: "The event that triggers the webhook" });
+
+const webhookEventInputSchema = z
+  .custom<GhostWebhookEvent>(
+    (event) => typeof event === "string" && event.length <= 50 && event === event.toLowerCase(),
+    "The event must be lowercase and at most 50 characters",
+  )
+  .meta({ description: "The event that triggers the webhook" });
+
+// Ghost takes any URI reference as the target, relative ones included.
+const webhookTargetUrlSchema = z.string().max(2000).meta({ description: "The URL of the webhook" });
 
 export const adminWebhookSchema = z.object({
   id: z.string().meta({ description: "The ID of the webhook" }),
-  event: ghostEventTypes,
-  target_url: z.url().meta({ description: "The URL of the webhook" }),
-  name: z.string().meta({ description: "The name of the webhook" }).nullish(),
-  secret: z.string().meta({ description: "The secret of the webhook" }).nullish(),
-  api_version: z.string().meta({ description: "The API version of the webhook" }).nullish(),
-  integration_id: z.string().meta({ description: "The ID of the integration" }).nullish(),
-  status: z.string().meta({ description: "The status of the webhook" }).nullish(),
+  event: webhookEventSchema,
+  target_url: webhookTargetUrlSchema,
+  name: z.string().meta({ description: "The name of the webhook" }).nullable(),
+  secret: z.string().meta({ description: "The secret of the webhook" }).nullable(),
+  api_version: z.string().meta({ description: "The API version of the webhook" }),
+  integration_id: z.string().meta({ description: "The ID of the integration" }),
   last_triggered_at: z
     .string()
     .meta({ description: "The date and time of the last webhook trigger" })
-    .nullish(),
+    .nullable(),
   last_triggered_status: z
     .string()
     .meta({ description: "The status of the last webhook trigger" })
-    .nullish(),
-  last_triggered_error: z.string().meta({ description: "The error of the last webhook trigger" }).nullish(),
+    .nullable(),
+  last_triggered_error: z.string().meta({ description: "The error of the last webhook trigger" }).nullable(),
   created_at: z.string().meta({ description: "The date and time of the webhook creation" }),
-  updated_at: z.string().meta({ description: "The date and time of the webhook update" }).nullish(),
+  updated_at: z.string().meta({ description: "The date and time of the webhook update" }).nullable(),
 });
 
 export const adminWebhookCreateSchema = z.object({
-  event: ghostEventTypes,
-  target_url: z.url().meta({ description: "The URL of the webhook" }),
+  event: webhookEventInputSchema,
+  target_url: webhookTargetUrlSchema,
   name: z.string().meta({ description: "The name of the webhook" }).optional(),
   secret: z.string().meta({ description: "The secret of the webhook" }).nullish(),
   api_version: z.string().meta({ description: "The API version of the webhook" }).nullish(),
@@ -92,8 +109,9 @@ export const adminWebhookCreateSchema = z.object({
 });
 
 export const adminWebhookUpdateSchema = z.object({
-  event: ghostEventTypes.optional(),
-  target_url: z.url().meta({ description: "The URL of the webhook" }).optional(),
+  event: webhookEventInputSchema.optional(),
+  target_url: webhookTargetUrlSchema.optional(),
   name: z.string().meta({ description: "The name of the webhook" }).optional(),
+  secret: z.string().meta({ description: "The secret of the webhook" }).nullish(),
   api_version: z.string().meta({ description: "The API version of the webhook" }).nullish(),
 });

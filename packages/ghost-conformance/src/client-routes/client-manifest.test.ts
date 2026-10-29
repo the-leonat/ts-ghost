@@ -1,7 +1,7 @@
-import { readFileSync } from "node:fs";
 import { describe, expect, test } from "vitest";
 
-import { MANIFEST_FILE, parseManifest } from "../manifest/manifest.ts";
+import { ghostLeg, type SchemaTarget } from "../ghost/pin.ts";
+import { manifestFor } from "../manifest/manifests.ts";
 import { recordClientCalls } from "./client-calls.ts";
 import { checkCall } from "./route-check.ts";
 
@@ -14,24 +14,39 @@ declare module "vitest" {
   }
 }
 
-const manifest = parseManifest(readFileSync(MANIFEST_FILE, "utf8"));
-const calls = await recordClientCalls();
+/** Each target's client against its leg's manifest; v6-latest's against the pin's, which the drift job moves. */
+const CHECKS: { target: SchemaTarget; leg: "v5" | "v6.0" | "pin" }[] = [
+  { target: "v5", leg: "v5" },
+  { target: "v6-compat", leg: "v6.0" },
+  { target: "v6-latest", leg: "pin" },
+];
 
-/** Client calls known to fail against the pinned Ghost, with why. */
-const EXPECTED_FAILURES: Record<string, string> = {
-  "newsletters.read({slug})": "Ghost has no read-newsletter-by-slug route",
-  "offers.read({slug})": "Ghost has no read-offer-by-slug route",
-  "tiers.read({slug})": "Ghost has no read-tier-by-slug route",
+/** Client calls known to fail against a target's Ghost, with why. */
+const EXPECTED_FAILURES: Record<SchemaTarget, Record<string, string>> = {
+  v5: {},
+  "v6-compat": {},
+  "v6-latest": {},
 };
 
-describe(`admin-api client against the Ghost ${manifest.ghost} manifest`, () => {
-  for (const call of calls) {
-    const reason = EXPECTED_FAILURES[call.name];
-    const title = `${call.name}: ${call.method} ${call.path}${reason ? ` (expected failure: ${reason})` : ""}`;
-    (reason ? test.fails : test)(title, ({ task }) => {
-      task.meta.clientResource = call.name.split(".")[0];
-      task.meta.clientCall = { method: call.method, path: call.path };
-      expect(checkCall(manifest.routes, call)).toBeUndefined();
-    });
-  }
-});
+for (const { target, leg } of CHECKS) {
+  const { manifest } = manifestFor(ghostLeg(leg).ghost);
+  const calls = await recordClientCalls(target);
+
+  describe(`${target} client against the Ghost ${manifest.ghost} manifest`, () => {
+    for (const call of calls) {
+      const route = `${target}: ${call.method} ${call.path} (${call.name})`;
+      const reason = EXPECTED_FAILURES[target][call.name];
+      (reason ? test.fails : test)(
+        `${route}${reason ? `, expected failure: ${reason}` : ""}`,
+        ({ task }) => {
+          // Coverage counts the pin's calls once.
+          if (leg === "pin") {
+            task.meta.clientResource = call.name.split(".")[0];
+            task.meta.clientCall = { method: call.method, path: call.path };
+          }
+          expect(checkCall(manifest.routes, call)).toBeUndefined();
+        },
+      );
+    }
+  });
+}

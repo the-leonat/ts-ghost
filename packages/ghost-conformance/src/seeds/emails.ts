@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 
 import { must } from "./seed-result.ts";
-import { ghostId, insert, literal, raw, type SqlSeed, type SqlSeedContext } from "./sql.ts";
+import { createdBy, ghostId, insert, literal, raw, type SqlSeed, type SqlSeedContext } from "./sql.ts";
 
 /** What the email seed creates; tests look it up by these slugs and emails. */
 export const EMAIL_SEED = {
@@ -34,7 +34,7 @@ export const emailSeed: SqlSeed = {
     suppressions: "Written from Mailgun bounce and spam-complaint events.",
     posts: "Only `newsletter_id`, which Ghost sets only when it sends the post.",
   },
-  async run({ admin, exec }: SqlSeedContext) {
+  async run({ admin, exec, version }: SqlSeedContext) {
     const [failedPost, submittedPost] = await Promise.all(
       Object.values(EMAIL_SEED.posts).map(async (slug) =>
         must(await admin.posts.add({ title: slug, slug, status: "published" }), "email seed"),
@@ -122,6 +122,7 @@ export const emailSeed: SqlSeed = {
           newsletter_id: null,
           created_at: t(0),
           updated_at: null,
+          ...createdBy(version),
         },
         {
           id: sentEmail,
@@ -147,6 +148,7 @@ export const emailSeed: SqlSeed = {
           newsletter_id: raw("@newsletter"),
           created_at: t(10),
           updated_at: t(11),
+          ...createdBy(version),
         },
       ]),
       insert("email_batches", [

@@ -3,9 +3,10 @@ import { adminMembersSchema } from "@ts-ghost/admin-api";
 
 import { EMAIL_SEED } from "../seeds/emails.ts";
 import { MEMBER_SEED, seedMembers } from "../seeds/members.ts";
+import { sessionRequest } from "../seeds/session.ts";
 import { uniqueSuffix } from "../seeds/unique-suffix.ts";
-import { unknownKeys } from "../unknown-keys.ts";
-import { adminApi } from "./ghost.ts";
+import { undeclaredKeys } from "../unknown-keys.ts";
+import { adminApi, requireRoute } from "./ghost.ts";
 import { assertOk, liveTest, type LiveContext } from "./live-test.ts";
 
 type Seeded = Awaited<ReturnType<typeof seedMembers>>;
@@ -36,12 +37,16 @@ describe("members", () => {
     expect(member!.newsletters[0]).toMatchObject({ status: "active" });
   });
 
-  liveTest("reading by id equals the browse entry", async ({ api }) => {
+  // A read also sends the member's attribution and tiers, which a browse leaves out.
+  liveTest("reading by id equals the browse entry, plus attribution and tiers", async ({ api }) => {
     const browsed = await api.members.browse({ filter: `email:'${MEMBER_SEED.plain}'` }).fetch();
     assertOk(browsed);
     const read = await api.members.read({ id: seeded.plain.id }).fetch();
     assertOk(read);
-    expect(read.data).toEqual(browsed.data[0]);
+    const { attribution, tiers, ...rest } = read.data;
+    expect(rest).toEqual(browsed.data[0]);
+    expect(tiers).toEqual([]);
+    expect(attribution).toMatchObject({ referrer_medium: "Admin API" });
   });
 
   /** Adds a member with a unique email, deleted again when the test finishes. */
@@ -55,7 +60,7 @@ describe("members", () => {
     });
     assertOk(added);
     onTestFinished(async () => {
-      await adminApi().members.delete(added.data.id);
+      await api.members.delete(added.data.id);
     });
     return added.data;
   }
@@ -84,7 +89,28 @@ describe("members", () => {
 
     expect(await api.members.delete(added.id)).toEqual({ success: true });
     const gone = await api.members.read({ id: added.id }).fetch();
-    expect(gone.success).toBe(false);
+    expect(gone).toMatchObject({ success: false, status: 404 });
+  });
+
+  liveTest("Ghost drops geolocation on add", async ({ api }) => {
+    const email = `member-dropped-${uniqueSuffix()}@conformance.test`;
+    const added = await api.members.add({ email, geolocation: '{"country":"Germany"}' });
+    assertOk(added);
+    onTestFinished(async () => {
+      await api.members.delete(added.data.id);
+    });
+    expect(added.data.geolocation).toBeNull();
+  });
+
+  liveTest("Ghost drops geolocation and stripe_customer_id on edit", async ({ api }) => {
+    const added = await addMember(api);
+    const edited = await api.members.edit(added.id, {
+      note: "edited",
+      geolocation: '{"country":"Germany"}',
+      stripe_customer_id: "cus_dropped",
+    });
+    assertOk(edited);
+    expect(edited.data).toMatchObject({ note: "edited", geolocation: null, subscriptions: [] });
   });
 
   liveTest("an unsuppressed member has no suppression info", async ({ api }) => {
@@ -93,8 +119,7 @@ describe("members", () => {
     expect(result.data.email_suppression).toEqual({ suppressed: false, info: null });
   });
 
-  // Expected failure: email_suppression.info is typed as a string; Ghost sends { reason, timestamp }.
-  liveTest.fails("a suppressed member's suppression info carries reason and timestamp", async ({ api }) => {
+  liveTest("a suppressed member's suppression info carries reason and timestamp", async ({ api }) => {
     for (const [email, reason] of [
       [EMAIL_SEED.members.spam, "spam"],
       [EMAIL_SEED.members.bounced, "fail"],
@@ -108,21 +133,18 @@ describe("members", () => {
     }
   });
 
-  // Expected failure: email_suppression.info is typed as a string; Ghost sends { reason, timestamp }.
-  liveTest.fails("browsing suppressed members parses", async ({ api }) => {
+  liveTest("browsing suppressed members parses", async ({ api }) => {
     const { spam, bounced } = EMAIL_SEED.members;
     const result = await api.members.browse({ filter: `email:['${spam}','${bounced}']` }).fetch();
     assertOk(result);
   });
 
-  // Expected failure: subscriptions[].current_period_end is typed as a string; Ghost sends null when comped.
-  liveTest.fails("browsing a comped member parses", async ({ api }) => {
+  liveTest("browsing a comped member parses", async ({ api }) => {
     const result = await api.members.browse({ filter: `email:'${MEMBER_SEED.comped}'` }).fetch();
     assertOk(result);
   });
 
-  // Expected failure: subscriptions[].current_period_end is typed as a string; Ghost sends null when comped.
-  liveTest.fails("a comped member carries Ghost's stand-in subscription", async ({ api }) => {
+  liveTest("a comped member carries Ghost's stand-in subscription", async ({ api }) => {
     const result = await api.members.read({ id: seeded.comped.id }).fetch();
     assertOk(result);
     expect(result.data).toMatchObject({ status: "comped", comped: true });
@@ -131,88 +153,75 @@ describe("members", () => {
     ]);
   });
 
-  // Expected failure: the client offers no member includes, so `tiers` is never requested.
   // A set `tiers` is covered by the paid member in paid-members.live.test.ts.
-  liveTest.fails("browse sends tiers only when they are included", async ({ api, responses }) => {
+  liveTest("browse sends tiers only when they are included", async ({ api, responses }) => {
     const filter = `email:'${MEMBER_SEED.plain}'` as const;
     const plain = await api.members.browse({ filter }).fields({ id: true }).fetch();
     assertOk(plain);
     expect((responses.last("/members/") as { members: object[] }).members[0]).not.toHaveProperty("tiers");
 
-    // @ts-expect-error the client's member include schema is empty
     const included = await api.members.browse({ filter }).include({ tiers: true }).fetch();
     assertOk(included);
-    // @ts-expect-error the client's member schema lacks `tiers`
     expect(included.data[0]?.tiers).toEqual([]);
   });
 
-  // Expected failure: Ghost always sends `tiers` on read, but the client's member schema strips it.
-  liveTest.fails("read returns tiers with or without the include", async ({ api, responses }) => {
+  liveTest("read returns tiers with or without the include", async ({ api, responses }) => {
     const result = await api.members.read({ id: seeded.plain.id }).fetch();
     assertOk(result);
     expect((responses.last("/members/") as { members: { tiers: unknown }[] }).members[0]?.tiers).toEqual([]);
-    // @ts-expect-error the client's member schema lacks `tiers`
     expect(result.data.tiers).toEqual([]);
   });
 
-  // Expected failure: the client offers no `email_recipients` include and its schema lacks the key.
-  liveTest.fails(
-    "email recipients come only when included, with and without delivery data",
-    async ({ api }) => {
-      const id = await memberId(EMAIL_SEED.members.recipient);
-      const result = await api.members
-        .read({ id })
-        // @ts-expect-error the client's member include schema is empty
-        .include({ email_recipients: true })
-        .fetch();
-      assertOk(result);
-      // @ts-expect-error the client's member schema lacks `email_recipients`
-      const recipients = result.data.email_recipients as Record<string, unknown>[];
-      expect(recipients).toHaveLength(2);
-      for (const recipient of recipients) {
-        expect(recipient).toMatchObject({
-          member_email: EMAIL_SEED.members.recipient,
-          email_id: expect.any(String),
-        });
-      }
-      expect(recipients.map((r) => r.member_name).sort()).toEqual(["Email Recipient", null]);
-      expect(recipients.filter((r) => r.delivered_at === null)).toHaveLength(1);
-    },
-  );
+  liveTest("email recipients come only when included, with and without delivery data", async ({ api }) => {
+    const id = await memberId(EMAIL_SEED.members.recipient);
+    const result = await api.members.read({ id }).include({ email_recipients: true }).fetch();
+    assertOk(result);
+    // Only the seeded emails: a newsletter another file sends also reaches this member.
+    const { posts } = await sessionRequest<{ posts: { email: { id: string } }[] }>(
+      inject("ghost"),
+      "GET",
+      `/posts/?filter=slug:[${Object.values(EMAIL_SEED.posts).join(",")}]&fields=id&include=email`,
+    );
+    const seededEmails = posts.map((post) => post.email.id);
+    const recipients = result.data.email_recipients.filter((r) => seededEmails.includes(r.email_id));
+    expect(recipients).toHaveLength(2);
+    for (const recipient of recipients) {
+      expect(recipient).toMatchObject({
+        member_email: EMAIL_SEED.members.recipient,
+        email_id: expect.any(String),
+      });
+    }
+    expect(recipients.map((r) => r.member_name).sort()).toEqual(["Email Recipient", null]);
+    expect(recipients.filter((r) => r.delivered_at === null)).toHaveLength(1);
+  });
 
-  // Expected failure: the client offers no `metafields` include and its schema lacks the key.
-  liveTest.fails(
+  liveTest(
     "metafields come only when included, and only for members that have them",
-    async ({ api, responses }) => {
+    async ({ api, responses, skip }) => {
+      requireRoute({ skip }, "GET /members/metafields/:namespace/");
       const { namespace, key, value } = MEMBER_SEED.metafield;
       const result = await api.members
         .browse({ filter: `email:['${MEMBER_SEED.metafields}','${MEMBER_SEED.plain}']` })
-        // @ts-expect-error the client's member include schema is empty
         .include({ metafields: true })
         .fetch();
       assertOk(result);
       expect(new URL(responses.all().at(-1)!.url).searchParams.get("include")).toBe("metafields");
       const byEmail = Object.fromEntries(result.data.map((member) => [member.email, member]));
-      // @ts-expect-error the client's member schema lacks `metafields`
       expect(byEmail[MEMBER_SEED.metafields]?.metafields).toEqual({ [namespace]: { [key]: value } });
       expect(byEmail[MEMBER_SEED.plain]).not.toHaveProperty("metafields");
     },
   );
 
-  // Expected failure: avatar_image is typed as a string; Ghost sends null when Gravatar is off site-wide.
-  liveTest.fails("a member without an avatar (Gravatar off) parses", async ({ api, responses }) => {
+  liveTest("a member without an avatar (Gravatar off) parses", async ({ api, responses }) => {
     await api.members.read({ id: seeded.plain.id }).fetch();
     const raw = (responses.last("/members/") as { members: Record<string, unknown>[] }).members[0];
     // Patched, not seeded: Gravatar is a boot-time config switch that would null every member in other files.
     expect(adminMembersSchema.safeParse({ ...raw, avatar_image: null }).success).toBe(true);
   });
 
-  // Expected failure: the member schema lacks uuid, attribution, can_comment, commenting, tiers,
-  // current_subscription, unsubscribe_url and the notification flags (Ghost 6.72).
-  liveTest.fails("a member carries no key the client's schema lacks", async ({ api, responses }) => {
+  liveTest("a member carries no key the client's schema lacks", async ({ api }) => {
     const result = await api.members.read({ id: seeded.plain.id }).fetch();
+    expect(undeclaredKeys(result)).toEqual([]);
     assertOk(result);
-    const raw = responses.last("/members/") as { members: unknown[] };
-    expect(unknownKeys(raw.members[0], result.data, { at: "member" })).toEqual([]);
   });
 });

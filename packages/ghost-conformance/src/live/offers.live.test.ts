@@ -2,7 +2,8 @@ import { beforeAll, describe, expect, inject } from "vitest";
 
 import { seedOffers } from "../seeds/offers.ts";
 import { uniqueSuffix } from "../seeds/unique-suffix.ts";
-import { unknownKeys } from "../unknown-keys.ts";
+import { undeclaredKeys } from "../unknown-keys.ts";
+import { ghostSends, requireBehaviour } from "./ghost.ts";
 import { assertOk, liveTest } from "./live-test.ts";
 
 let seed: Awaited<ReturnType<typeof seedOffers>>;
@@ -63,26 +64,37 @@ describe("offers", () => {
     });
   });
 
-  // Expected failure: offer.tier is required in the client's schema; a retention offer has none.
-  liveTest.fails("a retention offer reads with no tier", async ({ api }) => {
-    const result = await api.offers.read({ id: seed.retention.id }).fetch();
+  liveTest("a retention offer reads with no tier", async ({ api, skip }) => {
+    requireBehaviour({ skip }, "retentionOffers");
+    const result = await api.offers.read({ id: seed.retention!.id }).fetch();
 
     assertOk(result);
-    expect(result.data).toMatchObject({ code: seed.retention.code, type: "percent", tier: null });
+    expect(result.data).toMatchObject({ code: seed.retention!.code, type: "percent", tier: null });
   });
 
-  // Expected failure: the retention offer's null tier fails the client's offers schema.
-  liveTest.fails("browse lists the retention and the trial offer", async ({ api }) => {
+  liveTest("browse lists the retention and the trial offer", async ({ api, skip }) => {
+    requireBehaviour({ skip }, "retentionOffers");
     const result = await api.offers.browse({ limit: "all" }).fetch();
 
     assertOk(result);
     const byCode = new Map(result.data.map((offer) => [offer.code, offer]));
-    expect(byCode.get(seed.retention.code)).toMatchObject({ tier: null });
+    expect(byCode.get(seed.retention!.code)).toMatchObject({ tier: null });
     expect(byCode.get(seed.trial.code)).toMatchObject({ tier: { id: seed.tierId } });
   });
 
-  // Expected failure: the client's offer create schema has no trial type.
-  liveTest.fails("add creates a trial offer of a number of trial days on a tier", async ({ api }) => {
+  // PhilDL/ts-ghost#314: a retention offer's null tier failed the whole browse.
+  liveTest("browse of active offers parses with a retention offer among them", async ({ api, skip }) => {
+    requireBehaviour({ skip }, "retentionOffers");
+    const result = await api.offers.browse({ filter: "status:active" }).fetch();
+
+    assertOk(result);
+    expect(result.data.find((offer) => offer.code === seed.retention!.code)).toMatchObject({
+      redemption_type: "retention",
+      tier: null,
+    });
+  });
+
+  liveTest("add creates a trial offer of a number of trial days on a tier", async ({ api }) => {
     const code = `trial-${uniqueSuffix()}`;
     const trial = {
       name: `Trial ${code}`,
@@ -94,13 +106,13 @@ describe("offers", () => {
       currency: "USD",
       tier: { id: seed.tierId },
     } as const;
-    // @ts-expect-error the client's offer create schema has no trial type
     const added = await api.offers.add(trial);
 
     assertOk(added);
     const read = await api.offers.read({ id: added.data.id }).fetch();
     assertOk(read);
-    expect(read.data).toMatchObject({ ...trial, tier: { id: seed.tierId } });
+    // Ghost stores no currency on a trial offer.
+    expect(read.data).toMatchObject({ ...trial, currency: null, tier: { id: seed.tierId } });
   });
 
   liveTest(
@@ -117,11 +129,10 @@ describe("offers", () => {
         name: "ZodError",
         issues: [expect.objectContaining({ path: ["duration"] })],
       };
-      // A ZodError only: without a trial type in the client, this is refused on `type` first.
       await expect(
         // @ts-expect-error a trial offer's duration is "trial"
         api.offers.add({ ...base, type: "trial", duration: "once" }),
-      ).rejects.toMatchObject({ name: "ZodError" });
+      ).rejects.toMatchObject(rejectsDuration);
       await expect(
         // @ts-expect-error only a trial offer has a trial duration
         api.offers.add({ ...base, type: "percent", duration: "trial" }),
@@ -130,38 +141,27 @@ describe("offers", () => {
     },
   );
 
-  // Ghost also sends redemption_type, created_at and last_redeemed; the unknown-keys test owns them.
-  liveTest("a trial offer reads back with its trial days and tier", async ({ api, responses }) => {
+  liveTest(
+    "a trial offer reads back with its tier, redemption type, creation time and last redemption",
+    async ({ api }) => {
+      const result = await api.offers.read({ id: seed.trial.id }).fetch();
+
+      assertOk(result);
+      expect(result.data).toMatchObject({
+        type: "trial",
+        duration: "trial",
+        amount: 14,
+        ...(ghostSends("offers.redemption_type") && { redemption_type: "signup" }),
+        tier: { id: seed.tierId, name: expect.any(String) },
+        created_at: expect.stringMatching(ISO_MS),
+        last_redeemed: null,
+      });
+    },
+  );
+
+  liveTest("an offer carries no key the client's schema lacks", async ({ api }) => {
     const result = await api.offers.read({ id: seed.trial.id }).fetch();
-
+    expect(undeclaredKeys(result)).toEqual([]);
     assertOk(result);
-    expect(result.data).toMatchObject({
-      type: "trial",
-      duration: "trial",
-      amount: 14,
-      tier: { id: seed.tierId, name: expect.any(String) },
-    });
-    const raw = responses.last("/offers/") as { offers: unknown[] };
-    expect(raw.offers[0]).toMatchObject({
-      redemption_type: "signup",
-      created_at: expect.stringMatching(ISO_MS),
-      last_redeemed: null,
-    });
-  });
-
-  // Expected failure: the client offers slug reads, but Ghost has no /offers/slug/:slug/ route.
-  liveTest.fails("GET /offers/slug/:slug/ returns the offer", async ({ api }) => {
-    const result = await api.offers.read({ slug: seed.trial.code }).fetch();
-
-    assertOk(result);
-  });
-
-  // Expected failure: the client's offers schema lacks redemption_type, created_at and last_redeemed.
-  liveTest.fails("an offer carries no key the client's schema lacks", async ({ api, responses }) => {
-    const result = await api.offers.read({ id: seed.trial.id }).fetch();
-
-    assertOk(result);
-    const raw = responses.last("/offers/") as { offers: unknown[] };
-    expect(unknownKeys(raw.offers[0], result.data, { at: "offer" })).toEqual([]);
   });
 });

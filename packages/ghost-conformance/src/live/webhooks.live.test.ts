@@ -3,7 +3,7 @@ import { describe, expect } from "vitest";
 
 import { uniqueSuffix } from "../seeds/unique-suffix.ts";
 import { conformanceIntegration, WEBHOOK_TARGET } from "../seeds/webhooks.ts";
-import { unknownKeysOfResponses } from "../unknown-keys.ts";
+import { undeclaredKeys } from "../unknown-keys.ts";
 import { assertOk, liveTest } from "./live-test.ts";
 
 // Events no other test file fires: a concurrent delivery writes the old webhook back over an edit.
@@ -60,18 +60,28 @@ describe("webhooks", () => {
     expect(edited.data.last_triggered_error).toEqual(expect.any(String));
   });
 
-  // Expected failure: the webhook update schema drops secret, so a secret-only edit throws "No data to edit".
-  liveTest.fails("PUT /webhooks/:id/ rotates the secret on its own", async ({ api }) => {
+  liveTest("PUT /webhooks/:id/ rotates the secret on its own", async ({ api }) => {
     const added = await api.webhooks.add(newWebhook());
     assertOk(added);
 
     const secret = `rotated-${randomBytes(8).toString("hex")}`;
-    // @ts-expect-error the update schema has no secret
     const edited = await api.webhooks.edit(added.data.id, { secret });
     assertOk(edited);
     expect(edited.data.secret).toBe(secret);
     expect((await readBack(added.data.id))?.secret).toBe(secret);
   });
+
+  liveTest(
+    "POST /webhooks/ takes an event outside the known list and a relative target, and reads them back",
+    async ({ api }) => {
+      const input = { event: "ts_ghost.custom_event", target_url: `/hook/${uniqueSuffix()}` };
+      const added = await api.webhooks.add(input);
+      assertOk(added);
+
+      expect(added.data).toMatchObject(input);
+      expect(await readBack(added.data.id)).toMatchObject(input);
+    },
+  );
 
   liveTest("DELETE /webhooks/:id/ removes the webhook", async ({ api }) => {
     const added = await api.webhooks.add(newWebhook());
@@ -81,11 +91,11 @@ describe("webhooks", () => {
     expect(await readBack(added.data.id)).toBeUndefined();
   });
 
-  liveTest("webhook responses carry no key the client's schema lacks", async ({ api, responses }) => {
+  liveTest("webhook responses carry no key the client's schema lacks", async ({ api }) => {
     const added = await api.webhooks.add(newWebhook());
     assertOk(added);
-    assertOk(await api.webhooks.edit(added.data.id, { name: `Key check ${uniqueSuffix()}` }));
+    const edited = await api.webhooks.edit(added.data.id, { name: `Key check ${uniqueSuffix()}` });
 
-    expect(unknownKeysOfResponses(responses.all())).toEqual([]);
+    expect(undeclaredKeys(added, edited)).toEqual([]);
   });
 });

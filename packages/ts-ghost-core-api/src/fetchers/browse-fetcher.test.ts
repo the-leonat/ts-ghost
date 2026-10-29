@@ -849,6 +849,34 @@ describe("BrowseFetcher output tests suite", () => {
     expect(res.data[0].plaintext).toBeUndefined();
   });
 
+  test("a requested format Ghost omits on an empty post parses as empty", async () => {
+    const schema = z.object({
+      title: z.string(),
+      html: z.string().catch("").optional(),
+      plaintext: z.string().nullish(),
+    });
+    const fetcher = new BrowseFetcher(
+      "posts",
+      { schema, output: schema, include: z.object({}) },
+      {},
+      httpClient,
+    );
+    fetchMocker.doMockOnce(
+      JSON.stringify({
+        posts: [{ title: "full", html: "<p>Hi</p>", plaintext: "Hi" }, { title: "empty" }],
+        meta: { pagination: { page: 1, limit: 15, pages: 1, total: 2, next: null, prev: null } },
+      }),
+    );
+
+    const res = await fetcher.formats({ html: true, plaintext: true }).fetch();
+
+    assert(res.success);
+    expect(res.data).toEqual([
+      { title: "full", html: "<p>Hi</p>", plaintext: "Hi" },
+      { title: "empty", html: "", plaintext: null },
+    ]);
+  });
+
   test("new formats, fields, and include", async () => {
     const fetcher = new BrowseFetcher(
       "posts",

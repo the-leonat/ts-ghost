@@ -27,13 +27,15 @@ export async function bootstrapGhost(url: string): Promise<GhostCredentials> {
 
   const sessionCookie = await signIn(url, owner);
 
-  const integration = (await (
-    await call("create integration", `${admin}/integrations/`, {
-      method: "POST",
-      headers: { cookie: sessionCookie },
-      body: { integrations: [{ name: "ts-ghost conformance" }] },
-    })
-  ).json()) as { integrations: { api_keys: { type: string; secret: string }[] }[] };
+  const integration = JSON.parse(
+    (
+      await call("create integration", `${admin}/integrations/`, {
+        method: "POST",
+        headers: { cookie: sessionCookie },
+        body: { integrations: [{ name: "ts-ghost conformance" }] },
+      })
+    ).body,
+  ) as { integrations: { api_keys: { type: string; secret: string }[] }[] };
   const integrationKey = integration.integrations[0]?.api_keys.find((k) => k.type === "admin")?.secret;
   if (!integrationKey) throw new Error("New integration has no admin API key");
 
@@ -43,21 +45,21 @@ export async function bootstrapGhost(url: string): Promise<GhostCredentials> {
 
 /** Reads the signed-in user's staff token, "<id>:<secret>". */
 export async function readStaffToken(url: string, sessionCookie: string): Promise<string> {
-  const response = await call("owner staff token", `${adminApiUrl(url)}/users/me/token/`, {
+  const { body } = await call("owner staff token", `${adminApiUrl(url)}/users/me/token/`, {
     headers: { cookie: sessionCookie },
   });
-  const { apiKey } = (await response.json()) as { apiKey: { id: string; secret: string } };
+  const { apiKey } = JSON.parse(body) as { apiKey: { id: string; secret: string } };
   return `${apiKey.id}:${apiKey.secret}`;
 }
 
 /** Signs the Owner in and returns the session's `Cookie` header value. */
 export async function signIn(url: string, owner: { email: string; password: string }): Promise<string> {
   // Node's fetch sends no Origin, so Ghost falls back to its configured URL; a mismatching Origin is refused.
-  const response = await call("sign-in", `${adminApiUrl(url)}/session/`, {
+  const { headers } = await call("sign-in", `${adminApiUrl(url)}/session/`, {
     method: "POST",
     body: { username: owner.email, password: owner.password },
   });
-  const sessionCookie = response.headers
+  const sessionCookie = headers
     .getSetCookie()
     .map((cookie) => cookie.split(";")[0])
     .filter((pair) => pair.startsWith("ghost-admin-api-session="))
@@ -66,18 +68,18 @@ export async function signIn(url: string, owner: { email: string; password: stri
   return sessionCookie;
 }
 
+/** One bootstrap request, read to its end: Ghost saves a new session only while it finishes the response body. */
 async function call(
   step: string,
   url: string,
   init: { method?: string; headers?: Record<string, string>; body?: unknown },
-): Promise<Response> {
+): Promise<{ headers: Headers; body: string }> {
   const response = await fetch(url, {
     method: init.method ?? "GET",
     headers: { "content-type": "application/json", ...init.headers },
     body: init.body === undefined ? undefined : JSON.stringify(init.body),
   });
-  if (!response.ok) {
-    throw new Error(`Ghost bootstrap step "${step}" failed: ${response.status} ${await response.text()}`);
-  }
-  return response;
+  const body = await response.text();
+  if (!response.ok) throw new Error(`Ghost bootstrap step "${step}" failed: ${response.status} ${body}`);
+  return { headers: response.headers, body };
 }

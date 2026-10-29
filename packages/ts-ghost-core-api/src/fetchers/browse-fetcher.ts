@@ -2,11 +2,13 @@ import { z, ZodRawShape } from "zod";
 
 import { BrowseParamsSchema } from "../helpers/browse-params";
 import { DebugOption } from "../helpers/debug";
-import { sanitizeFormatMask, sanitizeMask } from "../helpers/masks";
 import type { HTTPClient } from "../helpers/http-client";
+import { requiredIncludes, sendableIncludes } from "../helpers/includes";
+import { sanitizeFormatMask, sanitizeMask } from "../helpers/masks";
+import { dropUnselected, parseFetched, resultSchema } from "../helpers/response-schema";
 import { ghostMetaSchema, type APIResource } from "../schemas/shared";
 import type { Exactly, Mask, NoUnrecognizedKeys } from "../utils";
-import { contentFormats, type ContentFormats } from "./formats";
+import { contentFormats, withEmptyFormats, type ContentFormats } from "./formats";
 
 export class BrowseFetcher<
   const Resource extends APIResource = any,
@@ -58,7 +60,11 @@ export class BrowseFetcher<
       this.resource,
       {
         schema: this.config.schema,
-        output: this.config.output.required(requiredFormats as Exactly<Formats, Formats>),
+        output: withEmptyFormats(
+          this.config.output.required(requiredFormats as Exactly<Formats, Formats>),
+          this.config.output,
+          params.formats,
+        ),
         include: this.config.include,
       },
       params,
@@ -78,9 +84,13 @@ export class BrowseFetcher<
     const parsedInclude = this.config.include.parse(include);
     const params = {
       ...this._params,
-      include: Object.keys(parsedInclude),
+      include: sendableIncludes(parsedInclude),
     };
-    const requiredIncludeKeys = sanitizeMask(this.config.output, parsedInclude, { excludeDotNotation: true });
+    const requiredIncludeKeys = sanitizeMask(
+      this.config.output,
+      requiredIncludes(this.config.include, parsedInclude),
+      { excludeDotNotation: true },
+    );
 
     return new BrowseFetcher(
       this.resource,
@@ -179,54 +189,33 @@ export class BrowseFetcher<
   }
 
   private _getResultSchema() {
-    return z.discriminatedUnion("success", [
-      z.object({
-        success: z.literal(true),
-        meta: ghostMetaSchema,
-        data: z.array(this.config.output),
+    return resultSchema({ meta: ghostMetaSchema, data: z.array(this.config.output) });
+  }
+
+  private async _parse<S extends ReturnType<typeof this._getResultSchema>>(
+    resultSchema: S,
+    options?: RequestInit & DebugOption,
+  ) {
+    const fetched = await this.httpClient.fetchWithStatus({
+      resource: this.resource,
+      searchParams: this._urlSearchParams,
+      options,
+    });
+    return parseFetched(resultSchema, fetched, {
+      dataPath: this.resource,
+      strict: this.httpClient.strict,
+      success: (result) => ({
+        meta: result?.meta || {
+          pagination: { pages: 0, page: 0, limit: 15, total: 0, prev: null, next: null },
+        },
+        data: dropUnselected(result?.[this.resource], this.config.schema, this.config.output),
       }),
-      z.object({
-        success: z.literal(false),
-        errors: z.array(
-          z.object({
-            type: z.string(),
-            message: z.string(),
-          }),
-        ),
-        status: z.number(),
-      }),
-    ]);
+    });
   }
 
   public async fetch(options?: RequestInit & DebugOption) {
     const resultSchema = this._getResultSchema();
-    const { data: result, status } = (await this.httpClient.fetchWithStatus({
-      resource: this.resource,
-      searchParams: this._urlSearchParams,
-      options,
-    })) as { data: any; status: number };
-    let data: any = {};
-    if (result.errors) {
-      data.success = false;
-      data.errors = result.errors;
-      data.status = status;
-    } else {
-      data = {
-        success: true,
-        meta: result.meta || {
-          pagination: {
-            pages: 0,
-            page: 0,
-            limit: 15,
-            total: 0,
-            prev: null,
-            next: null,
-          },
-        },
-        data: result[this.resource],
-      };
-    }
-    return resultSchema.parse(data);
+    return this._parse(resultSchema, options);
   }
 
   public async paginate(options?: RequestInit & DebugOption) {
@@ -239,37 +228,11 @@ export class BrowseFetcher<
     }
 
     const resultSchema = this._getResultSchema();
-    const { data: result, status } = (await this.httpClient.fetchWithStatus({
-      resource: this.resource,
-      searchParams: this._urlSearchParams,
-      options,
-    })) as { data: any; status: number };
-    let data: any = {};
-    if (result.errors) {
-      data.success = false;
-      data.errors = result.errors;
-      data.status = status;
-    } else {
-      data = {
-        success: true,
-        meta: result.meta || {
-          pagination: {
-            pages: 0,
-            page: 0,
-            limit: 15,
-            total: 0,
-            prev: null,
-            next: null,
-          },
-        },
-        data: result[this.resource],
-      };
-    }
     const response: {
       current: z.infer<typeof resultSchema>;
       next: BrowseFetcher<Resource, Params, Fields, BaseShape, OutputShape, IncludeShape> | undefined;
     } = {
-      current: resultSchema.parse(data),
+      current: await this._parse(resultSchema, options),
       next: undefined,
     };
     if (response.current.success === false) return response;

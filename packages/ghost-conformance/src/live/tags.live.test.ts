@@ -2,7 +2,7 @@ import { beforeAll, describe, expect } from "vitest";
 
 import { fullTagInput, seedTags } from "../seeds/tags.ts";
 import { uniqueSuffix } from "../seeds/unique-suffix.ts";
-import { unknownKeysOfResponses } from "../unknown-keys.ts";
+import { undeclaredKeys } from "../unknown-keys.ts";
 import { assertOk, liveTest } from "./live-test.ts";
 
 describe("tags", () => {
@@ -78,17 +78,17 @@ describe("tags", () => {
 
     expect(await api.tags.delete(added.data.id)).toEqual({ success: true });
     const read = await api.tags.read({ id: added.data.id }).fetch();
-    expect(read.success).toBe(false);
+    expect(read).toMatchObject({ success: false, status: 404 });
   });
 
-  liveTest("tag responses carry no key the client's schema lacks", async ({ api, responses }) => {
+  liveTest("tag responses carry no key the client's schema lacks", async ({ api }) => {
     const filter: `slug:[${string}]` = `slug:[${seeded.full.slug},${seeded.bare.slug}]`;
-    assertOk(await api.tags.browse({ filter }).include({ "count.posts": true }).fetch());
-    assertOk(await api.tags.read({ id: seeded.full.id }).fetch());
+    const browsed = await api.tags.browse({ filter }).include({ "count.posts": true }).fetch();
+    const read = await api.tags.read({ id: seeded.full.id }).fetch();
     const added = await api.tags.add(fullTagInput(uniqueSuffix()));
     assertOk(added);
-    assertOk(await api.tags.edit(added.data.id, { description: "Edited" }));
+    const edited = await api.tags.edit(added.data.id, { description: "Edited" });
 
-    expect(unknownKeysOfResponses(responses.all())).toEqual([]);
+    expect(undeclaredKeys(browsed, read, added, edited)).toEqual([]);
   });
 });

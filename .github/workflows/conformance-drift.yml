@@ -83,6 +83,16 @@ jobs:
         continue-on-error: true
         run: pnpm drift suite
 
+      - name: 🏗️ Build the admin client for the field check
+        if: steps.plan.outputs.bump == 'true'
+        working-directory: .
+        run: pnpm --filter "@ts-ghost/admin-api..." build
+
+      # Writes since/until entries for fields the new pin added or removed, and a major changeset for removals.
+      - name: 🧬 Record schema fields the new Ghost added or removed
+        if: steps.plan.outputs.bump == 'true'
+        run: pnpm drift fields
+
       - name: 📝 Render PR body
         if: steps.plan.outputs.bump == 'true'
         run: pnpm drift body
@@ -94,7 +104,14 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: drift
+          # From the repo root: the since/until table and a removal changeset live outside the package.
           path: |
+            packages/ghost-conformance/.drift/
+            packages/ghost-conformance/ghost-versions.json
+            packages/ghost-conformance/manifest.json
+            packages/ts-ghost-core-api/src/schemas/ghost-fields.ts
+            .changeset/ghost-*-fields.md
+|
             packages/ghost-conformance/.drift/
             packages/ghost-conformance/ghost-version
             packages/ghost-conformance/manifest.json
@@ -137,7 +154,7 @@ jobs:
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: drift
-          path: packages/ghost-conformance
+          path: .
 
       - name: 📬 Open, update or close the drift PR
         run: |

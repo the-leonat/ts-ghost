@@ -2,7 +2,7 @@ import { beforeAll, describe, expect, inject } from "vitest";
 
 import { FULL_HTML, fullScalars, seedPages } from "../seeds/posts-and-pages.ts";
 import { uniqueSuffix } from "../seeds/unique-suffix.ts";
-import { unknownKeysOfResponses } from "../unknown-keys.ts";
+import { undeclaredKeys } from "../unknown-keys.ts";
 import { adminApi } from "./ghost.ts";
 import { assertOk, liveTest, type LiveContext } from "./live-test.ts";
 
@@ -42,8 +42,7 @@ describe("pages", () => {
     expect(result.data.find((page) => page.id === seed.full.id)?.html).toBe(FULL_HTML);
   });
 
-  // Expected failure: formats({ plaintext }) makes plaintext required, but Ghost omits it on empty pages.
-  liveTest.fails("browse with the plaintext format returns content", async ({ api }) => {
+  liveTest("browse with the plaintext format returns content", async ({ api }) => {
     const result = await api.pages.browse({ limit: "all" }).formats({ plaintext: true }).fetch();
 
     assertOk(result);
@@ -65,7 +64,8 @@ describe("pages", () => {
 
     assertOk(bySlug);
     expect(byId.data.id).toBe(seed.full.id);
-    expect(bySlug.data).toEqual(byId.data);
+    // A page lists every tier, which the tiers seed adds and renames concurrently; compare all else.
+    expect(bySlug.data).toEqual({ ...byId.data, tiers: expect.any(Array) });
   });
 
   liveTest("nullable fields come back null on a bare page and set on a full page", async ({ api }) => {
@@ -106,14 +106,14 @@ describe("pages", () => {
     expect(read.data.html).toBe(FULL_HTML);
   });
 
-  // Expected failure: pages have no locale in Ghost; the client's input accepts one that Ghost drops.
-  liveTest.fails("add reads back locale", async ({ api }) => {
+  // locale input is deprecated: pages have no locale in Ghost.
+  liveTest("add ignores the deprecated locale", async ({ api }) => {
     const added = await api.pages.add({ title: `Locale ${uniqueSuffix()}`, locale: "de" });
     assertOk(added);
 
     const read = await api.pages.read({ id: added.data.id }).fetch();
     assertOk(read);
-    expect(read.data).toMatchObject({ locale: "de" });
+    expect(read.data).not.toHaveProperty("locale");
   });
 
   liveTest("edit persists every value sent", async ({ api }) => {
@@ -147,12 +147,12 @@ describe("pages", () => {
 
     expect(await api.pages.delete(added.data.id)).toEqual({ success: true });
     const read = await api.pages.read({ id: added.data.id }).fetch();
-    expect(read.success).toBe(false);
+    expect(read).toMatchObject({ success: false, status: 404 });
   });
 });
 
 describe("pages: unknown keys", () => {
-  const unknownAfterEveryOperation = async ({ api, responses }: LiveContext) => {
+  const unknownAfterEveryOperation = async (api: LiveContext["api"]) => {
     const browsed = await api.pages
       .browse({ limit: "all" })
       .include({ authors: true, tags: true, tiers: true })
@@ -163,26 +163,22 @@ describe("pages: unknown keys", () => {
       title: `Unknown keys ${uniqueSuffix()}`,
       tags: [{ name: "Unknown keys" }],
     });
-    assertOk(browsed);
-    assertOk(read);
-    assertOk(added);
-    const edited = await api.pages.edit(added.data.id, {
-      title: "Edited",
-      updated_at: new Date(added.data.updated_at ?? ""),
-    });
-    assertOk(edited);
-    return unknownKeysOfResponses(responses.all());
+    const edited =
+      added.success &&
+      (await api.pages.edit(added.data.id, {
+        title: "Edited",
+        updated_at: new Date(added.data.updated_at ?? ""),
+      }));
+    return undeclaredKeys(browsed, read, added, edited);
   };
   const isAuthorKey = (k: string) => /^pages\[\]\.(authors\[\]|primary_author)\./.test(k);
 
-  // Expected failure: the author schema lacks Ghost 6.72's socials, tour and notification flags.
-  liveTest.fails("authors carry no key the client's schema lacks", async (context) => {
-    expect((await unknownAfterEveryOperation(context)).filter(isAuthorKey)).toEqual([]);
+  liveTest("authors carry no key the client's schema lacks", async ({ api }) => {
+    expect((await unknownAfterEveryOperation(api)).filter(isAuthorKey)).toEqual([]);
   });
 
-  // Expected failure: the pages schema lacks show_title_and_feature_image.
-  liveTest.fails("pages carry no key the client's schema lacks", async (context) => {
-    expect((await unknownAfterEveryOperation(context)).filter((k) => !isAuthorKey(k))).toEqual([]);
+  liveTest("pages carry no key the client's schema lacks", async ({ api }) => {
+    expect((await unknownAfterEveryOperation(api)).filter((k) => !isAuthorKey(k))).toEqual([]);
   });
 });
 

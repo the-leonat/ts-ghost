@@ -5,12 +5,15 @@ import { ghostIdentitySchema } from "./shared";
 export const baseNewsletterSchema = z.object({
   ...ghostIdentitySchema.shape,
   name: z.string().meta({ description: "Public name for the newsletter" }),
-  description: z.string().meta({ description: "(nullable) Public description of the newsletter" }).nullish(),
-  sender_name: z.string().meta({ description: "(nullable) The sender name of the emails" }).nullish(),
+  description: z
+    .string()
+    .meta({ description: "(nullable) Public description of the newsletter" })
+    .nullable(),
+  sender_name: z.string().meta({ description: "(nullable) The sender name of the emails" }).nullable(),
   sender_email: z
     .string()
     .meta({ description: "(nullable) The email from which to send emails. Requires validation." })
-    .nullish(),
+    .nullable(),
   sender_reply_to: z.string().meta({
     description:
       "The reply-to email address for sent emails. Can be either newsletter (= use sender_email) or support (use support email from Portal settings).",
@@ -28,13 +31,13 @@ export const baseNewsletterSchema = z.object({
     .meta({
       description: "(nullable) Path to an image to show at the top of emails. Recommended size 1200x600",
     })
-    .nullish(),
+    .nullable(),
   show_header_icon: z.boolean().meta({ description: "true/false. Show the site icon in emails" }),
   show_header_title: z.boolean().meta({ description: "true/false. Show the site name in emails" }),
   title_font_category: z.union([z.literal("serif"), z.literal("sans_serif")]).meta({
     description: "Title font style. Either serif or sans_serif",
   }),
-  title_alignment: z.string().nullish(),
+  title_alignment: z.string(),
   show_feature_image: z
     .boolean()
     .meta({ description: "true/false. Show the post's feature image in emails" }),
@@ -47,13 +50,13 @@ export const baseNewsletterSchema = z.object({
       description:
         "(nullable) Extra information or legal text to show in the footer of emails. Should contain valid HTML.",
     })
-    .nullish(),
+    .nullable(),
   show_badge: z.boolean().meta({
     description:
       "true/false. Show you’re a part of the indie publishing movement by adding a small Ghost badge in the footer",
   }),
   created_at: z.string(),
-  updated_at: z.string().nullish(),
+  updated_at: z.string().nullable(),
   show_header_name: z.boolean().meta({ description: "true/false. Show the newsletter name in emails" }),
   uuid: z.string(),
 });

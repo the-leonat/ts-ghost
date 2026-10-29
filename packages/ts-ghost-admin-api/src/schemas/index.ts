@@ -5,3 +5,6 @@ export * from "./members";
 export * from "./newsletters";
 export * from "./offers";
 export * from "./webhooks";
+export * from "./pages";
+export * from "./users";
+export * from "./response-schemas";

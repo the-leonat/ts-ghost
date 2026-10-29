@@ -1,7 +1,6 @@
-import { z } from "zod";
-
 import { DebugOption } from "../helpers/debug";
 import type { HTTPClient } from "../helpers/http-client";
+import { parseFetched, resultSchema } from "../helpers/response-schema";
 import type { APIResource } from "../schemas/shared";
 
 export class DeleteFetcher<const Resource extends APIResource = any> {
@@ -31,56 +30,16 @@ export class DeleteFetcher<const Resource extends APIResource = any> {
   }
 
   public async submit(options?: RequestInit & DebugOption) {
-    const schema = z.discriminatedUnion("success", [
-      z.object({
-        success: z.literal(true),
-      }),
-      z.object({
-        success: z.literal(false),
-        errors: z.array(
-          z.object({
-            type: z.string(),
-            message: z.string(),
-            context: z.string().nullish(),
-          }),
-        ),
-        status: z.number(),
-      }),
-    ]);
-    let result: any = {};
-    try {
-      const response = await this.httpClient.fetchRawResponse({
-        resource: this.resource,
-        pathnameIdentity: this._pathnameIdentity,
-        options: {
-          ...options,
-          method: "DELETE",
-        },
-      });
-      if (response.status === 204) {
-        result = {
-          success: true,
-        };
-      } else {
-        const res = await response.json();
-        if (res.errors) {
-          result.success = false;
-          result.errors = res.errors;
-          result.status = response.status;
-        }
-      }
-    } catch (e) {
-      result = {
-        success: false,
-        errors: [
-          {
-            type: "FetchError",
-            message: (e as Error).toString(),
-          },
-        ],
-        status: 0,
-      };
-    }
-    return schema.parse(result);
+    const schema = resultSchema({});
+    const fetched = await this.httpClient.fetchWithStatus({
+      resource: this.resource,
+      pathnameIdentity: this._pathnameIdentity,
+      options: { ...options, method: "DELETE" },
+    });
+    return parseFetched(schema, fetched, {
+      dataPath: this.resource,
+      strict: this.httpClient.strict,
+      success: () => ({}),
+    });
   }
 }

@@ -8,12 +8,14 @@ import { stripeSeed } from "./stripe.ts";
 export const SQL_SEEDS: SqlSeed[] = [emailSeed, stripeSeed];
 
 /** Applies every SQL seed to a bootstrapped Ghost, after the bootstrap. */
-export async function applySqlSeeds(ghost: GhostCredentials & { url: string; composeProject: string }) {
+export async function applySqlSeeds(
+  ghost: GhostCredentials & Parameters<typeof adminApi>[1] & { composeProject: string },
+) {
   const admin = adminApi("integration", ghost);
   const exec = (statements: string[]) => mysqlExec(ghost.composeProject, statements);
   await Promise.all(
     SQL_SEEDS.map((seed) =>
-      seed.run({ admin, exec }).catch((error: unknown) => {
+      seed.run({ admin, exec, version: ghost.version }).catch((error: unknown) => {
         throw new Error(`SQL seed "${seed.name}" failed`, { cause: error });
       }),
     ),

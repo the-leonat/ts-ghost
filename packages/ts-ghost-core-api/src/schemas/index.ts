@@ -8,5 +8,8 @@ export * from "./tiers";
 export * from "./email";
 export * from "./offers";
 export * from "./members";
+export * from "./subscriptions";
 export * from "./newsletter";
 export * from "./site";
+export * from "./targets";
+export * from "./ghost-fields";

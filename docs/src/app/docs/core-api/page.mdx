@@ -17,9 +17,7 @@ pnpm i @ts-ghost/core-api
 
 ### Requirements
 
-This client is only compatible with Ghost versions 5.x for now.
-
-- Ghost 5^
+Works with Ghost 5 and Ghost 6. The schemas come per target (`v5`, `v6-compat`, `v6-latest`), e.g. `baseOffersSchemaFor("v6-latest")`; see the admin client docs for what each target matches.
 
 - Node.js 16+
   - We rely on global `fetch` being available, so you can bring your own
@@ -185,16 +183,16 @@ Read is meant to be used to fetch 1 object only by `id` or `slug`.
 const composedAPI = new APIComposer(
   "posts",
   { schema: simplifiedSchema, identitySchema: identitySchema, include: simplifiedIncludeSchema },
-  httpClient
+  httpClient,
 );
 let query = composedAPI.read({
-  id: "edHks74hdKqhs34izzahd45"
+  id: "edHks74hdKqhs34izzahd45",
 });
 
 // or
 
 let query = composedAPI.read({
-  slug: "typescript-is-awesome-in-2025"
+  slug: "typescript-is-awesome-in-2025",
 });
 ```
 
@@ -265,16 +263,18 @@ After using `.read` query, you will get a `ReadFetcher` with an `async fetch` me
 
 ```ts
 // example for the read query (the data is an object)
-const result: {
-    status: true;
-    data: z.infer<typeof simplifiedSchema>; // parsed by the Zod Schema and modified by the fields selected
-} | {
-    status: false;
-    errors: {
+const result:
+  | {
+      status: true;
+      data: z.infer<typeof simplifiedSchema>; // parsed by the Zod Schema and modified by the fields selected
+    }
+  | {
+      status: false;
+      errors: {
         message: string;
         type: string;
-    }[];
-}
+      }[];
+    };
 ```
 
 ### Browse Fetcher
@@ -290,53 +290,57 @@ That result is a discriminated union of 2 types:
 
 ```ts
 // example for the browse query (the data is an array of objects)
-const result: {
-    success: true;
-    data: z.infer<typeof simplifiedSchema>[];
-    meta: {
+const result:
+  | {
+      success: true;
+      data: z.infer<typeof simplifiedSchema>[];
+      meta: {
         pagination: {
-            pages: number;
-            limit: number;
-            page: number;
-            total: number;
-            prev: number | null;
-            next: number | null;
+          pages: number;
+          limit: number;
+          page: number;
+          total: number;
+          prev: number | null;
+          next: number | null;
         };
-    };
-} | {
-    success: false;
-    errors: {
+      };
+    }
+  | {
+      success: false;
+      errors: {
         message: string;
         type: string;
-    }[];
-}
+      }[];
+    };
 ```
 
 #### Browse `.paginate()`
 
 ```ts
-const result: {
-    success: true;
-    data: z.infer<typeof simplifiedSchema>[];
-    meta: {
+const result:
+  | {
+      success: true;
+      data: z.infer<typeof simplifiedSchema>[];
+      meta: {
         pagination: {
-            pages: number;
-            limit: number;
-            page: number;
-            total: number;
-            prev: number | null;
-            next: number | null;
+          pages: number;
+          limit: number;
+          page: number;
+          total: number;
+          prev: number | null;
+          next: number | null;
         };
-    };
-    next: BrowseFetcher | undefined; // the next page fetcher if it is defined
-} | {
-    success: false;
-    errors: {
+      };
+      next: BrowseFetcher | undefined; // the next page fetcher if it is defined
+    }
+  | {
+      success: false;
+      errors: {
         message: string;
         type: string;
-    }[];
-    next: undefined; // the next page fetcher is undefined here
-}
+      }[];
+      next: undefined; // the next page fetcher is undefined here
+    };
 ```
 
 Here you can use the `next` property to get the next page fetcher if it is defined.
@@ -510,16 +514,18 @@ The result will be parsed and typed with the `output` schema and represent the n
 
 ```ts
 // return from the `add` method
-const result: {
-    success: true;
-    data: z.infer<typeof simplifiedSchema>; // parsed by the Zod Schema given in the config
-} | {
-    success: false;
-    errors: {
+const result:
+  | {
+      success: true;
+      data: z.infer<typeof simplifiedSchema>; // parsed by the Zod Schema given in the config
+    }
+  | {
+      success: false;
+      errors: {
         message: string;
         type: string;
-    }[];
-}
+      }[];
+    };
 ```
 
 #### Edit record
@@ -539,16 +545,18 @@ The result will be parsed and typed with the `output` schema and represent the u
 
 ```ts
 // return from the `edit` method
-const result: {
-    success: true;
-    data: z.infer<typeof simplifiedSchema>; // parsed by the Zod Schema given in the config
-} | {
-    success: false;
-    errors: {
+const result:
+  | {
+      success: true;
+      data: z.infer<typeof simplifiedSchema>; // parsed by the Zod Schema given in the config
+    }
+  | {
+      success: false;
+      errors: {
         message: string;
         type: string;
-    }[];
-}
+      }[];
+    };
 ```
 
 #### Delete record
@@ -567,15 +575,17 @@ The response will not contain any data since Ghost API just return a 204 empty r
 
 ```ts
 // return from the `delete` method
-const result: {
-    success: true;
-} | {
-    success: false;
-    errors: {
+const result:
+  | {
+      success: true;
+    }
+  | {
+      success: false;
+      errors: {
         message: string;
         type: string;
-    }[];
-}
+      }[];
+    };
 ```
 
 ## Roadmap

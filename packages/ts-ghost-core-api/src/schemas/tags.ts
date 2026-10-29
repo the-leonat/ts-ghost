@@ -20,8 +20,8 @@ export const baseTagsSchema = z.object({
   canonical_url: z.string().nullable(),
   accent_color: z.string().nullable(),
   url: z.string(),
-  created_at: z.string().nullish(),
-  updated_at: z.string().nullish(),
+  created_at: z.string(),
+  updated_at: z.string().nullable(),
   count: z
     .object({
       posts: z.number(),

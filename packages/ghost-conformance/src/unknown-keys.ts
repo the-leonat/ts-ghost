@@ -5,16 +5,12 @@ export type RecordedResponse = {
   url: string;
   status: number;
   body: unknown;
-  /** What a tracked client returned from this body, set by `track`. */
-  parsed?: unknown;
 };
 
 export type ResponseRecorder = {
   all(): RecordedResponse[];
   /** Raw JSON body of the latest response whose URL path contains `pathPart`. */
   last(pathPart: string): unknown;
-  /** Wraps a client so each successful result is stored as `parsed` on the response it came from. */
-  track<T extends object>(client: T): T;
   restore(): void;
 };
 
@@ -48,72 +44,20 @@ export function recordResponses(): ResponseRecorder {
       if (!hit) throw new Error(`No response recorded for a path containing "${pathPart}"`);
       return hit.body;
     },
-    track: (client) => wrap(client, recorded) as typeof client,
     restore: () => spy.mockRestore(),
   };
 }
 
-const isObject = (v: unknown): v is Record<string, unknown> =>
-  typeof v === "object" && v !== null && !Array.isArray(v);
-
 /**
- * Keys present in Ghost's raw response but stripped by the client's Zod parse, i.e. keys its schema lacks.
- * Paths start at `at`; array indices collapse to `[]`. Paths listed in `ignore` are left out.
+ * Paths, as `posts[].key`, of the keys a strict client's results failed on because its schema lacks them.
+ * A successful result, or one failing for another reason, adds nothing.
  */
-export function unknownKeys(
-  raw: unknown,
-  parsed: unknown,
-  opts: { at: string; ignore?: string[] },
-): string[] {
+export function undeclaredKeys(...results: unknown[]): string[] {
   const found = new Set<string>();
-  const walk = (r: unknown, p: unknown, path: string) => {
-    if (Array.isArray(r) && Array.isArray(p)) {
-      r.forEach((item, i) => walk(item, p[i], `${path}[]`));
-    } else if (isObject(r) && isObject(p)) {
-      for (const key of Object.keys(r)) {
-        if (key in p) walk(r[key], p[key], `${path}.${key}`);
-        else found.add(`${path}.${key}`);
-      }
-    }
-  };
-  walk(raw, parsed, opts.at);
-  const ignored = new Set(opts.ignore ?? []);
-  return [...found].filter((path) => !ignored.has(path)).sort();
-}
-
-function wrap(value: unknown, log: RecordedResponse[]): unknown {
-  if (typeof value !== "object" || value === null || value instanceof Promise) return value;
-  return new Proxy(value, {
-    get(target, prop) {
-      const member: unknown = Reflect.get(target, prop, target);
-      if (typeof member !== "function") return wrap(member, log);
-      return (...args: unknown[]) => {
-        const from = log.length;
-        const out: unknown = member.apply(target, args);
-        if (!(out instanceof Promise)) return wrap(out, log);
-        return out.then((result: unknown) => {
-          const response = log.slice(from).findLast((r) => isObject(r.body));
-          if (response && isObject(result) && result.success === true && "data" in result)
-            response.parsed = result.data;
-          return result;
-        });
-      };
-    },
-  });
-}
-
-/** Unknown keys of every recorded response a tracked client parsed, as `<resource>[].<path>`. */
-export function unknownKeysOfResponses(responses: RecordedResponse[], ignore: string[] = []): string[] {
-  const found = new Set<string>();
-  for (const { url, body, parsed } of responses) {
-    if (parsed === undefined || !isObject(body)) continue;
-    // `.fields()` narrows the result on purpose, and Ghost ignores `fields` on some resources.
-    if (new URL(url).searchParams.has("fields")) continue;
-    const key = Object.keys(body).find((k) => k !== "meta");
-    if (!key) continue;
-    const raw = body[key];
-    const counterpart = Array.isArray(raw) && !Array.isArray(parsed) ? [parsed] : parsed;
-    for (const path of unknownKeys(raw, counterpart, { at: key, ignore })) found.add(path);
+  for (const result of results) {
+    const errors = (result as { errors?: { kind?: string; path?: string }[] } | undefined)?.errors ?? [];
+    for (const { kind, path } of errors)
+      if (kind === "undeclared" && path) found.add(path.replace(/\[\d+\]/g, "[]"));
   }
   return [...found].sort();
 }

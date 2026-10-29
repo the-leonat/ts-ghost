@@ -7,8 +7,7 @@ const { failed, submitted } = EMAIL_SEED.posts;
 
 // Unknown keys of a post's email and newsletter are checked in posts.live.test.ts.
 describe("emailed posts", () => {
-  // Expected failure: core email schema requires `from`, `source` and `updated_at`; Ghost sends null.
-  liveTest.fails("a post whose email has a null from and source parses", async ({ api }) => {
+  liveTest("a post whose email has a null from and source parses", async ({ api }) => {
     const result = await api.posts.read({ slug: failed }).fetch();
     assertOk(result);
     expect(result.data.email).toMatchObject({ status: "failed", from: null, source: null, reply_to: null });
@@ -42,8 +41,7 @@ describe("emailed posts", () => {
     expect(withoutTiers(byId.data)).toEqual(withoutTiers(bySlug.data));
   });
 
-  // Expected failure: the failed email's null `from`/`source`/`updated_at` break the whole browse.
-  liveTest.fails("browse returns both emailed posts with their email status", async ({ api }) => {
+  liveTest("browse returns both emailed posts with their email status", async ({ api }) => {
     const result = await api.posts.browse({ filter: `slug:[${failed},${submitted}]` }).fetch();
     assertOk(result);
     expect(result.data.map((post) => post.email?.status).sort()).toEqual(["failed", "submitted"]);

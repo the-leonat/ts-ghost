@@ -1,6 +1,7 @@
 import type { ProvidedContext } from "vitest";
 
 import { adminApi } from "../live/ghost.ts";
+import { manifestFor } from "../manifest/manifests.ts";
 import { must } from "./seed-result.ts";
 import { sessionRequest } from "./session.ts";
 
@@ -47,15 +48,19 @@ export async function seedMembers(ghost: ProvidedContext["ghost"]) {
   ).members![0]!;
   const withMetafields = must(await admin.members.add({ email: MEMBER_SEED.metafields }), "member seed");
 
-  // Member metafields are behind the `membersCustomFields` labs flag, which only staff can switch on.
-  const { namespace, key, value } = MEMBER_SEED.metafield;
-  await session("PUT", "/settings/", { settings: [{ key: "labs", value: '{"membersCustomFields":true}' }] });
-  await session("POST", `/members/metafields/${namespace}`, {
-    members_metafields: [{ key, type: "short_text", name: "Company" }],
-  });
-  await session("PUT", `/members/${withMetafields.id}/`, {
-    members: [{ metafields: { [namespace]: { [key]: value } } }],
-  });
+  if (manifestFor(ghost.version).has("POST /members/metafields/:namespace/")) {
+    // Member metafields are behind the `membersCustomFields` labs flag, which only staff can switch on.
+    const { namespace, key, value } = MEMBER_SEED.metafield;
+    await session("PUT", "/settings/", {
+      settings: [{ key: "labs", value: '{"membersCustomFields":true}' }],
+    });
+    await session("POST", `/members/metafields/${namespace}`, {
+      members_metafields: [{ key, type: "short_text", name: "Company" }],
+    });
+    await session("PUT", `/members/${withMetafields.id}/`, {
+      members: [{ metafields: { [namespace]: { [key]: value } } }],
+    });
+  }
 
   return { plain, comped, withMetafields, paidTier };
 }

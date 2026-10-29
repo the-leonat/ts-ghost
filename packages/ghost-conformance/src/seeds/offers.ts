@@ -1,5 +1,6 @@
 import type { ProvidedContext } from "vitest";
 
+import { ghostHas } from "../ghost/behaviours.ts";
 import { adminApi } from "../live/ghost.ts";
 import { must } from "./seed-result.ts";
 import { sessionRequest } from "./session.ts";
@@ -32,23 +33,25 @@ export async function seedOffers(ghost: ProvidedContext["ghost"]) {
     }),
     "offer seed",
   );
-  // Body as in Ghost's own e2e offers test.
-  const retention = await offer({
-    name: `Retention ${suffix}`,
-    code: `retention-${suffix}`,
-    display_title: "Stay with us",
-    display_description: "10% off if you stay",
-    type: "percent",
-    cadence: "month",
-    amount: 10,
-    duration: "forever",
-    duration_in_months: null,
-    currency_restriction: false,
-    currency: null,
-    status: "active",
-    redemption_type: "retention",
-    tier: null,
-  });
+  // Body as in Ghost's own e2e offers test; undefined on a Ghost without retention offers.
+  const retention = ghostHas("retentionOffers", ghost.version)
+    ? await offer({
+        name: `Retention ${suffix}`,
+        code: `retention-${suffix}`,
+        display_title: "Stay with us",
+        display_description: "10% off if you stay",
+        type: "percent",
+        cadence: "month",
+        amount: 10,
+        duration: "forever",
+        duration_in_months: null,
+        currency_restriction: false,
+        currency: null,
+        status: "active",
+        redemption_type: "retention",
+        tier: null,
+      })
+    : undefined;
   const trial = await offer({
     name: `Trial ${suffix}`,
     code: `trial-${suffix}`,

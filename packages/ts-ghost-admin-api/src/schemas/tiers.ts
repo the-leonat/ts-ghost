@@ -1,12 +1,8 @@
 import { z } from "zod";
 import { baseTiersSchema } from "@ts-ghost/core-api";
 
-export const adminTiersSchema = baseTiersSchema.merge(
-  z.object({
-    monthly_price_id: z.string().meta({ description: "Monthly Stripe price id" }).nullish(),
-    yearly_price_id: z.string().meta({ description: "Yearly Stripe price id" }).nullish(),
-  }),
-);
+/** A tier as the Admin API sends it; the same in every schema target. */
+export const adminTiersSchema = baseTiersSchema;
 
 export type Tiers = z.infer<typeof adminTiersSchema>;
 

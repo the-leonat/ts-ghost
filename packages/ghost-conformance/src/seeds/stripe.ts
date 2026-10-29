@@ -1,5 +1,5 @@
 import { must } from "./seed-result.ts";
-import { ghostId, insert, type SqlSeed, type SqlSeedContext } from "./sql.ts";
+import { createdBy, ghostId, insert, type SqlSeed, type SqlSeedContext } from "./sql.ts";
 
 /** What the Stripe seed creates; tests look it up by these emails and Stripe ids. */
 export const STRIPE_SEED = {
@@ -28,7 +28,7 @@ export const stripeSeed: SqlSeed = {
     members_products: "Only for paid members; the API links a tier only to comped members.",
     members: "Only `status`, which becomes `paid` only through a Stripe subscription.",
   },
-  async run({ admin, exec }: SqlSeedContext) {
+  async run({ admin, exec, version }: SqlSeedContext) {
     const tiers = must(await admin.tiers.browse({ filter: "slug:default-product" }).fetch(), "stripe seed");
     const tier = tiers[0];
     if (!tier) throw new Error("Stripe seed: no default paid tier");
@@ -85,6 +85,7 @@ export const stripeSeed: SqlSeed = {
       plan_interval: row.interval,
       plan_amount: row.amount,
       plan_currency: "usd",
+      ...createdBy(version),
     });
 
     await exec([
@@ -173,6 +174,7 @@ export const stripeSeed: SqlSeed = {
         email,
         created_at: t("2026-01-01"),
         updated_at: null,
+        ...createdBy(version),
       };
     }
   },

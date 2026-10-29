@@ -22,6 +22,9 @@ function readRoutes(): RouteDefinition[] {
   process.chdir(GHOST_ROOT);
   const ghostRequire = createRequire(`${ADMIN_DIR}/routes.js`);
   const labs = ghostRequire(`${GHOST_ROOT}/core/shared/labs.js`);
+  // Ghost before 6.42 loads its models in init(), and its endpoints read them (e.g. Post.allowedFormats).
+  const models = ghostRequire(`${GHOST_ROOT}/core/server/models`);
+  if (typeof models.init === "function") models.init();
   const mw = ghostRequire(`${ADMIN_DIR}/middleware.js`);
   const router = ghostRequire(`${ADMIN_DIR}/routes.js`)() as { stack: Layer[] };
 

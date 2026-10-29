@@ -1,7 +1,7 @@
 import { describe, expect } from "vitest";
 
 import { STRIPE_SEED } from "../seeds/stripe.ts";
-import { unknownKeys } from "../unknown-keys.ts";
+import { undeclaredKeys } from "../unknown-keys.ts";
 import { adminApi } from "./ghost.ts";
 import { assertOk, liveTest } from "./live-test.ts";
 
@@ -41,8 +41,7 @@ describe("paid members", () => {
     ]);
   });
 
-  // Expected failure: customer.email and price.nickname are typed as strings; Ghost sends null.
-  liveTest.fails("a subscription with a null customer email and price nickname parses", async ({ api }) => {
+  liveTest("a subscription with a null customer email and price nickname parses", async ({ api }) => {
     const result = await api.members.read({ id: await memberId(STRIPE_SEED.members.nulls) }).fetch();
 
     assertOk(result);
@@ -59,8 +58,7 @@ describe("paid members", () => {
     ]);
   });
 
-  // Expected failure: the paid member with a null customer email fails the members schema.
-  liveTest.fails("browsing paid members parses", async ({ api }) => {
+  liveTest("browsing paid members parses", async ({ api }) => {
     const result = await api.members.browse({ filter: "status:paid" }).fetch();
 
     assertOk(result);
@@ -69,28 +67,20 @@ describe("paid members", () => {
     );
   });
 
-  // Expected failure: the client offers no member includes and its schema strips `tiers`.
-  liveTest.fails("a paid member's tiers come with the include", async ({ api }) => {
+  liveTest("a paid member's tiers come with the include", async ({ api }) => {
     const result = await api.members
       .read({ id: await memberId(STRIPE_SEED.members.paid) })
-      // @ts-expect-error the client's member include schema is empty
       .include({ tiers: true })
       .fetch();
 
     assertOk(result);
-    // @ts-expect-error the client's member schema lacks `tiers`
     expect(result.data.tiers).toEqual([expect.objectContaining({ slug: "default-product", type: "paid" })]);
   });
 
-  // Expected failure: subscriptions lack plan, attribution, trial/discount dates, offer_redemptions, next_payment,
-  // price.tier, tier price ids/expiry_at and offer redemption_type/created_at/last_redeemed (Ghost 6.72).
-  liveTest.fails("a subscription carries no key the client's schema lacks", async ({ api, responses }) => {
+  liveTest("a subscription carries no key the client's schema lacks", async ({ api }) => {
     const result = await api.members.read({ id: await memberId(STRIPE_SEED.members.paid) }).fetch();
 
+    expect(undeclaredKeys(result).filter((k) => k.startsWith("members[].subscriptions["))).toEqual([]);
     assertOk(result);
-    const raw = responses.last("/members/") as { members: { subscriptions: unknown }[] };
-    expect(
-      unknownKeys(raw.members[0]?.subscriptions, result.data.subscriptions, { at: "subscriptions" }),
-    ).toEqual([]);
   });
 });

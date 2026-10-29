@@ -1,6 +1,7 @@
-import { TSGhostAdminAPI } from "@ts-ghost/admin-api";
+import { GHOST_LATEST, TSGhostAdminAPI } from "@ts-ghost/admin-api";
 
 import { ADMIN_API_PATH } from "../ghost/admin-api.ts";
+import type { SchemaTarget } from "../ghost/pin.ts";
 import type { ClientCall } from "./route-check.ts";
 
 const KEY = "1efedd9db174adee2d23d982:4b74dca0219bad629852191af326a45037346c2231240e0f7aec1f9371cc14e8";
@@ -94,9 +95,17 @@ function recorder() {
   return { calls, fetch, send };
 }
 
-/** Every request the public admin client makes, found by calling each method against a recording fetch. */
-export async function recordClientCalls(): Promise<ClientCall[]> {
-  const api = new TSGhostAdminAPI(BASE, KEY, "v6.0");
+/** The client version and options of each schema target. */
+const TARGET_CLIENT = {
+  v5: ["v5.130", {}],
+  "v6-compat": ["v6.0", {}],
+  "v6-latest": [`v${GHOST_LATEST}`, { schema: "latest" }],
+} as const;
+
+/** Every request the public admin client of `target` makes, found by calling each method against a recording fetch. */
+export async function recordClientCalls(target: SchemaTarget = "v6-compat"): Promise<ClientCall[]> {
+  const [version, options] = TARGET_CLIENT[target];
+  const api = new TSGhostAdminAPI(BASE, KEY, version as `v6.${string}`, options as {});
   const { calls, fetch, send } = recorder();
   // A manual swap, not vi.spyOn: the coverage CLI calls this outside Vitest.
   const realFetch = globalThis.fetch;

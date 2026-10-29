@@ -1,29 +1,53 @@
 import { z } from "zod";
-import { baseEmailSchema, baseNewsletterSchema, basePostsSchema } from "@ts-ghost/core-api";
+import {
+  baseEmailSchemaFor,
+  basePostsSchema,
+  ghostObject,
+  perTarget,
+  type SchemaTarget,
+} from "@ts-ghost/core-api";
 
-import { adminAuthorsSchema } from "./authors";
+import { adminAuthorsSchemaFor } from "./authors";
+import { droppedByGhost } from "./dropped-by-ghost";
+import { adminNewsletterSchemaFor } from "./newsletters";
+import { DEFAULT_FORMATS, DEFAULT_INCLUDES } from "./reasons";
 import { adminTiersSchema } from "./tiers";
 
-export const adminPostsSchema = basePostsSchema.merge(
-  z.object({
+/** A post as the Admin API sends it, for a schema target. */
+export const adminPostsSchemaFor = perTarget(<T extends SchemaTarget>(target: T) =>
+  ghostObject(target, "admin.posts", {
+    ...basePostsSchema.shape,
     uuid: z.string(),
-    mobiledoc: z.string().nullish(),
+    mobiledoc: z
+      .string()
+      .meta({ description: `(nullable) Null for a lexical post; ${DEFAULT_FORMATS}` })
+      .nullish(),
     email_only: z.boolean(),
-    status: z.union([z.literal("draft"), z.literal("published"), z.literal("scheduled")]),
-    email_segment: z.string().nullish(),
-    frontmatter: z.string().nullish(),
-    tiers: z.array(adminTiersSchema).optional(),
-    email: baseEmailSchema.nullish(),
-    newsletter: baseNewsletterSchema.nullish(),
+    status: z
+      .union([z.literal("draft"), z.literal("published"), z.literal("scheduled"), z.literal("sent")])
+      .meta({ description: "sent: an email-only post Ghost has emailed" }),
+    email_segment: z.string(),
+    frontmatter: z.string().nullable(),
+    tiers: z
+      .array(adminTiersSchema)
+      .meta({ description: `Sent by default or with include: tiers` })
+      .optional(),
+    email: baseEmailSchemaFor(target)
+      .meta({ description: `(nullable) ${DEFAULT_INCLUDES}` })
+      .nullish(),
+    newsletter: adminNewsletterSchemaFor(target)
+      .meta({ description: `(nullable) ${DEFAULT_INCLUDES}` })
+      .nullish(),
     count: z
       .object({
-        clicks: z.number().nullish(),
-        positive_feedback: z.number().nullish(),
-        negative_feedback: z.number().nullish(),
+        clicks: z.number(),
+        positive_feedback: z.number(),
+        negative_feedback: z.number(),
       })
-      .nullish(),
-    authors: z.array(adminAuthorsSchema),
-    primary_author: adminAuthorsSchema,
+      .meta({ description: DEFAULT_INCLUDES })
+      .optional(),
+    authors: z.array(adminAuthorsSchemaFor(target)),
+    primary_author: adminAuthorsSchemaFor(target),
     lexical: z
       .string()
       .catch(
@@ -35,12 +59,16 @@ export const adminPostsSchema = basePostsSchema.merge(
   }),
 );
 
-export type Post = z.infer<typeof adminPostsSchema>;
+/** The v6-compat post schema. */
+export const adminPostsSchema = adminPostsSchemaFor("v6-compat");
+
+export type Post<T extends SchemaTarget = "v6-compat"> = z.infer<ReturnType<typeof adminPostsSchemaFor<T>>>;
 
 const basePostsCreateSchema = z.object({
   title: z.string().min(1).max(2000),
   slug: z.string().max(191).optional(),
-  mobiledoc: z.string().max(1000000000).optional(),
+  /** @deprecated Ghost 6 stores lexical only and drops it, so it is not sent; send `lexical` or `html`. */
+  mobiledoc: droppedByGhost(z.string().max(1000000000)),
   lexical: z.string().max(1000000000).optional(),
   html: z.string().max(1000000000).optional(),
   feature_image: z.string().max(2000).url().optional(),
@@ -50,7 +78,8 @@ const basePostsCreateSchema = z.object({
   status: z
     .union([z.literal("draft"), z.literal("published"), z.literal("scheduled"), z.literal("sent")])
     .optional(),
-  locale: z.string().max(6).optional(),
+  /** @deprecated Ghost has no locale on posts and pages and drops it, so it is not sent. */
+  locale: droppedByGhost(z.string().max(6)),
   visibility: z
     .union([
       z.literal("public"),
@@ -138,45 +167,27 @@ const basePostsCreateSchema = z.object({
       description: `Specifying author via id, name or slug.`,
     })
     .optional(),
-  newsletter: z
-    .union([
+  /** @deprecated Ghost drops it from the body, so it is not sent; pass `edit`'s `newsletter` option. */
+  newsletter: droppedByGhost(
+    z.union([
       z.object({
         id: z.string().meta({ description: "The ID of the newsletter" }),
       }),
       z.object({
         slug: z.string().meta({ description: "The slug of the newsletter" }),
       }),
-    ])
-    .optional(),
+    ]),
+  ),
 });
 
-const emailOnlyNewsletterRefinement = (data: any) => {
-  // If email_only is true and status is scheduled, newsletter must be provided
-  if (data.email_only === true && data.status === "scheduled") {
-    return data.newsletter !== undefined;
-  }
-  return true;
-};
-
-const emailOnlyNewsletterRefinementOptions = {
-  message: "newsletter is required when scheduling an email_only post",
-  path: ["newsletter"],
-};
-
-export const adminPostsCreateSchema = basePostsCreateSchema.refine(
-  emailOnlyNewsletterRefinement,
-  emailOnlyNewsletterRefinementOptions,
-);
+export const adminPostsCreateSchema = basePostsCreateSchema;
 
 export type CreatePost = z.infer<typeof adminPostsCreateSchema>;
 
-export const adminPostsUpdateSchema = basePostsCreateSchema
-  .partial({ title: true })
-  .merge(
-    z.object({
-      updated_at: z.date().transform((val) => val.toISOString()),
-    }),
-  )
-  .refine(emailOnlyNewsletterRefinement, emailOnlyNewsletterRefinementOptions);
+export const adminPostsUpdateSchema = basePostsCreateSchema.partial({ title: true }).merge(
+  z.object({
+    updated_at: z.date().transform((val) => val.toISOString()),
+  }),
+);
 
 export type UpdatePost = z.infer<typeof adminPostsUpdateSchema>;

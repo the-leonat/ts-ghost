@@ -28,7 +28,7 @@ To know which Ghost Version you are using go in the Settings and click on top ri
 
 ![Ghost Version](https://github.com/PhilDL/ts-ghost/assets/4941205/c46034a5-844e-4d8c-b525-a47e26d941c6)
 
-Here the version is **"v5.47.0"**
+Here the version is **"v6.72.0"**: pass `"v6.72"` (or any `"v6.x"`) for Ghost 6, `"v5.x"` for Ghost 5. See the schema targets under Requirements.
 
 ### Installation
 
@@ -48,11 +48,7 @@ GHOST_ADMIN_API_KEY="1efedd9db174adee2d23d982:4b74dca0219bad629852191af326a45037
 ```ts title="ghost-queries.ts"
 import { TSGhostAdminAPI } from "@ts-ghost/admin-api";
 
-const api = new TSGhostAdminAPI(
-  process.env.GHOST_URL || "",
-  process.env.GHOST_ADMIN_API_KEY || "",
-  "v5.47.0"
-);
+const api = new TSGhostAdminAPI(process.env.GHOST_URL || "", process.env.GHOST_ADMIN_API_KEY || "", "v6.0");
 
 export async function getBlogPosts() {
   const response = await api.posts

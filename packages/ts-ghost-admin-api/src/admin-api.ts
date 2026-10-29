@@ -2,38 +2,70 @@ import { z } from "zod";
 import {
   adminAPICredentialsSchema,
   APIComposer,
-  baseNewsletterSchema,
-  baseOffersSchema,
-  baseSiteSchema,
+  baseOffersSchemaFor,
+  baseSiteSchemaFor,
   baseTagsSchema,
   BasicFetcher,
   DebugOption,
   emailOrIdSchema,
   HTTPClientFactory,
+  schemaTarget,
   slugOrIdSchema,
+  warnOnceOffLatest,
+  type SchemaOption,
+  type SchemaTargetOf,
+  type StrictOption,
+  type VersionFor,
 } from "@ts-ghost/core-api";
 
 import { adminTiersCreateSchema, adminTiersSchema } from "./schemas";
-import { adminMembersCreateSchema, adminMembersSchema } from "./schemas/members";
-import { adminNewsletterCreateSchema } from "./schemas/newsletters";
+import { droppedByGhost } from "./schemas/dropped-by-ghost";
+import {
+  adminMembersCreateSchema,
+  adminMembersIncludeSchema,
+  adminMembersSchemaFor,
+  adminMembersUpdateSchema,
+} from "./schemas/members";
+import { adminNewsletterCreateSchema, adminNewsletterSchemaFor } from "./schemas/newsletters";
 import { adminOffersCreateSchema, adminOffersUpdateSchema } from "./schemas/offers";
-import { adminPagesCreateSchema, adminPagesSchema, adminPagesUpdateSchema } from "./schemas/pages";
-import { adminPostsCreateSchema, adminPostsSchema, adminPostsUpdateSchema } from "./schemas/posts";
+import { adminPagesCreateSchema, adminPagesSchemaFor, adminPagesUpdateSchema } from "./schemas/pages";
+import { adminPostsCreateSchema, adminPostsSchemaFor, adminPostsUpdateSchema } from "./schemas/posts";
 import { adminTagsCreateSchema, adminTagsUpdateSchema } from "./schemas/tags";
-import { adminUsersSchema } from "./schemas/users";
+import { adminUsersSchemaFor } from "./schemas/users";
 import { adminWebhookCreateSchema, adminWebhookSchema, adminWebhookUpdateSchema } from "./schemas/webhooks";
 
-export type { AdminAPICredentials, APIVersions } from "@ts-ghost/core-api";
+export type { AdminAPICredentials, APIVersions, SchemaTarget } from "@ts-ghost/core-api";
 
-export class TSGhostAdminAPI<Version extends `v5.${string}` | `v6.${string}` = any> {
+/** Options of the admin client. */
+export type AdminAPIOptions = DebugOption &
+  SchemaOption & {
+    /** Request options for every request, mutations included; per-call options win, headers merge. */
+    defaultRequestOptions?: RequestInit;
+    /** Fail a result carrying a key the schema doesn't declare (by default it passes through);
+     * `{ ignore: ["posts[].new_key"] }` lets the listed paths through, `[]` matching any index. */
+    strict?: StrictOption;
+  };
+
+/**
+ * The Admin API client. Its schema target follows `version` and `options.schema`: "v5.x" parses as the last
+ * Ghost 5, "v6.x" as any Ghost 6 (v6-compat), and "v6.x" with `{ schema: "latest" }` as the pinned Ghost 6.
+ */
+export class TSGhostAdminAPI<
+  Version extends `v5.${string}` | `v6.${string}` = any,
+  Options extends AdminAPIOptions = {},
+> {
   private httpClientFactory: HTTPClientFactory;
+  /** The schema target this client parses against. */
+  readonly target: SchemaTargetOf<Version, Options>;
 
   constructor(
     protected readonly url: string,
     protected readonly key: string,
-    protected readonly version: Version,
-    protected readonly options?: DebugOption,
+    // With `{ schema: "latest" }` only `v${GHOST_LATEST}`, e.g. "v6.72", type-checks.
+    protected readonly version: VersionFor<Version, Options>,
+    protected readonly options?: Options,
   ) {
+    this.target = schemaTarget(version, options) as SchemaTargetOf<Version, Options>;
     const apiCredentials = adminAPICredentialsSchema.parse({
       key,
       version,
@@ -43,18 +75,21 @@ export class TSGhostAdminAPI<Version extends `v5.${string}` | `v6.${string}` = a
       ...options,
       ...apiCredentials,
       endpoint: "admin",
+      ...(this.target === "v6-latest" && { onResponse: warnOnceOffLatest() }),
     });
   }
+
   get posts() {
     const postsIncludeSchema = z.object({
-      authors: z.literal(true).optional(),
+      // Always sent: an include replaces Ghost's default `authors,tags`, and authors are required.
+      authors: z.literal(true).default(true),
       tags: z.literal(true).optional(),
       tiers: z.literal(true).optional(),
     });
     return new APIComposer(
       "posts",
       {
-        schema: adminPostsSchema,
+        schema: adminPostsSchemaFor(this.target),
         identitySchema: slugOrIdSchema,
         include: postsIncludeSchema,
         createSchema: adminPostsCreateSchema,
@@ -77,14 +112,15 @@ export class TSGhostAdminAPI<Version extends `v5.${string}` | `v6.${string}` = a
 
   get pages() {
     const pagesIncludeSchema = z.object({
-      authors: z.literal(true).optional(),
+      // Always sent: an include replaces Ghost's default `authors,tags`, and authors are required.
+      authors: z.literal(true).default(true),
       tags: z.literal(true).optional(),
       tiers: z.literal(true).optional(),
     });
     return new APIComposer(
       "pages",
       {
-        schema: adminPagesSchema,
+        schema: adminPagesSchemaFor(this.target),
         identitySchema: slugOrIdSchema,
         include: pagesIncludeSchema,
         createSchema: adminPagesCreateSchema,
@@ -107,10 +143,11 @@ export class TSGhostAdminAPI<Version extends `v5.${string}` | `v6.${string}` = a
     return new APIComposer(
       "members",
       {
-        schema: adminMembersSchema,
+        schema: adminMembersSchemaFor(this.target),
         identitySchema: z.object({ id: z.string() }),
-        include: z.object({}),
+        include: adminMembersIncludeSchema,
         createSchema: adminMembersCreateSchema,
+        updateSchema: adminMembersUpdateSchema,
         createOptionsSchema: z.object({
           send_email: z.boolean().optional(),
           email_type: z.union([z.literal("signin"), z.literal("subscribe"), z.literal("signup")]).optional(),
@@ -126,15 +163,19 @@ export class TSGhostAdminAPI<Version extends `v5.${string}` | `v6.${string}` = a
 
   get tiers() {
     const tiersIncludeSchema = z.object({
-      monthly_price: z.literal(true).optional(),
-      yearly_price: z.literal(true).optional(),
-      benefits: z.literal(true).optional(),
+      /** @deprecated Ghost always sends a tier's monthly price and drops the include, so it is not sent. */
+      monthly_price: droppedByGhost(z.literal(true)),
+      /** @deprecated Ghost always sends a tier's yearly price and drops the include, so it is not sent. */
+      yearly_price: droppedByGhost(z.literal(true)),
+      /** @deprecated Ghost always sends a tier's benefits and drops the include, so it is not sent. */
+      benefits: droppedByGhost(z.literal(true)),
     });
     return new APIComposer(
       "tiers",
       {
-        schema: adminTiersSchema,
-        identitySchema: slugOrIdSchema,
+        // The tiers endpoint always sends benefits; a member's or post's embedded tier doesn't.
+        schema: adminTiersSchema.required({ benefits: true }),
+        identitySchema: z.object({ id: z.string() }),
         include: tiersIncludeSchema,
         createSchema: adminTiersCreateSchema,
       },
@@ -147,8 +188,8 @@ export class TSGhostAdminAPI<Version extends `v5.${string}` | `v6.${string}` = a
     return new APIComposer(
       "newsletters",
       {
-        schema: baseNewsletterSchema,
-        identitySchema: slugOrIdSchema,
+        schema: adminNewsletterSchemaFor(this.target),
+        identitySchema: z.object({ id: z.string() }),
         include: newslettersIncludeSchema,
         createSchema: adminNewsletterCreateSchema,
         createOptionsSchema: z.object({
@@ -164,8 +205,8 @@ export class TSGhostAdminAPI<Version extends `v5.${string}` | `v6.${string}` = a
     return new APIComposer(
       "offers",
       {
-        schema: baseOffersSchema,
-        identitySchema: slugOrIdSchema,
+        schema: baseOffersSchemaFor(this.target),
+        identitySchema: z.object({ id: z.string() }),
         include: offersIncludeSchema,
         createSchema: adminOffersCreateSchema,
         updateSchema: adminOffersUpdateSchema,
@@ -196,7 +237,7 @@ export class TSGhostAdminAPI<Version extends `v5.${string}` | `v6.${string}` = a
     return new APIComposer(
       "users",
       {
-        schema: adminUsersSchema,
+        schema: adminUsersSchemaFor(this.target),
         identitySchema: emailOrIdSchema,
         include: usersIncludeSchema,
       },
@@ -219,7 +260,11 @@ export class TSGhostAdminAPI<Version extends `v5.${string}` | `v6.${string}` = a
   }
 
   get site() {
-    return new BasicFetcher("site", { output: baseSiteSchema }, this.httpClientFactory.create());
+    return new BasicFetcher(
+      "site",
+      { output: baseSiteSchemaFor(this.target) },
+      this.httpClientFactory.create(),
+    );
   }
 
   get settings() {
@@ -229,7 +274,13 @@ export class TSGhostAdminAPI<Version extends `v5.${string}` | `v6.${string}` = a
         output: z.array(
           z.object({
             key: z.string(),
-            value: z.string().nullable().or(z.number().nullable()).or(z.boolean().nullable()),
+            value: z
+              .string()
+              .nullable()
+              .or(z.number().nullable())
+              .or(z.boolean().nullable())
+              .or(z.array(z.string()))
+              .meta({ description: "A list for list-valued settings, e.g. all_blocked_email_domains" }),
           }),
         ),
       },

@@ -2,8 +2,8 @@ import { beforeAll, describe, expect, inject, onTestFinished } from "vitest";
 
 import { FULL_HTML, fullScalars, seedPosts, seedPostWithInactiveAuthor } from "../seeds/posts-and-pages.ts";
 import { uniqueSuffix } from "../seeds/unique-suffix.ts";
-import { unknownKeysOfResponses } from "../unknown-keys.ts";
-import { adminApi } from "./ghost.ts";
+import { undeclaredKeys } from "../unknown-keys.ts";
+import { adminApi, requireBehaviour } from "./ghost.ts";
 import { assertOk, liveTest } from "./live-test.ts";
 
 let seed: Awaited<ReturnType<typeof seedPosts>>;
@@ -52,8 +52,7 @@ describe("posts", () => {
     expect(full?.html).toBe("<p>Hello <strong>world</strong></p>");
   });
 
-  // Expected failure: formats({ plaintext }) makes plaintext required, but Ghost omits it on empty posts.
-  liveTest.fails("browse with the plaintext format returns content", async ({ api }) => {
+  liveTest("browse with the plaintext format returns content", async ({ api }) => {
     const result = await api.posts
       .browse({ limit: "all", filter: seededOnly() })
       .formats({ plaintext: true })
@@ -79,7 +78,8 @@ describe("posts", () => {
 
     assertOk(bySlug);
     expect(byId.data.id).toBe(seed.full.id);
-    expect(bySlug.data).toEqual(byId.data);
+    // A post lists every tier, which the tiers seed adds and renames concurrently; compare all else.
+    expect(bySlug.data).toEqual({ ...byId.data, tiers: expect.any(Array) });
   });
 
   liveTest("nullable fields come back null on a bare post and set on a full post", async ({ api }) => {
@@ -143,24 +143,27 @@ describe("posts", () => {
     expect(read.data).toMatchObject({ status: "scheduled", published_at: publishedAt.toISOString() });
   });
 
-  // Expected failure: Ghost 6 ignores mobiledoc input and stores lexical only, so it never reads back.
-  liveTest.fails("add reads back mobiledoc", async ({ api }) => {
-    const added = await api.posts.add({ title: `Mobiledoc ${uniqueSuffix()}`, mobiledoc: MOBILEDOC });
+  // mobiledoc input is deprecated: Ghost 6 stores lexical only.
+  liveTest("add ignores the deprecated mobiledoc", async ({ api }) => {
+    const added = await api.posts.add({
+      title: `Mobiledoc ${uniqueSuffix()}`,
+      mobiledoc: MOBILEDOC,
+    });
     assertOk(added);
 
     const read = await api.posts.read({ id: added.data.id }).fetch();
     assertOk(read);
-    expect(read.data.mobiledoc).toBe(MOBILEDOC);
+    expect(read.data.mobiledoc).toBeNull();
   });
 
-  // Expected failure: posts have no locale in Ghost; the client's input accepts one that Ghost drops.
-  liveTest.fails("add reads back locale", async ({ api }) => {
+  // locale input is deprecated: posts have no locale in Ghost.
+  liveTest("add ignores the deprecated locale", async ({ api }) => {
     const added = await api.posts.add({ title: `Locale ${uniqueSuffix()}`, locale: "de" });
     assertOk(added);
 
     const read = await api.posts.read({ id: added.data.id }).fetch();
     assertOk(read);
-    expect(read.data).toMatchObject({ locale: "de" });
+    expect(read.data).not.toHaveProperty("locale");
   });
 
   liveTest("edit persists every value sent", async ({ api }) => {
@@ -193,18 +196,70 @@ describe("posts", () => {
     expect(read.data.html).toBe(FULL_HTML);
   });
 
+  // An email-only post can't be scheduled on add: Ghost reads the newsletter only from edit's option.
+  liveTest(
+    "add can't schedule an email-only post: Ghost answers that it needs a newsletter",
+    async ({ api, skip }) => {
+      requireBehaviour({ skip }, "emailOnlyScheduleNeedsNewsletter");
+      const added = await api.posts.add({
+        title: `Email only ${uniqueSuffix()}`,
+        email_only: true,
+        status: "scheduled",
+        published_at: new Date("2099-01-01T00:00:00.000Z"),
+      });
+      expect(added).toMatchObject({ success: false, status: 422, errors: [{ type: "ValidationError" }] });
+    },
+  );
+
+  liveTest("edit's newsletter option schedules an email-only post", async ({ api }) => {
+    const draft = await api.posts.add({ title: `Email only ${uniqueSuffix()}`, email_only: true });
+    assertOk(draft);
+
+    const scheduled = await api.posts.edit(
+      draft.data.id,
+      {
+        status: "scheduled",
+        published_at: new Date("2099-01-01T00:00:00.000Z"),
+        updated_at: new Date(draft.data.updated_at ?? ""),
+      },
+      { newsletter: "default-newsletter" },
+    );
+    assertOk(scheduled);
+    expect(scheduled.data).toMatchObject({ status: "scheduled", email_only: true });
+    expect(scheduled.data.newsletter?.slug).toBe("default-newsletter");
+  });
+
+  // PhilDL/ts-ghost#320: an explicit include dropped Ghost's default authors, and a sent post's status failed.
+  liveTest("read by slug with tags included parses an email-only post Ghost has sent", async ({ api }) => {
+    const draft = await api.posts.add({ title: `Email only ${uniqueSuffix()}`, email_only: true });
+    assertOk(draft);
+    const sent = await api.posts.edit(
+      draft.data.id,
+      { status: "published", updated_at: new Date(draft.data.updated_at ?? "") },
+      // A segment no member matches, so the email reaches no other file's members.
+      { newsletter: "default-newsletter", email_segment: "label:ts-ghost-nobody" },
+    );
+    assertOk(sent);
+    expect(sent.data.status).toBe("sent");
+
+    const result = await api.posts.read({ slug: sent.data.slug }).include({ tags: true }).fetch();
+    assertOk(result);
+    expect(result.data.status).toBe("sent");
+    expect(result.data.authors.map((author) => author.email)).toEqual([inject("ghost").owner.email]);
+    expect(result.data.primary_author.email).toBe(inject("ghost").owner.email);
+  });
+
   liveTest("delete removes the post", async ({ api }) => {
     const added = await api.posts.add({ title: `To delete ${uniqueSuffix()}` });
     assertOk(added);
 
     expect(await api.posts.delete(added.data.id)).toEqual({ success: true });
     const read = await api.posts.read({ id: added.data.id }).fetch();
-    expect(read.success).toBe(false);
+    expect(read).toMatchObject({ success: false, status: 404 });
   });
 
-  // Expected failure: the client's author status allows active, invited and locked, not inactive.
-  liveTest.fails("read reports a post's inactive author", async ({ api }) => {
-    const { post, remove } = await seedPostWithInactiveAuthor(api);
+  liveTest("read reports a post's inactive author", async ({ api }) => {
+    const { post, remove } = await seedPostWithInactiveAuthor(adminApi());
     onTestFinished(remove);
 
     const result = await api.posts.read({ id: post.id }).fetch();
@@ -215,8 +270,7 @@ describe("posts", () => {
 });
 
 describe("posts: unknown keys", () => {
-  // Expected failure: the author schema lacks Ghost 6.72's socials, tour and notification flags.
-  liveTest.fails("authors carry no key the client's schema lacks", async ({ api, responses }) => {
+  liveTest("authors carry no key the client's schema lacks", async ({ api }) => {
     const browsed = await api.posts
       .browse({ limit: "all", filter: seededOnly() })
       .include({ authors: true, tags: true, tiers: true })
@@ -224,38 +278,26 @@ describe("posts: unknown keys", () => {
       .fetch();
     const read = await api.posts.read({ id: seed.full.id }).fetch();
     const added = await api.posts.add({ title: `Unknown keys ${uniqueSuffix()}` });
-    assertOk(browsed);
-    assertOk(read);
-    assertOk(added);
-    const edited = await api.posts.edit(added.data.id, {
-      title: "Edited",
-      updated_at: new Date(added.data.updated_at ?? ""),
-    });
-    assertOk(edited);
+    const edited =
+      added.success &&
+      (await api.posts.edit(added.data.id, {
+        title: "Edited",
+        updated_at: new Date(added.data.updated_at ?? ""),
+      }));
 
-    const unknown = unknownKeysOfResponses(responses.all());
+    const unknown = undeclaredKeys(browsed, read, added, edited);
     expect(unknown.filter((k) => /^posts\[\]\.(authors\[\]|primary_author)\./.test(k))).toEqual([]);
   });
 
-  // Expected failure: the post email schema lacks csd_email_count, post_id, newsletter_id, source_type and more.
-  liveTest.fails(
-    "a sent post's email carries no key the client's schema lacks",
-    async ({ api, responses }) => {
-      assertOk(await api.posts.read({ id: seed.emailed.id }).fetch());
-      const unknown = unknownKeysOfResponses(responses.all());
-      expect(unknown.filter((k) => k.startsWith("posts[].email."))).toEqual([]);
-    },
-  );
+  liveTest("a sent post's email carries no key the client's schema lacks", async ({ api }) => {
+    const unknown = undeclaredKeys(await api.posts.read({ id: seed.emailed.id }).fetch());
+    expect(unknown.filter((k) => k.startsWith("posts[].email."))).toEqual([]);
+  });
 
-  // Expected failure: the post newsletter schema lacks its design and feedback fields.
-  liveTest.fails(
-    "a sent post's newsletter carries no key the client's schema lacks",
-    async ({ api, responses }) => {
-      assertOk(await api.posts.read({ id: seed.emailed.id }).fetch());
-      const unknown = unknownKeysOfResponses(responses.all());
-      expect(unknown.filter((k) => k.startsWith("posts[].newsletter."))).toEqual([]);
-    },
-  );
+  liveTest("a sent post's newsletter carries no key the client's schema lacks", async ({ api }) => {
+    const unknown = undeclaredKeys(await api.posts.read({ id: seed.emailed.id }).fetch());
+    expect(unknown.filter((k) => k.startsWith("posts[].newsletter."))).toEqual([]);
+  });
 });
 
 const MOBILEDOC = JSON.stringify({

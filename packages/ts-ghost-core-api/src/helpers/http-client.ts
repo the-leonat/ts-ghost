@@ -2,10 +2,13 @@ import { SignJWT } from "jose";
 
 import type { APICredentials, APIResource } from "../schemas";
 import { DebugOption, resolveDebugLogger } from "./debug";
+import type { StrictOption } from "./response-schema";
 
 export type FetchWithStatusResult<T = unknown> = {
   data: T;
   status: number;
+  /** The response body as received, before any parsing; absent when no response arrived. */
+  body?: string;
 };
 
 export type HTTPClientOptions = {
@@ -13,7 +16,28 @@ export type HTTPClientOptions = {
   version: APICredentials["version"];
   url: APICredentials["url"];
   endpoint: "content" | "admin";
+  /** Request options for every request, e.g. `{ redirect: "manual" }`; per-call options win, headers merge. */
+  defaultRequestOptions?: RequestInit;
+  /** Fail results carrying keys the schema doesn't declare; by default they pass through. */
+  strict?: StrictOption;
+  /** Called with every response Ghost sends, before it is read. */
+  onResponse?: (response: Response) => void;
 } & DebugOption;
+
+/** Merges caller headers over generated ones; a caller header replaces a same-named one, case-insensitively. */
+function mergeHeaders(generated: Record<string, string>, ...supplied: (HeadersInit | undefined)[]) {
+  const merged: Record<string, string> = { ...generated };
+  for (const init of supplied) {
+    if (init === undefined) continue;
+    new Headers(init).forEach((value, name) => {
+      for (const key of Object.keys(merged)) {
+        if (key.toLowerCase() === name) delete merged[key];
+      }
+      merged[name] = value;
+    });
+  }
+  return merged;
+}
 
 export interface IHTTPClient {
   get baseURL(): URL | undefined;
@@ -85,6 +109,10 @@ export class HTTPClient<const Options extends HTTPClientOptions = any> implement
     return this._baseURL;
   }
 
+  get strict(): StrictOption {
+    return this.config.strict ?? false;
+  }
+
   get jwt() {
     return this._jwt;
   }
@@ -116,18 +144,8 @@ export class HTTPClient<const Options extends HTTPClientOptions = any> implement
     return headers;
   }
 
-  public async fetch({
-    resource,
-    searchParams,
-    options,
-    pathnameIdentity,
-  }: {
-    resource: APIResource;
-    searchParams?: URLSearchParams;
-    options?: RequestInit & DebugOption;
-    pathnameIdentity?: string;
-  }) {
-    const debug = resolveDebugLogger({ ...this.config, ...options });
+  /** A fresh URL for one request; the base URL is never changed. */
+  protected urlFor(resource: APIResource, pathnameIdentity?: string, searchParams?: URLSearchParams) {
     if (this._baseURL === undefined) throw new Error("URL is undefined");
     let path = `${resource}/`;
     if (pathnameIdentity !== undefined) {
@@ -142,16 +160,40 @@ export class HTTPClient<const Options extends HTTPClientOptions = any> implement
     if (this.config.endpoint === "content") {
       url.searchParams.append("key", this.config.key);
     }
+    return url;
+  }
+
+  /** The init for one request: per-call options over client defaults over generated headers. */
+  protected requestInit(options: RequestInit | undefined, generatedHeaders: Record<string, string>) {
+    const defaults = this.config.defaultRequestOptions;
+    return {
+      ...defaults,
+      ...options,
+      headers: mergeHeaders(generatedHeaders, defaults?.headers, options?.headers),
+    };
+  }
+
+  /** @deprecated Unused by the fetchers, and its error shape differs from theirs; use `fetchWithStatus`. */
+  public async fetch({
+    resource,
+    searchParams,
+    options,
+    pathnameIdentity,
+  }: {
+    resource: APIResource;
+    searchParams?: URLSearchParams;
+    options?: RequestInit & DebugOption;
+    pathnameIdentity?: string;
+  }) {
+    const debug = resolveDebugLogger({ ...this.config, ...options });
+    const url = this.urlFor(resource, pathnameIdentity, searchParams);
     let result = undefined;
     const headers = await this.genHeaders();
     debug("url", url.toString(), "headers", headers, "options", options);
     try {
-      result = await (
-        await fetch(url.toString(), {
-          ...options,
-          headers,
-        })
-      ).json();
+      const response = await fetch(url.toString(), this.requestInit(options, headers));
+      this.config.onResponse?.(response);
+      result = await response.json();
       debug("result", result, "status", result.status);
     } catch (e) {
       debug("error", e);
@@ -179,30 +221,18 @@ export class HTTPClient<const Options extends HTTPClientOptions = any> implement
     options?: RequestInit;
     pathnameIdentity?: string;
   }): Promise<FetchWithStatusResult> {
-    if (this._baseURL === undefined) throw new Error("URL is undefined");
-    let path = `${resource}/`;
-    if (pathnameIdentity !== undefined) {
-      path += `${pathnameIdentity}/`;
-    }
-    const url = new URL(path, this._baseURL);
-    if (searchParams !== undefined) {
-      for (const [key, value] of searchParams.entries()) {
-        url.searchParams.append(key, value);
-      }
-    }
-    if (this.config.endpoint === "content") {
-      url.searchParams.append("key", this.config.key);
-    }
+    const url = this.urlFor(resource, pathnameIdentity, searchParams);
     const headers = await this.genHeaders();
     try {
-      const response = await fetch(url.toString(), {
-        ...options,
-        headers,
-      });
+      const response = await fetch(url.toString(), this.requestInit(options, headers));
+      this.config.onResponse?.(response);
       const status = response.status;
+      const body = await response.text();
+      // A delete answers 204 with no body.
+      if (body === "" && response.ok) return { data: undefined, status, body };
       try {
-        const data = await response.json();
-        return { data, status };
+        const data = JSON.parse(body);
+        return { data, status, body };
       } catch (e) {
         return {
           data: {
@@ -214,6 +244,7 @@ export class HTTPClient<const Options extends HTTPClientOptions = any> implement
             ],
           },
           status,
+          body,
         };
       }
     } catch (e) {
@@ -231,6 +262,7 @@ export class HTTPClient<const Options extends HTTPClientOptions = any> implement
     }
   }
 
+  /** @deprecated Unused by the fetchers; use `fetchWithStatus`. */
   public async fetchRawResponse({
     resource,
     searchParams,
@@ -242,23 +274,10 @@ export class HTTPClient<const Options extends HTTPClientOptions = any> implement
     options?: RequestInit;
     pathnameIdentity?: string;
   }) {
-    if (this._baseURL === undefined) throw new Error("URL is undefined");
-    this._baseURL.pathname += `${resource}/`;
-    if (pathnameIdentity !== undefined) {
-      this._baseURL.pathname += `${pathnameIdentity}/`;
-    }
-    if (searchParams !== undefined) {
-      for (const [key, value] of searchParams.entries()) {
-        this._baseURL.searchParams.append(key, value);
-      }
-    }
-    if (this.config.endpoint === "content") {
-      this._baseURL.searchParams.append("key", this.config.key);
-    }
+    const url = this.urlFor(resource, pathnameIdentity, searchParams);
     const headers = await this.genHeaders();
-    return await fetch(this._baseURL.toString(), {
-      ...options,
-      headers,
-    });
+    const response = await fetch(url.toString(), this.requestInit(options, headers));
+    this.config.onResponse?.(response);
+    return response;
   }
 }

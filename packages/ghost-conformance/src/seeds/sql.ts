@@ -19,7 +19,13 @@ export type SqlSeedContext = {
   admin: TSGhostAdminAPI;
   /** Runs the statements in one transaction against Ghost's MySQL. */
   exec(statements: string[]): Promise<void>;
+  /** The Ghost version, e.g. "5.130.6". */
+  version: string;
 };
+
+/** Ghost 5 requires `created_by` on users, emails and Stripe rows; Ghost 6 dropped the column. */
+export const createdBy = (version: string): Record<string, SqlValue> =>
+  version.startsWith("5.") ? { created_by: "1" } : {};
 
 type Raw = { readonly raw: string };
 export type SqlValue = string | number | boolean | null | Date | Raw;
