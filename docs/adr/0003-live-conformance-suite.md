@@ -35,11 +35,11 @@ The harness runs against the client as upstream ships it. Every disagreement is 
 
 - **Error results instead of throws** (#35, #38): a response that doesn't match the schema returns `{ success: false }` with a `ResponseSchemaError`; a Ghost change no longer crashes consumers.
 - **Pass-through plus strict** (#39): by default undeclared keys pass through at runtime (types stay as declared); `strict: true | { ignore }` is an explicit constructor option that fails on them. The live suite uses strict.
-- **Three schema targets** (#43): `"v5.x"` selects v5 (exactly Ghost 5.last), `"v6.x"` selects v6-compat (required = present in every 6.x), `{ schema: "latest" }` selects v6-latest (exactly the pin). Presence and nullability are separate axes. `GHOST_FIELDS` records each field's `since`/`until` minor. Resource-level targets (hiding a getter on older Ghost) are deferred until the first post-6.0 resource; the drift job only records `resource.<group>` entries for now. The live suite runs one leg per target, each pinned to an exact image in `ghost-versions.json`.
+- **Three schema targets** (#52, superseding #43): only the version string selects one. `"v5.x"` → v5-compat and any other `"v6.x"` → v6-compat, both frozen, hand-written schemas; `"v6.<pin minor>[.patch]"` → v6-latest (exactly the pin, updated with each pin bump). No schema option, no since/until table. `strict` is test-only. The live suite runs one leg per target, each pinned to an exact image in `ghost-versions.json`.
 
 ### Drift is one rolling PR
 
-A weekly workflow bumps the pin to the newest Ghost, regenerates the manifest, runs the client check and the live suite, updates `GHOST_FIELDS`, and force-pushes one rolling PR from `conformance/drift`. The PR carries the manifest diff, the results, the client's route coverage at the old and new pin and links to every release note in between (for what the suite can't see, such as new query options). It fails visibly if anything fails, accumulates releases while unmerged and closes itself when the pin is current. This replaces v1's drift job and re-recording.
+A weekly workflow bumps the pin to the newest Ghost, regenerates the manifest, runs the client check and the live suite, and force-pushes one rolling PR from `conformance/drift`. A human updates v6-latest in that PR; a removed field needs a `major` changeset. The PR carries the manifest diff, the results, the client's route coverage at the old and new pin and links to every release note in between (for what the suite can't see, such as new query options). It fails visibly if anything fails, accumulates releases while unmerged and closes itself when the pin is current. This replaces v1's drift job and re-recording.
 
 ### Coverage grows incrementally
 
