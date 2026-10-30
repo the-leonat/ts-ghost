@@ -119,8 +119,12 @@ describe("BrowseFetcher type narrowing", () => {
           errors: {
             type: string;
             message: string;
+            context?: string | null | undefined;
+            path?: string | undefined;
+            kind?: "undeclared" | "mismatch" | undefined;
           }[];
           status: number;
+          body?: string | undefined;
         }
     >();
 
@@ -154,8 +158,12 @@ describe("BrowseFetcher type narrowing", () => {
           errors: {
             type: string;
             message: string;
+            context?: string | null | undefined;
+            path?: string | undefined;
+            kind?: "undeclared" | "mismatch" | undefined;
           }[];
           status: number;
+          body?: string | undefined;
         }
     >();
 
@@ -189,8 +197,12 @@ describe("BrowseFetcher type narrowing", () => {
           errors: {
             type: string;
             message: string;
+            context?: string | null | undefined;
+            path?: string | undefined;
+            kind?: "undeclared" | "mismatch" | undefined;
           }[];
           status: number;
+          body?: string | undefined;
         }
     >();
 
@@ -226,8 +238,12 @@ describe("BrowseFetcher type narrowing", () => {
           errors: {
             type: string;
             message: string;
+            context?: string | null | undefined;
+            path?: string | undefined;
+            kind?: "undeclared" | "mismatch" | undefined;
           }[];
           status: number;
+          body?: string | undefined;
         }
     >();
 
@@ -263,8 +279,12 @@ describe("BrowseFetcher type narrowing", () => {
           errors: {
             type: string;
             message: string;
+            context?: string | null | undefined;
+            path?: string | undefined;
+            kind?: "undeclared" | "mismatch" | undefined;
           }[];
           status: number;
+          body?: string | undefined;
         }
     >();
 
@@ -300,8 +320,12 @@ describe("BrowseFetcher type narrowing", () => {
           errors: {
             type: string;
             message: string;
+            context?: string | null | undefined;
+            path?: string | undefined;
+            kind?: "undeclared" | "mismatch" | undefined;
           }[];
           status: number;
+          body?: string | undefined;
         }
     >();
   });

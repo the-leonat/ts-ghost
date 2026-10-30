@@ -1,11 +1,12 @@
-import { z, ZodRawShape } from "zod";
+import type { ZodRawShape } from "zod";
 
 import { DebugOption } from "../helpers/debug";
 import type { HTTPClient } from "../helpers/http-client";
-import { sanitizeFormatMask, sanitizeMask } from "../helpers/masks";
+import { dropUnselected, parseFetched, resultSchema } from "../helpers/response-schema";
 import { type APIResource, type GhostIdentityInput } from "../schemas/shared";
-import type { Exactly, Mask, NoUnrecognizedKeys } from "../utils";
-import { contentFormats, type ContentFormats } from "./formats";
+import type { Mask, NoUnrecognizedKeys } from "../utils";
+import type { ContentFormats } from "./formats";
+import { outputURLParams, withFields, withFormats, withInclude, type OutputConfig } from "./output-shape";
 
 export class ReadFetcher<
   const Resource extends APIResource = any,
@@ -21,11 +22,7 @@ export class ReadFetcher<
 
   constructor(
     protected resource: Resource,
-    protected config: {
-      schema: z.ZodObject<BaseShape>;
-      output: z.ZodObject<OutputShape>;
-      include: z.ZodObject<IncludeShape>;
-    },
+    protected config: OutputConfig<BaseShape, OutputShape, IncludeShape>,
     private _params: {
       identity: GhostIdentityInput;
       include?: (keyof IncludeShape)[];
@@ -48,20 +45,11 @@ export class ReadFetcher<
   public formats<Formats extends Mask<Pick<OutputShape, ContentFormats>>>(
     formats: NoUnrecognizedKeys<Formats, OutputShape>,
   ) {
-    const requiredFormats = sanitizeFormatMask(this.config.output, formats);
-    const newOutput = this.config.output.required(requiredFormats as Exactly<Formats, Formats>);
-    const params = {
-      ...this._params,
-      formats: Object.keys(requiredFormats).filter((key) => contentFormats.includes(key)),
-    };
+    const shaped = withFormats<BaseShape, OutputShape, IncludeShape, Formats>(this.config, formats);
     return new ReadFetcher(
       this.resource,
-      {
-        schema: this.config.schema,
-        output: newOutput,
-        include: this.config.include,
-      },
-      params,
+      shaped.config,
+      { ...this._params, formats: shaped.formats },
       this.httpClient,
     );
   }
@@ -75,20 +63,11 @@ export class ReadFetcher<
    * @returns A new Fetcher with the fixed output shape and the formats specified
    */
   public include<Includes extends Mask<IncludeShape>>(include: NoUnrecognizedKeys<Includes, IncludeShape>) {
-    const parsedInclude = this.config.include.parse(include);
-    const params = {
-      ...this._params,
-      include: Object.keys(parsedInclude),
-    };
-    const requiredIncludeKeys = sanitizeMask(this.config.output, parsedInclude, { excludeDotNotation: true });
+    const shaped = withInclude<BaseShape, OutputShape, IncludeShape, Includes>(this.config, include);
     return new ReadFetcher(
       this.resource,
-      {
-        schema: this.config.schema,
-        output: this.config.output.required(requiredIncludeKeys as Exactly<Includes, Includes>),
-        include: this.config.include,
-      },
-      params,
+      shaped.config,
+      { ...this._params, include: shaped.include },
       this.httpClient,
     );
   }
@@ -101,18 +80,8 @@ export class ReadFetcher<
    * @returns A new Fetcher with the fixed output shape having only the selected Fields
    */
   public fields<Fields extends Mask<OutputShape>>(fields: NoUnrecognizedKeys<Fields, OutputShape>) {
-    const pickedFields = sanitizeMask(this.config.output, fields);
-    const newOutput = this.config.output.pick(pickedFields as Exactly<Fields, Fields>);
-    return new ReadFetcher(
-      this.resource,
-      {
-        schema: this.config.schema,
-        output: newOutput,
-        include: this.config.include,
-      },
-      this._params,
-      this.httpClient,
-    );
+    const config = withFields<BaseShape, OutputShape, IncludeShape, Fields>(this.config, fields);
+    return new ReadFetcher(this.resource, config, this._params, this.httpClient);
   }
 
   public getResource() {
@@ -136,19 +105,7 @@ export class ReadFetcher<
   }
 
   private _buildUrlParams() {
-    const inputKeys = this.config.schema.keyof().options as string[];
-    const outputKeys = this.config.output.keyof().options as string[];
-
-    if (inputKeys.length !== outputKeys.length && outputKeys.length > 0) {
-      this._urlParams.fields = outputKeys.join(",");
-    }
-    if (this._params.include && this._params.include.length > 0) {
-      this._urlParams.include = this._params.include.join(",");
-    }
-    if (this._params.formats && this._params.formats.length > 0) {
-      this._urlParams.formats = this._params.formats.join(",");
-    }
-
+    this._urlParams = outputURLParams(this.config, this._params);
     if (this._params.identity.id) {
       this._pathnameIdentity = `${this._params.identity.id}`;
     } else if (this._params.identity.slug) {
@@ -165,39 +122,19 @@ export class ReadFetcher<
   }
 
   public async fetch(options?: RequestInit & DebugOption) {
-    const res = z.discriminatedUnion("success", [
-      z.object({
-        success: z.literal(true),
-        data: this.config.output,
-      }),
-      z.object({
-        success: z.literal(false),
-        errors: z.array(
-          z.object({
-            type: z.string(),
-            message: z.string(),
-          }),
-        ),
-        status: z.number(),
-      }),
-    ]);
-    const { data: result, status } = (await this.httpClient.fetchWithStatus({
+    const res = resultSchema({ data: this.config.output });
+    const fetched = await this.httpClient.fetchWithStatus({
       resource: this.resource,
       pathnameIdentity: this._pathnameIdentity,
       searchParams: this._urlSearchParams,
       options,
-    })) as { data: any; status: number };
-    let data: any = {};
-    if (result.errors) {
-      data.success = false;
-      data.errors = result.errors;
-      data.status = status;
-    } else {
-      data = {
-        success: true,
-        data: result[this.resource][0],
-      };
-    }
-    return res.parse(data);
+    });
+    return parseFetched(res, fetched, {
+      dataPath: `${this.resource}[0]`,
+      strict: this.config.strict,
+      success: (result) => ({
+        data: dropUnselected(result?.[this.resource]?.[0], this.config.schema, this.config.output),
+      }),
+    });
   }
 }

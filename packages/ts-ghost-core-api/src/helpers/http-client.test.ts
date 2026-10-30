@@ -411,3 +411,35 @@ describe("HTTPClient fetchWithStatus", () => {
     expect((result.data as any).errors[0].type).toBe("FetchError");
   });
 });
+
+describe("HTTPClient fetchRawResponse", () => {
+  beforeEach(() => {
+    fetchMocker.enableMocks();
+  });
+  afterEach(() => {
+    fetchMocker.resetMocks();
+    vi.restoreAllMocks();
+  });
+
+  test("builds each call's URL afresh, so a second call on the same client does not extend the first", async () => {
+    const httpClient = new HTTPClient({
+      key: "abcd",
+      version: "v5.22",
+      endpoint: "content",
+      url: "https://ghost.org",
+    });
+    fetchMocker.mockResponse(JSON.stringify({}));
+
+    await httpClient.fetchRawResponse({ resource: "posts", pathnameIdentity: "slug/one" });
+    await httpClient.fetchRawResponse({
+      resource: "tags",
+      searchParams: new URLSearchParams({ limit: "2" }),
+    });
+
+    expect(fetchMocker.mock.calls.map(([url]) => url)).toEqual([
+      "https://ghost.org/ghost/api/content/posts/slug/one/?key=abcd",
+      "https://ghost.org/ghost/api/content/tags/?limit=2&key=abcd",
+    ]);
+    expect(httpClient.baseURL?.toString()).toBe("https://ghost.org/ghost/api/content/");
+  });
+});

@@ -7,6 +7,7 @@ import { MutationFetcher } from "./fetchers/mutation-fetcher";
 import { ReadFetcher } from "./fetchers/read-fetcher";
 import { parseBrowseParams, type BrowseParams } from "./helpers/browse-params";
 import type { HTTPClientFactory } from "./helpers/http-client";
+import type { StrictOption } from "./helpers/response-schema";
 import type { APIResource } from "./schemas";
 import type { IsAny } from "./utils";
 
@@ -37,6 +38,8 @@ export class APIComposer<
       createOptionsSchema?: CreateOptions;
       updateSchema?: UpdateSchema;
       updateOptionsSchema?: UpdateOptions;
+      /** Fail results carrying keys the schema doesn't declare; by default they pass through. */
+      strict?: StrictOption;
     },
     protected httpClientFactory: HTTPClientFactory,
   ) {}
@@ -61,6 +64,7 @@ export class APIComposer<
         schema: this.config.schema,
         output: this.config.schema,
         include: this.config.include,
+        strict: this.config.strict,
       },
       {
         browseParams:
@@ -81,6 +85,7 @@ export class APIComposer<
         schema: this.config.schema,
         output: this.config.schema,
         include: this.config.include,
+        strict: this.config.strict,
       },
       {
         identity: z.parse(this.config.identitySchema, options),
@@ -103,6 +108,7 @@ export class APIComposer<
       {
         output: this.config.schema,
         paramsShape: this.config.createOptionsSchema,
+        strict: this.config.strict,
       },
       parsedOptions as ({ id?: string } & z4.output<CreateOptions>) | undefined,
       { method: "POST", body: parsedData as Record<string, unknown> },
@@ -136,6 +142,7 @@ export class APIComposer<
       {
         output: this.config.schema,
         paramsShape: this.config.updateOptionsSchema,
+        strict: this.config.strict,
       },
       { id: cleanId, ...parsedOptions } as ({ id?: string } & z4.output<UpdateOptions>) | undefined,
       { method: "PUT", body: parsedData },
