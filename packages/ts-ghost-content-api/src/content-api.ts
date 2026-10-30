@@ -2,9 +2,10 @@ import {
   APIComposer,
   BasicFetcher,
   contentAPICredentialsSchema,
-  type DebugOption,
   HTTPClientFactory,
   slugOrIdSchema,
+  type DebugOption,
+  type StrictOption,
 } from "@ts-ghost/core-api";
 
 import { authorsIncludeSchema, authorsSchema } from "./authors/schemas";
@@ -15,6 +16,15 @@ import { tagsIncludeSchema, tagsSchema } from "./tags/schemas";
 import { tiersIncludeSchema, tiersSchema } from "./tiers/schemas";
 
 export type { ContentAPICredentials, APIVersions } from "@ts-ghost/core-api";
+
+/** Options of the content client. */
+export type ContentAPIOptions = DebugOption & {
+  /** Request options for every request; per-call options win, headers merge. */
+  defaultRequestOptions?: RequestInit;
+  /** For tests and drift checks, not production: also fail a result carrying a key the schema doesn't
+   * declare (by default it passes through). `{ ignore: ["posts[].new_key"] }` lets listed paths through. */
+  strict?: StrictOption;
+};
 
 export enum BrowseEndpointType {
   authors = "authors",
@@ -32,7 +42,7 @@ export class TSGhostContentAPI<Version extends `v5.${string}` | `v6.${string}` =
     protected readonly url: string,
     protected readonly key: string,
     protected readonly version: Version,
-    protected readonly options?: DebugOption,
+    protected readonly options?: ContentAPIOptions,
   ) {
     const apiCredentials = contentAPICredentialsSchema.parse({
       key,
@@ -53,6 +63,7 @@ export class TSGhostContentAPI<Version extends `v5.${string}` | `v6.${string}` =
         schema: authorsSchema,
         identitySchema: slugOrIdSchema,
         include: authorsIncludeSchema,
+        strict: this.options?.strict,
       },
       this.HTTPClientFactoryFactory,
     ).access(["read", "browse"]);
@@ -60,7 +71,12 @@ export class TSGhostContentAPI<Version extends `v5.${string}` | `v6.${string}` =
   get tiers() {
     return new APIComposer(
       "tiers",
-      { schema: tiersSchema, identitySchema: slugOrIdSchema, include: tiersIncludeSchema },
+      {
+        schema: tiersSchema,
+        identitySchema: slugOrIdSchema,
+        include: tiersIncludeSchema,
+        strict: this.options?.strict,
+      },
       this.HTTPClientFactoryFactory,
     ).access(["browse", "read"]);
   }
@@ -71,6 +87,7 @@ export class TSGhostContentAPI<Version extends `v5.${string}` | `v6.${string}` =
         schema: postsSchema,
         identitySchema: slugOrIdSchema,
         include: postsIncludeSchema,
+        strict: this.options?.strict,
       },
       this.HTTPClientFactoryFactory,
     ).access(["browse", "read"]);
@@ -82,6 +99,7 @@ export class TSGhostContentAPI<Version extends `v5.${string}` | `v6.${string}` =
         schema: pagesSchema,
         identitySchema: slugOrIdSchema,
         include: pagesIncludeSchema,
+        strict: this.options?.strict,
       },
       this.HTTPClientFactoryFactory,
     ).access(["browse", "read"]);
@@ -89,12 +107,21 @@ export class TSGhostContentAPI<Version extends `v5.${string}` | `v6.${string}` =
   get tags() {
     return new APIComposer(
       "tags",
-      { schema: tagsSchema, identitySchema: slugOrIdSchema, include: tagsIncludeSchema },
+      {
+        schema: tagsSchema,
+        identitySchema: slugOrIdSchema,
+        include: tagsIncludeSchema,
+        strict: this.options?.strict,
+      },
       this.HTTPClientFactoryFactory,
     ).access(["browse", "read"]);
   }
 
   get settings() {
-    return new BasicFetcher("settings", { output: settingsSchema }, this.HTTPClientFactoryFactory.create());
+    return new BasicFetcher(
+      "settings",
+      { output: settingsSchema, strict: this.options?.strict },
+      this.HTTPClientFactoryFactory.create(),
+    );
   }
 }
