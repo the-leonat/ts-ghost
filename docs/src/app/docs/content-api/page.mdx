@@ -8,9 +8,11 @@ All the available options from the Ghost Content API are available here, filteri
 
 ## Requirements
 
-This client is only compatible with Ghost versions 5.x for now.
+This client works with Ghost 5 and Ghost 6. Pass the Ghost version you run, e.g. `"v5.130"` or `"v6.0"`; it is sent to Ghost as `Accept-Version`. The Content API parses every version with the same schemas; schema targets are an admin client feature.
 
-- Ghost 5.^ (Any Ghost version after 5.0)
+```ts
+const api = new TSGhostContentAPI(url, key, "v6.0");
+```
 
 - Node.js 16+
   - We rely on global `fetch` being available, so you can bring your own
