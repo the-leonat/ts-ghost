@@ -4,7 +4,7 @@ import { isCancel } from "@clack/core";
 import { cancel, log, note, select, spinner, text } from "@clack/prompts";
 import type { TSGhostAdminAPI } from "@ts-ghost/admin-api";
 
-import { fetchAllMembers } from "./helpers";
+import { fetchAllMembers } from "../../utils/admin-api";
 
 export const membersExportAll = async (ghost: TSGhostAdminAPI, _siteName: string) => {
   const s = spinner();
