@@ -43,3 +43,12 @@ describe("members", () => {
     void api.members.edit("x", { name: "n" }, { include: "tiers" });
   });
 });
+
+describe("users", () => {
+  test("a user reads by id, email or slug, as Ghost's /users/slug/:slug/ route allows", async () => {
+    const bySlug = await api.users.read({ slug: "s" }).fetch();
+    if (bySlug.success) expectTypeOf(bySlug.data.slug).toEqualTypeOf<string>();
+    void api.users.read({ id: "x" });
+    void api.users.read({ email: "a@b.c" });
+  });
+});
