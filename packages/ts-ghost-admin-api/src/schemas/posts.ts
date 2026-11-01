@@ -1,41 +1,83 @@
 import { z } from "zod";
-import { baseEmailSchema, baseNewsletterSchema, basePostsSchema } from "@ts-ghost/core-api";
+import {
+  ghostCodeInjectionSchema,
+  ghostIdentitySchema,
+  ghostMetadataSchema,
+  ghostSocialMediaSchema,
+  ghostVisibilitySchema,
+} from "@ts-ghost/core-api";
 
-import { adminAuthorsSchema } from "./authors";
-import { adminTiersSchema } from "./tiers";
+import { latestAuthorsSchema } from "./authors";
+import { latestEmailSchema } from "./email";
+import { latestNewsletterSchema } from "./newsletters";
+import { DEFAULT_FORMATS, DEFAULT_INCLUDES } from "./reasons";
+import { latestTagsSchema } from "./tags";
+import { latestTiersSchema } from "./tiers";
 
-export const adminPostsSchema = basePostsSchema.merge(
-  z.object({
-    uuid: z.string(),
-    mobiledoc: z.string().nullish(),
-    email_only: z.boolean(),
-    status: z.union([z.literal("draft"), z.literal("published"), z.literal("scheduled")]),
-    email_segment: z.string().nullish(),
-    frontmatter: z.string().nullish(),
-    tiers: z.array(adminTiersSchema).optional(),
-    email: baseEmailSchema.nullish(),
-    newsletter: baseNewsletterSchema.nullish(),
-    count: z
-      .object({
-        clicks: z.number().nullish(),
-        positive_feedback: z.number().nullish(),
-        negative_feedback: z.number().nullish(),
-      })
-      .nullish(),
-    authors: z.array(adminAuthorsSchema),
-    primary_author: adminAuthorsSchema,
-    lexical: z
-      .string()
-      .catch(
-        '{"root":{"children":[{"children":[],"direction":null,"format":"","indent":0,"type":"paragraph","version":1}],"direction":null,"format":"","indent":0,"type":"root","version":1}}',
-      )
-      .optional(),
-    html: z.string().catch("").optional(),
-    plaintext: z.string().catch("").optional(),
-  }),
-);
-
-export type Post = z.infer<typeof adminPostsSchema>;
+/** A post as the Admin API sends it. */
+export const latestPostsSchema = z.object({
+  ...ghostIdentitySchema.shape,
+  ...ghostMetadataSchema.shape,
+  title: z.string(),
+  comment_id: z.string().nullable(),
+  feature_image: z.string().nullable(),
+  feature_image_alt: z.string().nullable(),
+  feature_image_caption: z.string().nullable(),
+  featured: z.boolean(),
+  custom_excerpt: z.string().nullable(),
+  ...ghostCodeInjectionSchema.shape,
+  ...ghostSocialMediaSchema.shape,
+  visibility: ghostVisibilitySchema,
+  custom_template: z.string().nullable(),
+  canonical_url: z.string().nullable(),
+  tags: z.array(latestTagsSchema).optional(),
+  primary_tag: latestTagsSchema
+    .meta({ description: "(nullable) Sent with the tags: by default or with include: tags" })
+    .nullish(),
+  url: z.string(),
+  excerpt: z.string().nullable(),
+  reading_time: z.number().optional().default(0),
+  created_at: z.string(),
+  updated_at: z.string().nullable(),
+  published_at: z.string().nullable(),
+  email_subject: z.string().nullable(),
+  is_page: z.boolean().default(false),
+  uuid: z.string(),
+  mobiledoc: z
+    .string()
+    .meta({ description: `(nullable) Null for a lexical post; ${DEFAULT_FORMATS}` })
+    .nullish(),
+  email_only: z.boolean(),
+  status: z
+    .union([z.literal("draft"), z.literal("published"), z.literal("scheduled"), z.literal("sent")])
+    .meta({ description: "sent: an email-only post Ghost has emailed" }),
+  email_segment: z.string(),
+  frontmatter: z.string().nullable(),
+  tiers: z
+    .array(latestTiersSchema)
+    .meta({ description: `Sent by default or with include: tiers` })
+    .optional(),
+  email: latestEmailSchema.meta({ description: `(nullable) ${DEFAULT_INCLUDES}` }).nullish(),
+  newsletter: latestNewsletterSchema.meta({ description: `(nullable) ${DEFAULT_INCLUDES}` }).nullish(),
+  count: z
+    .object({
+      clicks: z.number(),
+      positive_feedback: z.number(),
+      negative_feedback: z.number(),
+    })
+    .meta({ description: DEFAULT_INCLUDES })
+    .optional(),
+  authors: z.array(latestAuthorsSchema),
+  primary_author: latestAuthorsSchema,
+  lexical: z
+    .string()
+    .catch(
+      '{"root":{"children":[{"children":[],"direction":null,"format":"","indent":0,"type":"paragraph","version":1}],"direction":null,"format":"","indent":0,"type":"root","version":1}}',
+    )
+    .optional(),
+  html: z.string().catch("").optional(),
+  plaintext: z.string().catch("").optional(),
+});
 
 const basePostsCreateSchema = z.object({
   title: z.string().min(1).max(2000),
@@ -50,7 +92,7 @@ const basePostsCreateSchema = z.object({
   status: z
     .union([z.literal("draft"), z.literal("published"), z.literal("scheduled"), z.literal("sent")])
     .optional(),
-  locale: z.string().max(6).optional(),
+  locale: z.string().max(6).meta({ description: "Stored by Ghost but never sent back" }).optional(),
   visibility: z
     .union([
       z.literal("public"),
@@ -138,6 +180,7 @@ const basePostsCreateSchema = z.object({
       description: `Specifying author via id, name or slug.`,
     })
     .optional(),
+  /** @deprecated Ghost drops it from the body; pass `edit`'s `newsletter` option. Removed in a later major. */
   newsletter: z
     .union([
       z.object({
@@ -147,36 +190,18 @@ const basePostsCreateSchema = z.object({
         slug: z.string().meta({ description: "The slug of the newsletter" }),
       }),
     ])
+    .meta({ deprecated: true })
     .optional(),
 });
 
-const emailOnlyNewsletterRefinement = (data: any) => {
-  // If email_only is true and status is scheduled, newsletter must be provided
-  if (data.email_only === true && data.status === "scheduled") {
-    return data.newsletter !== undefined;
-  }
-  return true;
-};
-
-const emailOnlyNewsletterRefinementOptions = {
-  message: "newsletter is required when scheduling an email_only post",
-  path: ["newsletter"],
-};
-
-export const adminPostsCreateSchema = basePostsCreateSchema.refine(
-  emailOnlyNewsletterRefinement,
-  emailOnlyNewsletterRefinementOptions,
-);
+export const adminPostsCreateSchema = basePostsCreateSchema;
 
 export type CreatePost = z.infer<typeof adminPostsCreateSchema>;
 
-export const adminPostsUpdateSchema = basePostsCreateSchema
-  .partial({ title: true })
-  .merge(
-    z.object({
-      updated_at: z.date().transform((val) => val.toISOString()),
-    }),
-  )
-  .refine(emailOnlyNewsletterRefinement, emailOnlyNewsletterRefinementOptions);
+export const adminPostsUpdateSchema = basePostsCreateSchema.partial({ title: true }).merge(
+  z.object({
+    updated_at: z.date().transform((val) => val.toISOString()),
+  }),
+);
 
 export type UpdatePost = z.infer<typeof adminPostsUpdateSchema>;

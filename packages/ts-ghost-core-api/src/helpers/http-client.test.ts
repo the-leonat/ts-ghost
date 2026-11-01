@@ -443,3 +443,41 @@ describe("HTTPClient fetchRawResponse", () => {
     expect(httpClient.baseURL?.toString()).toBe("https://ghost.org/ghost/api/content/");
   });
 });
+
+describe("HTTPClient expectedVersion", () => {
+  const client = (expectedVersion?: string) =>
+    new HTTPClient({
+      key: "a",
+      version: "v6.0",
+      endpoint: "content",
+      url: "https://ghost.org",
+      expectedVersion,
+    });
+  const respondAs = (version: string) =>
+    fetchMocker.mockResponse(JSON.stringify({ posts: [] }), { headers: { "content-version": version } });
+  beforeEach(() => {
+    fetchMocker.enableMocks();
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+  });
+  afterEach(() => {
+    fetchMocker.resetMocks();
+    vi.restoreAllMocks();
+  });
+
+  test("warns once per Ghost minor that differs, and still answers", async () => {
+    respondAs("v6.80");
+    const http = client("6.72");
+    expect((await http.fetchWithStatus({ resource: "posts" })).status).toBe(200);
+    await http.fetchWithStatus({ resource: "posts" });
+    expect(console.warn).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(console.warn).mock.calls[0]?.[0]).toMatch(/Ghost v6\.80.*latest.*6\.72.*compat/);
+  });
+
+  test("stays quiet on the expected minor, and without an expected version", async () => {
+    respondAs("v6.72");
+    await client("6.72").fetchWithStatus({ resource: "posts" });
+    respondAs("v6.81");
+    await client().fetchWithStatus({ resource: "posts" });
+    expect(console.warn).not.toHaveBeenCalled();
+  });
+});

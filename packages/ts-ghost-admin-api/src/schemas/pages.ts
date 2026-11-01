@@ -1,39 +1,76 @@
 import { z } from "zod";
-import { basePagesSchema } from "@ts-ghost/core-api";
+import {
+  ghostCodeInjectionSchema,
+  ghostIdentitySchema,
+  ghostMetadataSchema,
+  ghostSocialMediaSchema,
+  ghostVisibilitySchema,
+} from "@ts-ghost/core-api";
 
-import { adminAuthorsSchema } from "./authors";
-import { adminTiersSchema } from "./tiers";
+import { latestAuthorsSchema } from "./authors";
+import { DEFAULT_FORMATS, DEFAULT_INCLUDES } from "./reasons";
+import { latestTagsSchema } from "./tags";
+import { latestTiersSchema } from "./tiers";
 
-export const adminPagesSchema = basePagesSchema.merge(
-  z.object({
-    uuid: z.string(),
-    mobiledoc: z.string().nullish(),
-    status: z.union([z.literal("draft"), z.literal("published"), z.literal("scheduled")]),
-    frontmatter: z.string().nullish(),
-    tiers: z.array(adminTiersSchema).nullish(),
-    count: z
-      .object({
-        clicks: z.number().nullish(),
-        positive_feedback: z.number().nullish(),
-        negative_feedback: z.number().nullish(),
-        paid_conversions: z.number().nullish(),
-        signups: z.number().nullish(),
-      })
-      .nullish(),
-    authors: z.array(adminAuthorsSchema),
-    primary_author: adminAuthorsSchema,
-    lexical: z
-      .string()
-      .catch(
-        '{"root":{"children":[{"children":[],"direction":null,"format":"","indent":0,"type":"paragraph","version":1}],"direction":null,"format":"","indent":0,"type":"root","version":1}}',
-      )
-      .optional(),
-    html: z.string().catch("").optional(),
-    plaintext: z.string().catch("").optional(),
-  }),
-);
-
-export type Page = z.infer<typeof adminPagesSchema>;
+/** A page as the Admin API sends it. */
+export const latestPagesSchema = z.object({
+  ...ghostIdentitySchema.shape,
+  ...ghostMetadataSchema.shape,
+  title: z.string(),
+  comment_id: z.string().nullable(),
+  feature_image: z.string().nullable(),
+  feature_image_alt: z.string().nullable(),
+  feature_image_caption: z.string().nullable(),
+  featured: z.boolean(),
+  custom_excerpt: z.string().nullable(),
+  ...ghostCodeInjectionSchema.shape,
+  ...ghostSocialMediaSchema.shape,
+  visibility: ghostVisibilitySchema,
+  custom_template: z.string().nullable(),
+  canonical_url: z.string().nullable(),
+  tags: z.array(latestTagsSchema).optional(),
+  primary_tag: latestTagsSchema
+    .meta({ description: "(nullable) Sent with the tags: by default or with include: tags" })
+    .nullish(),
+  url: z.string(),
+  excerpt: z.string().nullable(),
+  reading_time: z.number().optional().default(0),
+  created_at: z.string(),
+  updated_at: z.string().nullable(),
+  published_at: z.string().nullable(),
+  is_page: z.boolean().default(true),
+  uuid: z.string(),
+  mobiledoc: z
+    .string()
+    .meta({ description: `(nullable) Null for a lexical page; ${DEFAULT_FORMATS}` })
+    .nullish(),
+  status: z.union([z.literal("draft"), z.literal("published"), z.literal("scheduled")]),
+  frontmatter: z.string().nullable(),
+  show_title_and_feature_image: z.boolean(),
+  tiers: z
+    .array(latestTiersSchema)
+    .meta({ description: "Sent by default or with include: tiers" })
+    .optional(),
+  count: z
+    .object({
+      positive_feedback: z.number(),
+      negative_feedback: z.number(),
+      paid_conversions: z.number(),
+      signups: z.number(),
+    })
+    .meta({ description: DEFAULT_INCLUDES })
+    .optional(),
+  authors: z.array(latestAuthorsSchema),
+  primary_author: latestAuthorsSchema,
+  lexical: z
+    .string()
+    .catch(
+      '{"root":{"children":[{"children":[],"direction":null,"format":"","indent":0,"type":"paragraph","version":1}],"direction":null,"format":"","indent":0,"type":"root","version":1}}',
+    )
+    .optional(),
+  html: z.string().catch("").optional(),
+  plaintext: z.string().catch("").optional(),
+});
 
 export const adminPagesCreateSchema = z.object({
   title: z.string().min(1).max(2000),
@@ -46,7 +83,7 @@ export const adminPagesCreateSchema = z.object({
   feature_image_caption: z.string().max(65535).optional(),
   featured: z.boolean().optional(),
   status: z.union([z.literal("draft"), z.literal("published"), z.literal("scheduled")]).optional(),
-  locale: z.string().max(6).optional(),
+  locale: z.string().max(6).meta({ description: "Stored by Ghost but never sent back" }).optional(),
   visibility: z
     .union([
       z.literal("public"),

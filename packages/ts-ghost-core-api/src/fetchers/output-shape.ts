@@ -1,9 +1,10 @@
 import type { z, ZodRawShape } from "zod";
 
+import { requiredIncludes } from "../helpers/includes";
 import { sanitizeFormatMask, sanitizeMask } from "../helpers/masks";
 import type { StrictOption } from "../helpers/response-schema";
 import type { Exactly, Mask, NoUnrecognizedKeys } from "../utils";
-import { contentFormats, type ContentFormats } from "./formats";
+import { contentFormats, withEmptyFormats, type ContentFormats } from "./formats";
 
 /** What browse and read fetchers parse with: the full schema, the selected output, includes and strictness. */
 export type OutputConfig<
@@ -29,9 +30,11 @@ export function withFormats<
   formats: NoUnrecognizedKeys<Formats, OutputShape>,
 ) {
   const requiredFormats = sanitizeFormatMask(config.output, formats);
+  const formatKeys = Object.keys(requiredFormats).filter((key) => contentFormats.includes(key));
+  const required = config.output.required(requiredFormats as Exactly<Formats, Formats>);
   return {
-    formats: Object.keys(requiredFormats).filter((key) => contentFormats.includes(key)),
-    config: { ...config, output: config.output.required(requiredFormats as Exactly<Formats, Formats>) },
+    formats: formatKeys,
+    config: { ...config, output: withEmptyFormats(required, config.output, formatKeys) },
   };
 }
 
@@ -46,7 +49,9 @@ export function withInclude<
   include: NoUnrecognizedKeys<Includes, IncludeShape>,
 ) {
   const parsedInclude = config.include.parse(include);
-  const requiredIncludeKeys = sanitizeMask(config.output, parsedInclude, { excludeDotNotation: true });
+  const requiredIncludeKeys = sanitizeMask(config.output, requiredIncludes(config.include, parsedInclude), {
+    excludeDotNotation: true,
+  });
   return {
     include: Object.keys(parsedInclude),
     config: {
