@@ -16,12 +16,18 @@ ADR 0003 (after #52) had three targets: frozen v5-compat and v6-compat, and v6-l
 
 ## Decision
 
-### Two targets, selected by the version string
+### Two targets, selected by an option
 
-| Target   | Version string                                        | Promise                                                                                                 |
-| -------- | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| `latest` | `"v<pin minor>[.patch]"`                              | exactly what the pinned Ghost sends: narrow types, the editable schema modules                          |
-| `compat` | any other `"v5.x"`/`"v6.x"`, or a non-literal version | parses what every supported Ghost sends (5.130 up to the pin); exported schemas and types default to it |
+| Target   | Selected by            | Promise                                                                                                 |
+| -------- | ---------------------- | ------------------------------------------------------------------------------------------------------- |
+| `compat` | default                | parses what every supported Ghost sends (5.130 up to the pin); exported schemas and types default to it |
+| `latest` | `{ schema: "latest" }` | exactly what the pinned Ghost sends: narrow types, the editable schema modules                          |
+
+The version string names the Ghost you run and is sent as `Accept-Version`; it never selects types. Matching it against the pin made every pin bump widen a `"v<pin>"` user's types under a minor release, and a non-literal version lost every field that differs between the targets.
+
+The installed package release decides which Ghost `latest` is: each release pins one Ghost, and its changelog says which. A `latest` user on an older Ghost stays on the release that pinned it, so `latest` means pinning the exact package version. A `latest` client on another Ghost only warns, once per process per Ghost minor; throwing would break every `latest` user on every pin bump. A field that Ghost added and their Ghost lacks is an error result.
+
+Releases: a pin bump alone is a `patch`, and each is released, so every Ghost minor has a release to pin to. A field Ghost added is a `minor`; a field it removed or retyped, or a raised lower bound, is a `major`.
 
 `compat` is derived from `latest` in one file, `schemas/compat.ts`, with plain zod (`partial`, `extend`): one line per difference, commented with the Ghost versions (`// since 6.13`, `// 6.28–6.38`). The file is the history; there is no since/until table. A type test per resource asserts that `latest`'s output is assignable to `compat`'s.
 
@@ -52,5 +58,5 @@ PR 0 (client plumbing), then PR A (schemas), then PR B (conformance) based on PR
 ## Consequences
 
 - Drift edits the `latest` modules and adds one `compat.ts` line per removal or retype; the drift PR runs only the pin leg, and the `v5`/`v6.0` legs run on its normal CI.
-- Removed: the frozen v5-compat and v6-compat files, the `pin-compat` leg, `ghostAtLeast`, `requireStrict`, the undeclared-key and response-recording helpers, and the expected-failure machinery.
+- Removed: selecting a target by the version string (`TargetOf`, `schemaTarget`), the frozen v5-compat and v6-compat files, the `pin-compat` leg, `ghostAtLeast`, `requireStrict`, the undeclared-key and response-recording helpers, and the expected-failure machinery.
 - A newly accepted input stays invisible to the suite (the manifest has no bodies); release notes cover it.
