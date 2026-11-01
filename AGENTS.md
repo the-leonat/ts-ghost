@@ -140,3 +140,13 @@ pnpm version-packages # Apply changesets and bump versions
 - Unit tests run against mocked fetch responses
 - Integration tests require a real Ghost instance with specific test data (CI uses `astro-starter.digitalpress.blog`)
 - Tests include type checking via `vitest --typecheck`
+
+## Ghost resources (adding or updating)
+
+- Copy an existing resource; the live suite's rules are in `packages/ghost-conformance/README.md`.
+- Latest schemas are exactly what the pinned Ghost sends; compat differs only by one line per field in `schemas/compat.ts`, commented with Ghost versions (`// since 6.45`).
+- Find those versions in Ghost's source at release tags or by running the official image, never from changelogs or the manifest (it has no bodies).
+- Inputs are sent as given: never strip a key; mark one Ghost drops `@deprecated`.
+- A resource older Ghosts lack is still on every target, marked `@since`.
+- Live tests check only our schemas (shape, nullability, modifiers, round trip on latest), never Ghost's behaviour.
+- Changeset: pin bump alone `patch` (the drift PR writes it), added field `minor`, removed or retyped field `major`.
