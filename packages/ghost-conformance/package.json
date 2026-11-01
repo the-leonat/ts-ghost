@@ -12,8 +12,9 @@
     "lint": "eslint ./src --fix",
     "typecheck": "tsc --project ./tsconfig.json --noEmit",
     "manifest": "node src/manifest/generate.ts",
+    "drift": "node src/drift/workflow-steps.ts",
     "coverage": "node src/route-coverage/report.ts",
-    "clean": "rimraf .turbo"
+    "clean": "rimraf .turbo .drift"
   },
   "devDependencies": {
     "@ts-ghost/admin-api": "workspace:*",

@@ -62,6 +62,7 @@ pnpm playground:content-api
 - **packages/ts-ghost-content-api** (`@ts-ghost/content-api`): Content API client for read-only operations (posts, pages, authors, tags, tiers, settings)
 - **packages/ts-ghost-admin-api** (`@ts-ghost/admin-api`): Admin API client with full CRUD operations (posts, pages, members, tags, tiers, newsletters, offers, users, webhooks)
 - **apps/ghost-blog-buster** (`@ts-ghost/ghost-blog-buster`): CLI tool for exporting Ghost blog content to Markdown
+- **packages/ghost-conformance** (private): Live conformance suite: the admin-api client against a pinned Ghost in Docker, route manifests and the weekly drift job
 - **packages/tsconfig**: Shared TypeScript configuration
 - **docs**: Documentation site
 - **examples/nextjs**: Example Next.js integration

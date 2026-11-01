@@ -2,7 +2,7 @@
 
 Private package that checks `@ts-ghost/admin-api`'s schemas against a real Ghost. It runs the public client against the official Ghost Docker image (with MySQL 8) at a pinned version, and it keeps a manifest of every Admin API route. Nothing here is published, and the client packages don't import from it.
 
-Every Ghost image is pinned to an exact version, and by digest, in [`ghost-versions.json`](./ghost-versions.json): the last Ghost 5 (`v5`), Ghost 6.0.0 (`v6.0`) and the pin (`pin`). A Ghost run with `GHOST_LEG_VERSION` that isn't pinned there runs by tag alone; MySQL is pinned by digest in the compose file. The compose setup, the manifest and the client version all read it from there ([`src/ghost/versions.ts`](./src/ghost/versions.ts)). The pin's minor is also core-api's `GHOST_LATEST` ([`ghost-latest.ts`](../ts-ghost-core-api/src/schemas/ghost-latest.ts)), the minor the client's latest target matches; a unit test keeps them equal.
+Every Ghost image is pinned to an exact version, and by digest, in [`ghost-versions.json`](./ghost-versions.json): the last Ghost 5 (`v5`), Ghost 6.0.0 (`v6.0`) and the pin (`pin`), which the drift job moves with its new digest. A Ghost run with `GHOST_LEG_VERSION` that isn't pinned there runs by tag alone; MySQL is pinned by digest in the compose file. The compose setup, the manifest, the drift job and the client version all read it from there ([`src/ghost/versions.ts`](./src/ghost/versions.ts)). The pin's minor is also core-api's `GHOST_LATEST` ([`ghost-latest.ts`](../ts-ghost-core-api/src/schemas/ghost-latest.ts)), the minor the client's latest target matches; a unit test keeps them equal, and the drift job moves both.
 
 ## The live suite
 
@@ -53,7 +53,7 @@ pnpm --filter @ts-ghost/ghost-conformance test:manifest  # manifest generation t
 pnpm --filter @ts-ghost/ghost-conformance manifest   # regenerate manifest.json (Docker)
 ```
 
-The `manifest` script runs TypeScript directly with Node's type stripping, so it needs Node ≥ 22.18. The live suite and the manifest need a running Docker with `docker compose`. Each run starts its own compose project (Ghost plus MySQL on tmpfs) on a free local port and removes it afterwards, so runs never share state. An interrupted run removes its Ghost on exit, and each live run first removes projects left by a killed run (their names carry the owning process id).
+The `manifest` and `drift` scripts run TypeScript directly with Node's type stripping, so they need Node ≥ 22.18. The live suite and the manifest need a running Docker with `docker compose`. Each run starts its own compose project (Ghost plus MySQL on tmpfs) on a free local port and removes it afterwards, so runs never share state. An interrupted run removes its Ghost on exit, and each live run first removes projects left by a killed run (their names carry the owning process id).
 
 The live suite's global setup runs Ghost's first-run setup to create the Owner, signs in, creates an integration and fetches the Owner's staff token, all through Ghost's public API, then applies the SQL seed.
 
@@ -63,4 +63,26 @@ CI runs the live suite on every PR to `main`, once per leg ([`.github/workflows/
 
 ## Route coverage
 
-`pnpm coverage` calls every method of the latest client, as the client → manifest check does, and counts the manifest routes the client calls, with labs-flagged routes left out. It gives two numbers: routes that accept an integration token (what the client can use today) and all routes, whatever their auth. It also tables each resource (the route's first path segment) and lists the integration-token routes the client doesn't call.
+`pnpm coverage` calls every method of the latest client, as the client → manifest check does, and counts the manifest routes the client calls, with labs-flagged routes left out. It gives two numbers: routes that accept an integration token (what the client can use today) and all routes, whatever their auth. It also tables each resource (the route's first path segment) and lists the integration-token routes the client doesn't call. The drift PR shows the same report for the pin and the new Ghost side by side.
+
+## Drift PR
+
+[`.github/workflows/conformance-drift.yml`](../../.github/workflows/conformance-drift.yml) runs every Monday and can be started by hand with a Ghost version, from the default branch only. There is one drift PR, from the branch `conformance/drift`. When a newer Ghost image exists, the workflow:
+
+1. bumps the pin in `ghost-versions.json` and `GHOST_LATEST` to its minor, and regenerates the manifest,
+2. runs the client → manifest check and the live suite's `pin` leg (latest) against the new Ghost; the `v5` and `v6.0` legs run on the PR's normal CI,
+3. writes no schema: the reviewer updates latest (the schema modules in `packages/ts-ghost-admin-api/src/schemas/`) to what the new Ghost sends and adds a line to `schemas/compat.ts` for each field Ghost removed or retyped, so compat still parses older Ghosts; an added field gets a `minor` changeset (compat makes it optional with `partial`), a removed or retyped one a `major` changeset,
+4. writes `.changeset/ghost-pin.md`, a `patch` changeset saying "Pins Ghost <minor>", replaced on each run. A pin bump alone is a patch, and each is released, so every Ghost minor has a release for `{ schema: "latest" }` users to pin to,
+5. force-pushes `conformance/drift` and rewrites the PR's title and description: always from the default branch's pin to the newest Ghost, with the manifest diff, the test results, the route coverage at both versions, and links to the release notes of every version in between,
+6. fails the run if the manifest, the client check or the live suite failed, so a breaking release doesn't show up as green.
+
+Merging the PR bumps the pin. If nobody fixes it, it stays open and the next runs add the newer releases to it. The next run overwrites commits pushed to the drift branch, so fix on another branch or merge soon after. When the pin already is the newest Ghost, the run closes an open drift PR. A PR opened with the workflow's default `GITHUB_TOKEN` starts no other workflows: close and reopen it, or set a `CONFORMANCE_PR_TOKEN` secret (GitHub App or fine-grained token).
+
+The release notes matter because the suite can't see everything, such as new query options or newly accepted inputs. If the new Ghost has a major the client doesn't support yet, the live suite doesn't run, and the PR and the job say so.
+
+The workflow has two jobs. `drift` runs the dependencies and a fresh Ghost with a read-only token and hands its results to `pr` as an artifact; `pr` runs only `src/drift/workflow-steps.ts` with plain Node and is the only job that can push and edit PRs. The steps can be run locally with `pnpm drift <step>`.
+
+Setup:
+
+- **Settings → Actions → General → Workflow permissions → "Allow GitHub Actions to create and approve pull requests"**. Without it, the `pr` job fails with a message pointing to that setting.
+- PRs opened with the workflow's `GITHUB_TOKEN` start no other workflows, so the drift PR shows no Tests or Conformance checks until someone closes and reopens it. An optional `CONFORMANCE_PR_TOKEN` secret (a GitHub App installation token or a fine-grained token with contents and pull-requests write on this repository) is used instead when set, and CI then runs on its own.
