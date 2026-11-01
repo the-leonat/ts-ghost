@@ -61,6 +61,10 @@ The code depends one way, `ghost ← seeds ← live`: [`src/ghost/`](./src/ghost
 
 CI runs the live suite on every PR to `main`, once per leg ([`.github/workflows/conformance.yml`](../../.github/workflows/conformance.yml)). The Tests workflow adds the client's route coverage to its job summary.
 
+## Compat sweep
+
+The legs only see Ghost 5.130, 6.0 and the pin, but Ghost adds and removes fields between them. [`.github/workflows/conformance-sweep.yml`](../../.github/workflows/conformance-sweep.yml) runs monthly, and by hand with a list of versions: for Ghost 6.10, 6.30, 6.50, 6.60 and the minor before the pin, it generates that Ghost's manifest and runs the compat leg against it (`GHOST_LEG=v6.0 GHOST_LEG_VERSION=<version>`). A failure is a field `compat.ts` doesn't declare yet.
+
 ## Route coverage
 
 `pnpm coverage` calls every method of the latest client, as the client → manifest check does, and counts the manifest routes the client calls, with labs-flagged routes left out. It gives two numbers: routes that accept an integration token (what the client can use today) and all routes, whatever their auth. It also tables each resource (the route's first path segment) and lists the integration-token routes the client doesn't call. The drift PR shows the same report for the pin and the new Ghost side by side.
