@@ -1,6 +1,6 @@
 # 3. Check the clients live against pinned Ghost images, with a route manifest as the only generated artefact
 
-- Status: accepted
+- Status: accepted; targets, live-suite rules, markers and branch model superseded by [ADR 0004](./0004-two-schema-targets-and-a-schema-only-live-suite.md)
 - Date: 2026-10-28
 - Context: spec the-leonat/ts-ghost#23, tickets #24–#43, #45; this ADR is ticket #36
 - Supersedes: [ADR 0002](./0002-fixture-recorded-conformance-checks.md) (fixture-recorded conformance). ADR 0002 never reached `main`: it lived only on the branch `integration` (PR #11, closed) and is kept here as a historical record.
