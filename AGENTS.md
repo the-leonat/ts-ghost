@@ -62,6 +62,7 @@ pnpm playground:content-api
 - **packages/ts-ghost-content-api** (`@ts-ghost/content-api`): Content API client for read-only operations (posts, pages, authors, tags, tiers, settings)
 - **packages/ts-ghost-admin-api** (`@ts-ghost/admin-api`): Admin API client with full CRUD operations (posts, pages, members, tags, tiers, newsletters, offers, users, webhooks)
 - **apps/ghost-blog-buster** (`@ts-ghost/ghost-blog-buster`): CLI tool for exporting Ghost blog content to Markdown
+- **packages/ghost-conformance** (private): Live conformance suite: the admin-api client against a pinned Ghost in Docker, route manifests and the weekly drift job
 - **packages/tsconfig**: Shared TypeScript configuration
 - **docs**: Documentation site
 - **examples/nextjs**: Example Next.js integration
@@ -139,3 +140,13 @@ pnpm version-packages # Apply changesets and bump versions
 - Unit tests run against mocked fetch responses
 - Integration tests require a real Ghost instance with specific test data (CI uses `astro-starter.digitalpress.blog`)
 - Tests include type checking via `vitest --typecheck`
+
+## Ghost resources (adding or updating)
+
+- Copy an existing resource; the live suite's rules are in `packages/ghost-conformance/README.md`.
+- Latest schemas are exactly what the pinned Ghost sends; compat differs only by one line per field in `schemas/compat.ts`, commented with Ghost versions (`// since 6.45`).
+- Find those versions in Ghost's source at release tags or by running the official image, never from changelogs or the manifest (it has no bodies).
+- Inputs are sent as given: never strip a key; mark one Ghost drops `@deprecated`.
+- A resource older Ghosts lack is still on every target, marked `@since`.
+- Live tests check only our schemas (shape, nullability, modifiers, round trip on latest), never Ghost's behaviour.
+- Changeset: pin bump alone `patch` (the drift PR writes it), added field `minor`, removed or retyped field `major`.
