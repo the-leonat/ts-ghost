@@ -7,7 +7,7 @@ import { EMAIL_SEED } from "../seeds/emails.ts";
 import { uniqueSuffix } from "../seeds/helpers.ts";
 import { FULL_HTML, fullScalars, seedPosts } from "../seeds/posts-and-pages.ts";
 import { assertOk, liveTest, onLatest } from "./live-test.ts";
-import { CONTENT, fetched, MODIFIERS, NOT_SEEDABLE, NOT_SENT_BACK } from "./posts-and-pages.ts";
+import { CONTENT, fetched, MODIFIERS, NOT_SEEDABLE, NOT_SENT_BACK } from "./content-cases.ts";
 import { deprecatedKeys, nullabilityGaps, readBack, unsentInputs } from "./schema-keys.ts";
 
 let seed: Awaited<ReturnType<typeof seedPosts>>;
