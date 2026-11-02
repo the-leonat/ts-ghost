@@ -87,6 +87,23 @@ export function summariseSuite(report: VitestJsonReport | undefined): SuiteSumma
   };
 }
 
+/** One report of several Vitest runs; undefined when any of them never reported, which counts as a crash. */
+export function mergeReports(reports: (VitestJsonReport | undefined)[]): VitestJsonReport | undefined {
+  if (reports.some((r) => !r)) return undefined;
+  const present = reports as VitestJsonReport[];
+  const sum = (
+    key: "numTotalTests" | "numPassedTests" | "numFailedTests" | "numPendingTests" | "numTodoTests",
+  ) => present.reduce((total, r) => total + r[key], 0);
+  return {
+    numTotalTests: sum("numTotalTests"),
+    numPassedTests: sum("numPassedTests"),
+    numFailedTests: sum("numFailedTests"),
+    numPendingTests: sum("numPendingTests"),
+    numTodoTests: sum("numTodoTests"),
+    testResults: present.flatMap((r) => r.testResults),
+  };
+}
+
 /** An error line cut to 300 characters, so a long response dump doesn't flood the PR body. */
 function shorten(line: string): string {
   return line.length > 300 ? `${line.slice(0, 299)}…` : line;
@@ -130,7 +147,7 @@ export function renderPrBody(input: {
   releases: GhostRelease[];
   diff: ManifestDiff;
   suite: SuiteSummary;
-  /** The Docker-free unit tests, incl. the client → manifest check, against the new manifest. */
+  /** The conformance, core-api and admin-api unit tests, incl. the client → manifest check, against the new pin. */
   client: SuiteSummary;
   /** Client resources, so the reviewer knows which release notes matter. */
   resources: string[];
@@ -164,7 +181,7 @@ export function renderPrBody(input: {
     ...(client.ok
       ? []
       : [
-          `> ❌ **The client → manifest check fails against the new manifest.** Do not merge until it is green.`,
+          `> ❌ **The unit tests or the client → manifest check fail against the new pin.** Do not merge until they are green.`,
           "",
         ]),
     `Weekly drift check: bumps the pinned Ghost from \`${plan.from}\` → \`${plan.to}\` and regenerates \`manifest.json\`. Merging it bumps the pin; how this PR works is in ${rules}.`,
@@ -175,7 +192,7 @@ export function renderPrBody(input: {
     "",
     ...renderSuite("live suite", suite, run),
     "",
-    "## Client → manifest check",
+    "## Unit tests and client → manifest check",
     "",
     ...renderSuite("client check", client, run),
     "",

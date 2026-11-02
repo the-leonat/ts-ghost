@@ -72,7 +72,7 @@ jobs:
         continue-on-error: true
         run: pnpm manifest
 
-      - name: 🧭 Client → manifest check against the new manifest
+      - name: 🧭 Unit tests and client → manifest check against the new pin
         if: steps.plan.outputs.bump == 'true'
         continue-on-error: true
         run: pnpm drift client

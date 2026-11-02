@@ -74,7 +74,7 @@ The legs only see Ghost 5.130, 6.0 and the pin, but Ghost adds and removes field
 [`.github/workflows/conformance-drift.yml`](../../.github/workflows/conformance-drift.yml) runs every Monday and can be started by hand with a Ghost version, from the default branch only. There is one drift PR, from the branch `conformance/drift`. When a newer Ghost image exists, the workflow:
 
 1. bumps the pin in `ghost-versions.json` and `GHOST_LATEST` to its minor, and regenerates the manifest,
-2. runs the client → manifest check and the live suite's `pin` leg (latest) against the new Ghost; the `v5` and `v6.0` legs run on the PR's normal CI,
+2. runs the conformance, core-api and admin-api unit tests (with the client → manifest check) and the live suite's `pin` leg (latest) against the new Ghost; the `v5` and `v6.0` legs run on the PR's normal CI,
 3. writes no schema: the reviewer updates latest (the schema modules in `packages/ts-ghost-admin-api/src/schemas/`) to what the new Ghost sends and adds a line to `schemas/compat.ts` for each field Ghost removed or retyped, so compat still parses older Ghosts; an added field gets a `minor` changeset (compat makes it optional with `partial`), a removed or retyped one a `major` changeset,
 4. writes `.changeset/ghost-pin.md`, a `patch` changeset saying "Pins Ghost <minor>", replaced on each run. A pin bump alone is a patch, and each is released, so every Ghost minor has a release for `{ schema: "latest" }` users to pin to,
 5. force-pushes `conformance/drift` and rewrites the PR's title and description: always from the default branch's pin to the newest Ghost, with the manifest diff, the test results, the route coverage at both versions, and links to the release notes of every version in between,

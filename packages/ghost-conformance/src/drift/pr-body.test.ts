@@ -7,6 +7,7 @@ import { measureCoverage } from "../route-coverage/coverage.ts";
 import {
   clientResources,
   diffManifests,
+  mergeReports,
   renderPinChangeset,
   renderPrBody,
   renderPrTitle,
@@ -133,6 +134,25 @@ describe("summariseSuite", () => {
   });
 });
 
+describe("mergeReports", () => {
+  const one = report([{ fullName: "a", status: "passed" }]);
+  const other = report([{ fullName: "b", status: "failed" }]);
+
+  test("adds up the runs, so a failure in any of them fails the suite", () => {
+    expect(summariseSuite(mergeReports([one, other]))).toMatchObject({
+      ok: false,
+      total: 2,
+      passed: 1,
+      failed: 1,
+      failures: ["b"],
+    });
+  });
+
+  test("a run that never reported makes the whole suite a crash", () => {
+    expect(summariseSuite(mergeReports([one, undefined]))).toMatchObject({ ok: false, crashed: true });
+  });
+});
+
 describe("renderPrTitle", () => {
   test("names both versions", () => {
     expect(renderPrTitle(plan, passing, passing)).toBe(TITLE);
@@ -236,14 +256,14 @@ describe("renderPrBody", () => {
     expect(text).toContain("- posts > edits persist");
   });
 
-  test("reports the client → manifest check against the new manifest", () => {
-    expect(body()).toMatch(/## Client → manifest check\n\n✅.*1 passed/);
+  test("reports the unit tests and the client → manifest check against the new pin", () => {
+    expect(body()).toMatch(/## Unit tests and client → manifest check\n\n✅.*1 passed/);
   });
 
   test("puts a failing client check up front and names its failing tests", () => {
     const client = summariseSuite(report([{ fullName: "posts.browse: GET /posts/", status: "failed" }]));
     const text = body({ client });
-    expect(text.split("\n")[0]).toMatch(/client → manifest check fails/i);
+    expect(text.split("\n")[0]).toMatch(/client → manifest check fail/i);
     expect(text).toContain("- posts.browse: GET /posts/");
   });
 

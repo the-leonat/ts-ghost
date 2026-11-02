@@ -22,6 +22,7 @@ import {
   clientResources,
   diffManifests,
   DRIFT_BRANCH,
+  mergeReports,
   renderPinChangeset,
   renderPrBody,
   renderPrTitle,
@@ -36,6 +37,12 @@ import {
 const PACKAGE_DIR = fileURLToPath(new URL("../..", import.meta.url));
 const STATE = resolve(process.env.DRIFT_STATE ?? join(PACKAGE_DIR, ".drift"));
 const file = (name: string) => join(STATE, name);
+/** The packages a pin bump can break, by report: tests may name the pin, and the bump moves core-api's GHOST_LATEST. */
+const UNIT_TESTS = {
+  "client.json": PACKAGE_DIR,
+  "client-core-api.json": join(PACKAGE_DIR, "../ts-ghost-core-api"),
+  "client-admin-api.json": join(PACKAGE_DIR, "../ts-ghost-admin-api"),
+};
 /** One fixed name, so each run replaces it and pending bumps never pile up. */
 const PIN_CHANGESET_FILE = fileURLToPath(new URL("../../../../.changeset/ghost-pin.md", import.meta.url));
 /** Set by the workflow from the manifest step's outcome; a failed generation leaves the old manifest. */
@@ -75,8 +82,13 @@ const steps: Record<string, () => Promise<number>> = {
     return vitest("suite.json", ["-c", "./vitest.config.live.ts"], { GHOST_LEG: "pin" });
   },
 
-  /** Runs the Docker-free unit tests, incl. the client → manifest check, against the new manifest. */
-  client: () => vitest("client.json", ["--typecheck"]),
+  /** Runs the Docker-free unit tests, incl. the client → manifest check, against the new pin. */
+  async client() {
+    const codes = [];
+    for (const [name, dir] of Object.entries(UNIT_TESTS))
+      codes.push(await vitest(name, ["--typecheck"], {}, dir));
+    return Math.max(...codes);
+  },
 
   /** Renders the PR title and body; also shows the body as the run's job summary. */
   async body() {
@@ -84,7 +96,7 @@ const steps: Record<string, () => Promise<number>> = {
     const before = parseManifest(await readFile(file("manifest.before.json"), "utf8"));
     const after = parseManifest(await readFile(MANIFEST_FILE, "utf8"));
     const suite = await liveSuite(plan);
-    const client = summariseSuite(await readReport("client.json"));
+    const client = await unitTests();
     // Imported here: it needs Vite, and the pr job runs this file without dependencies.
     const { recordSourceClientCalls } = await import("../client-routes/record-from-source.ts");
     // The bumped pin's latest client, as the client check ran it.
@@ -147,7 +159,7 @@ const steps: Record<string, () => Promise<number>> = {
         : []),
       ...verdictErrors({
         "live suite": await liveSuite(plan),
-        "client check": summariseSuite(await readReport("client.json")),
+        "client check": await unitTests(),
       }),
     ];
     errors.forEach(report);
@@ -162,8 +174,18 @@ async function liveSuite(plan: SavedPlan) {
   return summariseSuite(await readReport("suite.json"));
 }
 
-/** Runs Vitest in the package with `args`, keeping its JSON report as `report`; resolves to its exit code. */
-async function vitest(report: string, args: string[], env: Record<string, string> = {}): Promise<number> {
+/** The result of every unit test run together. */
+async function unitTests() {
+  return summariseSuite(mergeReports(await Promise.all(Object.keys(UNIT_TESTS).map(readReport))));
+}
+
+/** Runs Vitest in `cwd` with `args`, keeping its JSON report as `report`; resolves to its exit code. */
+async function vitest(
+  report: string,
+  args: string[],
+  env: Record<string, string> = {},
+  cwd = PACKAGE_DIR,
+): Promise<number> {
   await rm(file(report), { force: true });
   return new Promise((done) => {
     const child = spawn(
@@ -172,7 +194,7 @@ async function vitest(report: string, args: string[], env: Record<string, string
         ...["exec", "vitest", "run", ...args],
         ...["--reporter=default", "--reporter=json", `--outputFile.json=${file(report)}`],
       ],
-      { cwd: PACKAGE_DIR, stdio: "inherit", env: { ...process.env, ...env } },
+      { cwd, stdio: "inherit", env: { ...process.env, ...env } },
     );
     child.on("close", (code) => done(code ?? 1));
   });
