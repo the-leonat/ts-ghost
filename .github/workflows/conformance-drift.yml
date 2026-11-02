@@ -19,7 +19,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  DRIFT_BASE: ${{ github.event.repository.default_branch }}
+  DRIFT_BASE: drift-test
 
 jobs:
   # Runs the dev dependencies and a fresh Ghost, so it gets a read-only token and keeps none on disk.
@@ -35,7 +35,7 @@ jobs:
     steps:
       # The pin and the PR base are the default branch's; a run from another branch would rewrite its PR.
       - name: 🛑 Only from the default branch
-        if: github.ref_name != github.event.repository.default_branch
+        if: github.ref_name != 'drift-test'
         working-directory: .
         run: |
           echo "::error::Run the drift workflow from $DRIFT_BASE, not $GITHUB_REF_NAME."
