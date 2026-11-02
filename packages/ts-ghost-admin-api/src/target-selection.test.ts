@@ -8,6 +8,8 @@ const key = "1efedd9db174adee2d23d982:4b74dca0219bad629852191af326a45037346c2231
 const url = "https://my-ghost-blog.com";
 
 describe("a latest client on another Ghost minor", () => {
+  const [major, minor] = GHOST_LATEST.split(".");
+  const otherMinor = `${major}.${Number(minor) + 1}`;
   let warn: MockInstance<typeof console.warn>;
   const site = {
     title: "Blog",
@@ -33,12 +35,13 @@ describe("a latest client on another Ghost minor", () => {
   });
 
   test("warns once when Ghost's content-version differs from the pin, and still succeeds", async () => {
-    const api = new TSGhostAdminAPI(url, key, "v6.80", { schema: "latest" });
-    respondAs("v6.80");
+    const api = new TSGhostAdminAPI(url, key, `v${otherMinor}` as `v6.${string}`, { schema: "latest" });
+    respondAs(`v${otherMinor}`);
     expect(await api.site.fetch()).toMatchObject({ success: true });
     await api.site.fetch();
     expect(warn).toHaveBeenCalledTimes(1);
-    expect(warn.mock.calls[0]?.[0]).toMatch(/Ghost v6\.80.*latest.*6\.72.*compat/);
+    expect(warn.mock.calls[0]?.[0]).toContain(`Ghost v${otherMinor} answered a client on the latest schema`);
+    expect(warn.mock.calls[0]?.[0]).toContain(`matches Ghost ${GHOST_LATEST}`);
   });
 
   test("stays quiet on the pinned minor, and on a compat client whatever its version", async () => {
