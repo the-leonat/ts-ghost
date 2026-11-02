@@ -1,0 +1,16 @@
+# Temporary stub: registers the workflow so it can be dispatched from a branch.
+name: 🔁 Conformance drift (newest Ghost)
+on:
+  workflow_dispatch:
+    inputs:
+      ghost-version:
+        type: string
+        required: false
+        default: ""
+permissions:
+  contents: read
+jobs:
+  stub:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Dispatch with --ref a branch that has the real workflow."
