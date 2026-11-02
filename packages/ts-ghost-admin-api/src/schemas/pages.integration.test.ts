@@ -237,7 +237,7 @@ describe("pages integration tests browse", () => {
     expect(page.twitter_description).toBe(stubPage.twitter_description);
     expect(page.meta_title).toBe(stubPage.meta_title);
     expect(page.meta_description).toBe(stubPage.meta_description);
-    expect(page.email_subject).toBeUndefined();
+    expect(page).not.toHaveProperty("email_subject");
     expect(page.frontmatter).toBe(stubPage.frontmatter);
     expect(page.feature_image_alt).toBe(stubPage.feature_image_alt);
     expect(page.feature_image_caption).toBe(stubPage.feature_image_caption);
@@ -349,7 +349,7 @@ describe("pages integration tests browse", () => {
     expect(page.twitter_description).toBe(stubPage.twitter_description);
     expect(page.meta_title).toBe(stubPage.meta_title);
     expect(page.meta_description).toBe(stubPage.meta_description);
-    expect(page.email_subject).toBeUndefined();
+    expect(page).not.toHaveProperty("email_subject");
     expect(page.frontmatter).toBe(stubPage.frontmatter);
     expect(page.feature_image_alt).toBe(stubPage.feature_image_alt);
     expect(page.feature_image_caption).toBe(stubPage.feature_image_caption);

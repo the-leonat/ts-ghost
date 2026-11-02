@@ -17,7 +17,22 @@ export type HTTPClientOptions = {
   endpoint: "content" | "admin";
   /** Request options for every request, e.g. `{ redirect: "manual" }`; per-call options win, headers merge. */
   defaultRequestOptions?: RequestInit;
+  /** @internal The Ghost minor the client's schemas match, e.g. "6.72"; another `content-version` warns once. */
+  expectedVersion?: string;
 } & DebugOption;
+
+const warnedVersions = new Set<string>();
+
+/** Warns once per Ghost minor that differs from `expected`, as the latest types may not fit it. */
+function warnIfOffVersion(expected: string | undefined, response: Response) {
+  const sent = /^v?(\d+\.\d+)/.exec(response.headers.get("content-version") ?? "")?.[1];
+  if (!expected || !sent || sent === expected || warnedVersions.has(sent)) return;
+  warnedVersions.add(sent);
+  console.warn(
+    `@ts-ghost: Ghost v${sent} answered a client on the latest schema, which matches Ghost ${expected}; ` +
+      `types may not fit. Install the release that pins your Ghost, or drop { schema: "latest" } for compat.`,
+  );
+}
 
 /** Merges caller headers over generated ones; a caller header replaces a same-named one, case-insensitively. */
 function mergeHeaders(generated: Record<string, string>, ...supplied: (HeadersInit | undefined)[]) {
@@ -215,6 +230,7 @@ export class HTTPClient<const Options extends HTTPClientOptions = any> implement
     const headers = await this.genHeaders();
     try {
       const response = await fetch(url.toString(), this.requestInit(options, headers));
+      warnIfOffVersion(this.config.expectedVersion, response);
       const status = response.status;
       const body = await response.text();
       // A delete answers 204 with no body.

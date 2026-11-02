@@ -10,9 +10,29 @@ It is made to interract with the Ghost Admin API with authentication by key. Fil
 
 ## Requirements
 
-This client is only compatible with Ghost versions 5.x for now.
+This client works with Ghost 5 and Ghost 6. Pass your Ghost's version: it is sent as `Accept-Version` and selects no types. The `schema` option picks the target responses are parsed with:
 
-- Ghost 5.^ (Any Ghost version after 5.0)
+| Option                 | Schema target | Parses responses as                                                                        |
+| ---------------------- | ------------- | ------------------------------------------------------------------------------------------ |
+| none, the default      | `compat`      | any supported Ghost (5.130 up to the pin) sends them: fields not in every one are optional |
+| `{ schema: "latest" }` | `latest`      | Ghost 6.72, the minor this release pins, sends them: all of them required                  |
+
+Optional (`field?:`) and nullable (`| null`) are separate: optional means some Ghost version leaves the field out, nullable means Ghost sends `null` for it. `compat` promises that every supported Ghost parses, not stable types: when Ghost removes or retypes a field, it changes in a major release.
+
+`latest` means pinning the exact package version. Each release pins one Ghost (`GHOST_LATEST`, today `"6.72"`), and any release may move that pin, a patch included. So install the release whose changelog says "Pins Ghost 6.72" for your Ghost, without a version range (`pnpm add -E`), and upgrade it when you upgrade Ghost. On another Ghost, a field that Ghost lacks is an error result. A target known only at runtime (a `SchemaTarget` variable) is typed `compat`.
+
+```ts
+const compat = new TSGhostAdminAPI(url, key, "v6.0"); // any supported Ghost, 5.130 included
+const latest = new TSGhostAdminAPI(url, key, "v6.72", { schema: "latest" }); // Ghost 6.72, the pin
+```
+
+The exported types take the target too, e.g. `Post<"latest">`, `Member<"latest">` (default `"compat"`). The exported schemas (`adminPostsSchema`, `adminMembersSchema`, …) are the `compat` ones; `latest`'s are only in `adminSchemas.latest`.
+
+What differs per target:
+
+- **Fields.** `compat` has every field any supported Ghost sends; one not in all of them is optional, e.g. `newsletter.show_share_button?: boolean` (since Ghost 6.23). It is derived from `latest` in `schemas/compat.ts`, one line per difference. `latest` requires every field Ghost 6.72 sends and leaves out ones it no longer sends. `adminSchemas[target]` holds each target's runtime schemas.
+- **Inputs.** Both targets take the same inputs and send everything you pass, `mobiledoc` and `locale` included. Inputs every Ghost ignores are `@deprecated` and still sent: a post's body `newsletter`, members' `geolocation`, edit's `stripe_customer_id`, the tiers price and benefit includes. Newsletters, tiers and offers are read by id only: Ghost has no read-by-slug route for them.
+- **Version check.** A `latest` client warns once (`console.warn`) when Ghost's `content-version` header names another minor than 6.72. It never fails a request, in strict mode neither. Install the release that pins your Ghost, or drop the option for `compat`.
 
 - Node.js 16+
   - We rely on global `fetch` being available, so you can bring your own

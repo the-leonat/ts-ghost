@@ -22,8 +22,13 @@ export const sanitizeMask = <Shape extends z.ZodRawShape>(
   );
 };
 
-export const sanitizeFormatMask = <Shape extends z.ZodRawShape>(schema: z.ZodObject<Shape>, mask: RuntimeMask) => {
+export const sanitizeFormatMask = <Shape extends z.ZodRawShape>(
+  schema: z.ZodObject<Shape>,
+  mask: RuntimeMask,
+) => {
   const knownKeys = getKnownSchemaKeys(schema);
 
-  return Object.fromEntries(Object.entries(mask).filter(([key]) => knownKeys.has(key) && contentFormats.includes(key)));
+  return Object.fromEntries(
+    Object.entries(mask).filter(([key]) => knownKeys.has(key) && contentFormats.includes(key)),
+  );
 };

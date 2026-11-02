@@ -9,8 +9,14 @@ const site = {
   title: "t",
   description: "d",
   logo: null,
+  icon: null,
+  cover_image: null,
+  accent_color: null,
+  locale: "en",
   version: "6.72",
   url: "https://ghost.org/",
+  site_uuid: "3a6509ac-c05d-4ab0-b201-b09512b9ad72",
+  allow_external_signup: true,
 };
 const withBrand = json({ site: { ...site, brand: { color: "#fff" } } });
 

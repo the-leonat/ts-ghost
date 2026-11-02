@@ -32,10 +32,30 @@ It is made to interract with the Ghost Admin API with authentication by key. Fil
 
 ## Requirements
 
-This client is only compatible with Ghost versions 5.x and 6x.
+This client works with Ghost 5 and Ghost 6. Pass your Ghost's version: it is sent as `Accept-Version` and selects no types. The `schema` option picks the target responses are parsed with:
 
-- Ghost 5.^ (Any Ghost version after 5.0)
-- Ghost 6.^ (Any Ghost version after 6.0)
+| Option                 | Schema target | Parses responses as                                                                        |
+| ---------------------- | ------------- | ------------------------------------------------------------------------------------------ |
+| none, the default      | `compat`      | any supported Ghost (5.130 up to the pin) sends them: fields not in every one are optional |
+| `{ schema: "latest" }` | `latest`      | Ghost 6.72, the minor this release pins, sends them: all of them required                  |
+
+Optional (`field?:`) and nullable (`| null`) are separate: optional means some Ghost version leaves the field out, nullable means Ghost sends `null` for it. `compat` promises that every supported Ghost parses, not stable types: when Ghost removes or retypes a field, it changes in a major release.
+
+`latest` means pinning the exact package version. Each release pins one Ghost (`GHOST_LATEST`, today `"6.72"`), and any release may move that pin, a patch included. So install the release whose changelog says "Pins Ghost 6.72" for your Ghost, without a version range (`pnpm add -E`), and upgrade it when you upgrade Ghost. On another Ghost, a field that Ghost lacks is an error result. A target known only at runtime (a `SchemaTarget` variable) is typed `compat`.
+
+```ts
+const compat = new TSGhostAdminAPI(url, key, "v6.0"); // any supported Ghost, 5.130 included
+const latest = new TSGhostAdminAPI(url, key, "v6.72", { schema: "latest" }); // Ghost 6.72, the pin
+```
+
+The exported types take the target too, e.g. `Post<"latest">`, `Member<"latest">` (default `"compat"`). The exported schemas (`adminPostsSchema`, `adminMembersSchema`, …) are the `compat` ones; `latest`'s are only in `adminSchemas.latest`.
+
+What differs per target:
+
+- **Fields.** `compat` has every field any supported Ghost sends; one not in all of them is optional, e.g. `newsletter.show_share_button?: boolean` (since Ghost 6.23). It is derived from `latest` in `schemas/compat.ts`, one line per difference. `latest` requires every field Ghost 6.72 sends and leaves out ones it no longer sends. `adminSchemas[target]` holds each target's runtime schemas.
+- **Inputs.** Both targets take the same inputs and send everything you pass, `mobiledoc` and `locale` included. Inputs every Ghost ignores are `@deprecated` and still sent: a post's body `newsletter`, members' `geolocation`, edit's `stripe_customer_id`, the tiers price and benefit includes. Newsletters, tiers and offers are read by id only: Ghost has no read-by-slug route for them.
+- **Version check.** A `latest` client warns once (`console.warn`) when Ghost's `content-version` header names another minor than 6.72. It never fails a request, in strict mode neither. Install the release that pins your Ghost, or drop the option for `compat`.
+
 - Node.js 16+
   - We rely on global `fetch` being available, so you can bring your own
     polyfill and if you run Node 16, you'll need to run with the
@@ -72,7 +92,7 @@ To know which Ghost Version you are using go in the Settings and click on top ri
 
 ![Ghost Version](https://github.com/PhilDL/ts-ghost/assets/4941205/c46034a5-844e-4d8c-b525-a47e26d941c6)
 
-Here the version is **"v5.47.0"**
+Here the version is **"v6.72.0"**: pass your Ghost's version, `"v6.72"`, or any `"v6.x"` for Ghost 6 and `"v5.x"` for Ghost 5. That gives the `compat` schemas, which parse on every supported Ghost; for narrow types see `{ schema: "latest" }` under Requirements.
 
 ### Installation
 
@@ -92,11 +112,7 @@ GHOST_ADMIN_API_KEY="1efedd9db174adee2d23d982:4b74dca0219bad629852191af326a45037
 ```ts title="ghost-queries.ts"
 import { TSGhostAdminAPI } from "@ts-ghost/admin-api";
 
-const api = new TSGhostAdminAPI(
-  process.env.GHOST_URL || "",
-  process.env.GHOST_ADMIN_API_KEY || "",
-  "v5.47.0",
-);
+const api = new TSGhostAdminAPI(process.env.GHOST_URL || "", process.env.GHOST_ADMIN_API_KEY || "", "v6.0");
 
 export async function getBlogPosts() {
   const response = await api.posts
@@ -245,17 +261,19 @@ Alternatively, coming from a `browse` query you also have access to the `paginat
 The result is a **discriminated union** with the Boolean `success` as a discriminator, so a check on `success` will let you know if the query was successful or not. The shape of the "OK" path depends on the query you made and the output modifiers you used.
 
 ```ts
-const result: {
-    success: true;
-    data: Member; // Shape depends on resource + browse | read + output modifiers
-    // contains aditionnal metadata for browse queries
-} | {
-    success: false;
-    errors: {
+const result:
+  | {
+      success: true;
+      data: Member; // Shape depends on resource + browse | read + output modifiers
+      // contains aditionnal metadata for browse queries
+    }
+  | {
+      success: false;
+      errors: {
         message: string;
         type: string;
-    }[];
-}
+      }[];
+    };
 ```
 
 ## Mutations (Add / Edit / Delete)
@@ -451,26 +469,28 @@ The `data` property of the result will be an array of objects of the resource yo
 
 ```ts
 // example for the browse query (the data is an array of objects)
-const result: {
-    success: true;
-    data: Post[];
-    meta: {
+const result:
+  | {
+      success: true;
+      data: Post[];
+      meta: {
         pagination: {
-            pages: number;
-            limit: number;
-            page: number;
-            total: number;
-            prev: number | null;
-            next: number | null;
+          pages: number;
+          limit: number;
+          page: number;
+          total: number;
+          prev: number | null;
+          next: number | null;
         };
-    };
-} | {
-    success: false;
-    errors: {
+      };
+    }
+  | {
+      success: false;
+      errors: {
         message: string;
         type: string;
-    }[];
-}
+      }[];
+    };
 ```
 
 ### Result type of `.paginate()`
@@ -478,28 +498,30 @@ const result: {
 Paginate is a method that will return a cursor and a `next` fetcher to directly have the next query with the same parameters but on page n + 1. See a complete example in the [Common Recipes](/docs/admin-api/common-recipes) section.
 
 ```ts
-const result: {
-    success: true;
-    data: Post[];
-    meta: {
+const result:
+  | {
+      success: true;
+      data: Post[];
+      meta: {
         pagination: {
-            pages: number;
-            limit: number | "all";
-            page: number;
-            total: number;
-            prev: number | null;
-            next: number | null;
+          pages: number;
+          limit: number | "all";
+          page: number;
+          total: number;
+          prev: number | null;
+          next: number | null;
         };
-    };
-    next: BrowseFetcher | undefined; // the next page fetcher if it is defined
-} | {
-    success: false;
-    errors: {
+      };
+      next: BrowseFetcher | undefined; // the next page fetcher if it is defined
+    }
+  | {
+      success: false;
+      errors: {
         message: string;
         type: string;
-    }[];
-    next: undefined; // the next page fetcher is undefined here
-}
+      }[];
+      next: undefined; // the next page fetcher is undefined here
+    };
 ```
 
 Here you can use the `next` property to get the next page fetcher if it is defined.
@@ -517,7 +539,7 @@ The `read` method is used to one item from a Ghost Admin API resource, it is the
 
 Options for the read method depends on the resource you are querying. Each resource have a specific identity field that you can use to fetch it.
 
-For example, the `Post` resource will have `id` and `slug` as identity fields but the `Member` resource will only have `id`. On the other hand the `User` resource will have `id`, and `email` as identity fields.
+For example, the `Post` resource will have `id` and `slug` as identity fields but the `Member` resource will only have `id`. On the other hand the `User` resource will have `id`, `email` and `slug` as identity fields.
 
 **Use TypeScript autocomplete to guide you through the available identity fields.**
 
@@ -527,17 +549,17 @@ import { TSGhostAdminAPI } from "@ts-ghost/admin-api";
 const api = new TSGhostAdminAPI(
   "https://demo.ghost.io",
   "1efedd9db174adee2d23d982:4b74dca0219bad629852191af326a45037346c2231240e0f7aec1f9371cc14e8",
-  "v6.0"
+  "v6.0",
 );
 
 let query = api.users.read({
-  email: "philippe@ts-ghost.com"
+  email: "philippe@ts-ghost.com",
 });
 
 // or
 
 let query = api.users.read({
-  id: "edHks74hdKqhs34izzahd45"
+  id: "edHks74hdKqhs34izzahd45",
 });
 ```
 
@@ -584,16 +606,18 @@ The `data` property of the result will be an object corresponding to the resourc
 
 ```ts
 // example for the read query (the data is an object)
-const result: {
-    success: true;
-    data: Post; // parsed by the Zod Schema and modified by the fields selected
-} | {
-    success: false;
-    errors: {
+const result:
+  | {
+      success: true;
+      data: Post; // parsed by the Zod Schema and modified by the fields selected
+    }
+  | {
+      success: false;
+      errors: {
         message: string;
         type: string;
-    }[];
-}
+      }[];
+    };
 ```
 
 <ContentNavigation
@@ -609,10 +633,10 @@ The result type from the subsequent `fetch` will be modified to match your selec
 
 ```ts /fields({ title: true })/
 // Example with read...
-let result = await api.posts.read({ slug: "slug"}).fields({ title: true }).fetch();
+let result = await api.posts.read({ slug: "slug" }).fields({ title: true }).fetch();
 
 // ... and with browse
-let result = await api.posts.browse({limit: 2}).fields({ title: true }).fetch();
+let result = await api.posts.browse({ limit: 2 }).fields({ title: true }).fetch();
 ```
 
 ## Select specific fields with `.fields()`
@@ -755,6 +779,21 @@ let query = await api.posts
   .fetch({ next: { revalidate: 10 } }); // NextJS revalidate this data every 10 seconds at most
 ```
 
+### Client options
+
+The client's fourth argument sets options for every request it makes:
+
+```ts
+const api = new TSGhostAdminAPI(url, key, "v6.0", {
+  // Applied to every request, add, edit and delete included; per-call options win and headers are merged.
+  defaultRequestOptions: { redirect: "manual", headers: { "X-Client": "my-app" } },
+  // Fail a result that carries a key the client's schema doesn't declare.
+  strict: { ignore: ["posts[].new_key"] },
+});
+```
+
+By default a key Ghost sends that the schema doesn't declare passes through to `result.data`, untyped. With `strict: true` such a key instead fails the result with one `{ type: "ResponseSchemaError", kind: "undeclared", path, message }` error per key, where `path` is in Ghost's terms (e.g. `posts[0].new_key`); a value the schema rejects gets `kind: "mismatch"`. `strict: { ignore: [...] }` is strict mode that still lets the listed paths through, `[]` matching any index. Strict mode is a testing and drift tool, not for production: a Ghost release that adds a field would fail every strict result. A response that violates the schema, e.g. a required field missing or `null` where it isn't nullable, is an error result with or without it.
+
 <ContentNavigation
 previous={{ title: "Output Modfiers", href: "/docs/admin-api/output-modifiers" }}
 next={{ title: "Add", href: "/docs/admin-api/add" }}
@@ -811,16 +850,18 @@ The result will be parsed and typed with the `output` schema and represent the n
 
 ```ts
 // return from the `add` method
-const result: {
-    success: true;
-    data: Member; // parsed by the Zod Schema given in the config
-} | {
-    success: false;
-    errors: {
+const result:
+  | {
+      success: true;
+      data: Member; // parsed by the Zod Schema given in the config
+    }
+  | {
+      success: false;
+      errors: {
         message: string;
         type: string;
-    }[];
-}
+      }[];
+    };
 ```
 
 <ContentNavigation
@@ -862,16 +903,18 @@ The result will be parsed and typed with the `output` schema and represent the n
 
 ```ts
 // return from the `edit` method
-const result: {
-    success: true;
-    data: Member;
-} | {
-    success: false;
-    errors: {
+const result:
+  | {
+      success: true;
+      data: Member;
+    }
+  | {
+      success: false;
+      errors: {
         message: string;
         type: string;
-    }[];
-}
+      }[];
+    };
 ```
 
 <ContentNavigation
@@ -907,15 +950,17 @@ The response will not contain any data since Ghost API just return a 204 empty r
 
 ```ts
 // return from the `delete` method
-const result: {
-    success: true;
-} | {
-    success: false;
-    errors: {
+const result:
+  | {
+      success: true;
+    }
+  | {
+      success: false;
+      errors: {
         message: string;
         type: string;
-    }[];
-}
+      }[];
+    };
 ```
 
 <ContentNavigation
@@ -968,8 +1013,7 @@ const tiers = await api.tiers
   .browse({
     filter: "active:true+type:paid",
   })
-  .include({ benefits: true, monthly_price: true, yearly_price: true })
-  .fetch();
+  .fetch(); // Ghost always sends prices and benefits, no include needed
 
 if (!tiers.success) {
   throw new Error(tiers.errors.join(", "));
@@ -1052,10 +1096,7 @@ let key = "1efedd9db174adee2d23d982:4b74dca0219bad629852191af326a45037346c223124
 const api = new TSGhostAdminAPI(url, key, "v6.0");
 
 const posts: Post[] = [];
-let cursor = await api.posts
-  .browse()
-  .include({ authors: true, tags: true })
-  .paginate();
+let cursor = await api.posts.browse().include({ authors: true, tags: true }).paginate();
 if (cursor.current.success) posts.push(...cursor.current.data);
 while (cursor.next) {
   cursor = await cursor.next.paginate();
