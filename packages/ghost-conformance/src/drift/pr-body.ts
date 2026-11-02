@@ -155,12 +155,25 @@ export function renderPrBody(input: {
   coverage: Coverage[];
   /** Regenerating the manifest failed, so `diff` and the client check saw the old manifest. */
   manifestFailed?: boolean;
+  /** `CONFORMANCE_PR_TOKEN` is set, so CI starts on its own. */
+  prTokenSet?: boolean;
   runUrl?: string;
   /** e.g. `https://github.com/owner/repo`, to link the README's rules. */
   repoUrl?: string;
 }): string {
-  const { plan, releases, diff, suite, client, resources, coverage, manifestFailed, runUrl, repoUrl } =
-    input;
+  const {
+    plan,
+    releases,
+    diff,
+    suite,
+    client,
+    resources,
+    coverage,
+    manifestFailed,
+    prTokenSet,
+    runUrl,
+    repoUrl,
+  } = input;
   const run = runUrl ? ` ([run](${runUrl}))` : "";
   const rules = repoUrl
     ? `[the conformance README](${repoUrl}/blob/HEAD/${README}#drift-pr)`
@@ -186,8 +199,12 @@ export function renderPrBody(input: {
         ]),
     `Weekly drift check: bumps the pinned Ghost from \`${plan.from}\` → \`${plan.to}\` and regenerates \`manifest.json\`. Merging it bumps the pin; how this PR works is in ${rules}.`,
     "",
-    "CI doesn't start on this PR unless the `CONFORMANCE_PR_TOKEN` secret is set: close and reopen it to run CI.",
-    "",
+    ...(prTokenSet
+      ? []
+      : [
+          "GitHub holds CI on this PR, because the bot's token opened it. Re-run the held runs or close and reopen the PR, so the `v5` and `v6.0` compat legs run. Setting the `CONFORMANCE_PR_TOKEN` secret skips this.",
+          "",
+        ]),
     "## Live suite",
     "",
     ...renderSuite("live suite", suite, run),

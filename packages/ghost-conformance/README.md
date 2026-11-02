@@ -80,7 +80,7 @@ The legs only see Ghost 5.130, 6.0 and the pin, but Ghost adds and removes field
 5. force-pushes `conformance/drift` and rewrites the PR's title and description: always from the default branch's pin to the newest Ghost, with the manifest diff, the test results, the route coverage at both versions, and links to the release notes of every version in between,
 6. fails the run if the manifest, the client check or the live suite failed, so a breaking release doesn't show up as green.
 
-Merging the PR bumps the pin. If nobody fixes it, it stays open and the next runs add the newer releases to it. The next run overwrites commits pushed to the drift branch, so fix on another branch or merge soon after. When the pin already is the newest Ghost, the run closes an open drift PR. A PR opened with the workflow's default `GITHUB_TOKEN` starts no other workflows: close and reopen it, or set a `CONFORMANCE_PR_TOKEN` secret (GitHub App or fine-grained token).
+Merging the PR bumps the pin. If nobody fixes it, it stays open and the next runs add the newer releases to it. The next run overwrites commits pushed to the drift branch, so fix on another branch or merge soon after. When the pin already is the newest Ghost, the run closes an open drift PR. GitHub holds the CI of a PR opened or pushed with the workflow's default `GITHUB_TOKEN`: re-run the held runs or close and reopen the PR, or set a `CONFORMANCE_PR_TOKEN` secret (GitHub App or fine-grained token). The PR body says this only when the secret isn't set.
 
 The release notes matter because the suite can't see everything, such as new query options or newly accepted inputs. If the new Ghost has a major the client doesn't support yet, the live suite doesn't run, and the PR and the job say so.
 
@@ -89,4 +89,4 @@ The workflow has two jobs. `drift` runs the dependencies and a fresh Ghost with 
 Setup:
 
 - **Settings → Actions → General → Workflow permissions → "Allow GitHub Actions to create and approve pull requests"**. Without it, the `pr` job fails with a message pointing to that setting.
-- PRs opened with the workflow's `GITHUB_TOKEN` start no other workflows, so the drift PR shows no Tests or Conformance checks until someone closes and reopens it. An optional `CONFORMANCE_PR_TOKEN` secret (a GitHub App installation token or a fine-grained token with contents and pull-requests write on this repository) is used instead when set, and CI then runs on its own.
+- GitHub holds runs started by the workflow's `GITHUB_TOKEN` (conclusion `action_required`), so the drift PR's Tests and Conformance checks don't run until someone re-runs them or closes and reopens the PR. An optional `CONFORMANCE_PR_TOKEN` secret (a GitHub App installation token or a fine-grained token with contents and pull-requests write on this repository) is used instead when set, and CI then runs on its own.

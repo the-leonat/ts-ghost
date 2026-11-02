@@ -87,6 +87,8 @@ jobs:
         run: pnpm drift body
         env:
           MANIFEST_OUTCOME: ${{ steps.manifest.outcome }}
+          # Only whether it is set: this job keeps no write token.
+          PR_TOKEN_SET: ${{ secrets.CONFORMANCE_PR_TOKEN != '' }}
 
       - name: 📦 Keep the drift state for the PR job
         if: ${{ !cancelled() && steps.plan.outcome == 'success' }}

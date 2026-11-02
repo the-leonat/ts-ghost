@@ -113,6 +113,7 @@ const steps: Record<string, () => Promise<number>> = {
       resources: clientResources(calls),
       coverage,
       manifestFailed: manifestFailed(),
+      prTokenSet: process.env.PR_TOKEN_SET === "true",
       runUrl,
       repoUrl: server && repo ? `${server}/${repo}` : undefined,
     });

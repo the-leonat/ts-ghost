@@ -286,9 +286,14 @@ describe("renderPrBody", () => {
     expect(text).not.toMatch(/stays open/);
   });
 
-  test("says other workflows don't run on it and how to start them", () => {
+  test("says CI is held on the bot's token and how to start it", () => {
+    expect(body()).toMatch(/re-run the held runs/i);
     expect(body()).toMatch(/close and reopen/i);
     expect(body()).toContain("CONFORMANCE_PR_TOKEN");
+  });
+
+  test("says nothing about holding CI when the token is set", () => {
+    expect(body({ prTokenSet: true })).not.toMatch(/held|close and reopen|CONFORMANCE_PR_TOKEN/i);
   });
 
   test("a crashed suite is reported as failing, not as zero failures", () => {
