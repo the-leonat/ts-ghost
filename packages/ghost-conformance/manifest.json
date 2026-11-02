@@ -1,5 +1,5 @@
 {
-  "ghost": "6.72.0",
+  "ghost": "6.73.0",
   "routes": [
     {"method":"GET","path":"/actions/","labs":null,"public":false,"integration":true,"staff":true,"session":true},
     {"method":"GET","path":"/apps/installations/","labs":"apps","public":false,"integration":false,"staff":true,"session":true},
