@@ -11,6 +11,7 @@ Breaking type changes:
 - `member.email_suppression.info` is `{ reason: "spam" | "fail", timestamp }` instead of a string.
 - `subscriptions[].current_period_end` (null on a comped member's stand-in subscription), `customer.email`, `price.nickname` and `price.interval` are nullable.
 - `tiers.browse()`/`tiers.read()` type `benefits` as `string[]`, always present: Ghost's tiers endpoint always sends them. A tier embedded in a member or post still has them optional.
+- `members.add`/`members.edit` `labels` take `{ name }` only. Ghost matches labels by name: without one, Ghost 6.38 and later answers 200 and removes the member's labels, older Ghosts answer 500. Labels read from a member can be sent back; before, they went out as `{ id }` and were lost.
 - A member's `uuid` and `unsubscribe_url`, and an offer's `created_at` and `last_redeemed` (`string | null`), are always sent and typed as present; on compat a member's `uuid` is `string | null` (a nullable column before Ghost 6.0).
 
 Additions:

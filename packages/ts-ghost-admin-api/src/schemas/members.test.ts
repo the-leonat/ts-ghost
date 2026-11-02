@@ -26,6 +26,22 @@ describe("members inputs are sent as given", () => {
     expect(sentMember(fetch)).toEqual(member);
   });
 
+  test("a label needs its name: Ghost matches by name, and drops or 500s on one without", async () => {
+    stubFetch([]);
+    for (const label of [{ id: "1" }, { slug: "vip" }]) {
+      const labels = [label] as unknown as { name: string }[];
+      await expect(api.members.edit("1", { labels })).rejects.toThrow();
+      await expect(api.members.add({ email: "a@example.com", labels })).rejects.toThrow();
+    }
+  });
+
+  test("labels read from a member can be sent back and keep their names", async () => {
+    const fetch = stubFetch([notFound]);
+    const labels = [{ id: "1", name: "VIP", slug: "vip", created_at: "x", updated_at: null }];
+    await api.members.edit("1", { labels });
+    expect(sentMember(fetch).labels).toEqual([{ name: "VIP" }]);
+  });
+
   test("an edit without keys has no data to edit", async () => {
     stubFetch([]);
     await expect(api.members.edit("1", {})).rejects.toThrow("No data to edit");

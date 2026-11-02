@@ -10,20 +10,8 @@ export const adminMembersCreateSchema = z.object({
   /** @deprecated Ghost drops it; removed in a later major. */
   geolocation: z.string().meta({ deprecated: true }).optional(),
   labels: z
-    .array(
-      z.union([
-        z.object({
-          id: z.string().meta({ description: "The ID of the label" }),
-        }),
-        z.object({
-          name: z.string().meta({ description: "The name of the label" }),
-        }),
-        z.object({
-          slug: z.string().meta({ description: "The slug of the label" }),
-        }),
-      ]),
-    )
-    .meta({ description: "The labels associated with the member" })
+    .array(z.object({ name: z.string().meta({ description: "The name of the label, created if new" }) }))
+    .meta({ description: "The labels associated with the member; Ghost matches them by name" })
     .optional(),
   products: z
     .array(
@@ -41,7 +29,7 @@ export const adminMembersCreateSchema = z.object({
     )
     .meta({
       description: `The products associated with the member, they correspond to a stripe product. 
-          If given the member status will be 'comped' as given away a subscription.`,
+          On add, the member's status becomes 'comped' as given away a subscription; an edit changes the status only with Stripe connected.`,
     })
     .optional(),
   // newsletters and subscribed exclude each other. `subscribed`

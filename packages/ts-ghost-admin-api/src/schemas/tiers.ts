@@ -27,7 +27,10 @@ export const latestTiersSchema = z.object({
     .transform((v) => (v ? v : null)),
   benefits: z.array(z.string()).optional(),
   visibility: ghostVisibilitySchema,
-  currency: z.string().meta({ description: "(nullable) Absent on the free tier under /tiers/" }).nullish(),
+  currency: z
+    .string()
+    .meta({ description: "(nullable) The free tier's is absent under /tiers/ and null in a post or page" })
+    .nullish(),
   trial_days: z.number().default(0),
   monthly_price_id: z
     .string()
