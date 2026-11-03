@@ -32,15 +32,12 @@
     "test": "vitest --typecheck run",
     "test:watch": "vitest --typecheck",
     "test:coverage": "vitest --typecheck run --coverage",
-    "test:integration": "vitest run -c ./vitest.config.integration.ts",
-    "test:integration:watch": "vitest -c ./vitest.config.integration.ts",
     "test-ci": "vitest --typecheck run --coverage.enabled --coverage.reporter='text-summary'",
     "lint": "eslint ./src --fix",
     "typecheck": "tsc --project ./tsconfig.json --noEmit",
     "playground": "jiti ./src/playground.ts"
   },
   "devDependencies": {
-    "@faker-js/faker": "^10.4.0",
     "@ts-ghost/core-api": "workspace:*",
     "@ts-ghost/tsconfig": "workspace:*",
     "@types/node": "catalog:",

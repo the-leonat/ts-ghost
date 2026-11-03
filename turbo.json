@@ -6,12 +6,7 @@
     "GHOST_URL",
     "GHOST_CONTENT_API_KEY",
     "GHOST_ADMIN_API_KEY",
-    "GHOST_VERSION",
-    "VITE_GHOST_URL",
-    "VITE_GHOST_CONTENT_API_KEY",
-    "VITE_GHOST_ADMIN_API_KEY",
-    "VITE_GHOST_VERSION",
-    "VITE_GHOST_INTEGRATION_ID"
+    "GHOST_VERSION"
   ],
   "tasks": {
     "build": {
@@ -33,12 +28,6 @@
       "outputs": []
     },
     "test": {
-      "outputs": []
-    },
-    "test:integration": {
-      "outputs": []
-    },
-    "test:integration:watch": {
       "outputs": []
     },
     "test:watch": {
