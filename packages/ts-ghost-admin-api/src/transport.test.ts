@@ -56,4 +56,40 @@ describe("admin-api transport", () => {
       errors: [{ type: "ResponseSchemaError", message: expect.stringContaining("site.brand") }],
     });
   });
+
+  test("a fetch that throws gives an error result on every operation, not a rejection", async () => {
+    const down = () => {
+      throw new TypeError("fetch failed");
+    };
+    stubFetch([down], { repeat: true });
+    const api = new TSGhostAdminAPI("https://ghost.org", KEY, "v6.0");
+    const failure = {
+      success: false,
+      errors: [{ type: "FetchError", message: expect.stringContaining("fetch failed") }],
+    };
+
+    expect(await api.site.fetch()).toMatchObject(failure);
+    expect(await api.tags.browse().fetch()).toMatchObject(failure);
+    expect(await api.tags.read({ id: "1" }).fetch()).toMatchObject(failure);
+    expect(await api.tags.add({ name: "a" })).toMatchObject(failure);
+    expect(await api.tags.edit("1", { name: "b" })).toMatchObject(failure);
+    expect(await api.tags.delete("1")).toMatchObject(failure);
+  });
+
+  test("fetchers from one client are separate instances", async () => {
+    const fetchSpy = stubFetch([() => new Response(null, { status: 204 })], { repeat: true });
+    const api = new TSGhostAdminAPI("https://ghost.org", KEY, "v6.0");
+
+    const first = api.posts.browse({ limit: 1 });
+    const second = api.posts.browse({ limit: 2 }).fields({ id: true });
+    expect(first).not.toBe(second);
+    expect(first.getParams()).toMatchObject({ browseParams: { limit: 1 } });
+    expect(second.getParams()).toMatchObject({ browseParams: { limit: 2 } });
+    expect(second.getOutputFields()).toEqual(["id"]);
+    expect(first.getOutputFields()).not.toEqual(["id"]);
+
+    await Promise.all([api.posts.delete("a"), api.posts.delete("b")]);
+    const deleted = fetchSpy.mock.calls.map(([url]) => new URL(String(url)).pathname).sort();
+    expect(deleted).toEqual(["/ghost/api/admin/posts/a/", "/ghost/api/admin/posts/b/"]);
+  });
 });
