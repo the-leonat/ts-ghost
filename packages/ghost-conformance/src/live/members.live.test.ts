@@ -48,6 +48,15 @@ async function readByEmail(api: LiveContext["api"], email: string) {
 }
 
 describe("members", () => {
+  liveTest("a browse filter with a plus in the email finds the member", async ({ api }) => {
+    const email = `member+${uniqueSuffix()}@conformance.test`;
+    const added = must(await api.members.add({ email }), email);
+
+    const browsed = await api.members.browse({ filter: `email:'${email}'` }).fetch();
+    assertOk(browsed);
+    expect(browsed.data.map((member) => member.id)).toEqual([added.id]);
+  });
+
   liveTest("every seeded member parses, each nullable field both null and set", async ({ api }) => {
     assertOk(
       await api.members.browse({ filter: `email:[${VARIANTS.map((e) => `'${e}'`).join(",")}]` }).fetch(),

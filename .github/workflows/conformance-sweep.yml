@@ -1,13 +1,19 @@
-# Monthly: the compat leg against Ghost minors between 6.0 and the pin, so "compat parses every 6.x" rests on
-# evidence. A failure is a missing line in packages/ts-ghost-admin-api/src/schemas/compat.ts.
+# The compat leg against Ghost minors between 6.0 and the pin, on PRs that touch the schemas or the pin and by hand,
+# so "compat parses every 6.x" rests on evidence. A failure is a missing line in compat.ts or the content schemas.
 name: 🔁 Conformance compat sweep (Ghost 6 minors)
 on:
-  schedule:
-    - cron: "0 6 1 * *"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "packages/ts-ghost-admin-api/src/schemas/**"
+      - "packages/ts-ghost-content-api/src/**"
+      - "packages/ts-ghost-core-api/src/schemas/**"
+      - "packages/ghost-conformance/ghost-versions.json"
   workflow_dispatch:
     inputs:
       ghost-versions:
-        description: "Comma-separated Ghost versions, e.g. 6.20.0,6.40.0 (default: 6.10, 6.30, 6.50, 6.60 and the minor before the pin)"
+        description: "Comma-separated Ghost versions, e.g. 6.20.0,6.40.0 (default: 6.10, 6.28, 6.30, 6.50, 6.60 and the minor before the pin)"
         type: string
         required: false
         default: ""
@@ -30,19 +36,27 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          # A PR's merge commit and its parents: the first parent holds the base branch's pin.
+          fetch-depth: 2
 
+      # The PR's pin and the inputs are untrusted: env only, and every version must pass the check below.
       - name: 📋 List them
         id: list
         env:
           REQUESTED: ${{ inputs.ghost-versions }}
+          EVENT: ${{ github.event_name }}
         run: |
           node -e '
-            const { pin } = require("./packages/ghost-conformance/ghost-versions.json");
+            const { execSync } = require("node:child_process");
+            const file = "packages/ghost-conformance/ghost-versions.json";
+            const { pin } = require(`./${file}`);
             const [major, minor] = pin.split(".").map(Number);
             const requested = (process.env.REQUESTED || "").split(",").map((v) => v.trim()).filter(Boolean);
+            // A drift PR can jump several minors, so the minor before its pin can miss the old pin.
+            const basePin = process.env.EVENT === "pull_request" ? [JSON.parse(execSync(`git show HEAD^1:${file}`)).pin] : [];
             const versions = requested.length
               ? requested
-              : ["6.10.0", "6.30.0", "6.50.0", "6.60.0", `${major}.${minor - 1}.0`];
+              : ["6.10.0", "6.28.0", "6.30.0", "6.50.0", "6.60.0", `${major}.${minor - 1}.0`, ...basePin];
             if (!versions.every((v) => /^6\.\d+\.\d+$/.test(v))) throw new Error(`Not Ghost 6 versions: ${versions}`);
             console.log(`versions=${JSON.stringify([...new Set(versions)])}`);
           ' >> "$GITHUB_OUTPUT"

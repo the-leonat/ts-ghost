@@ -147,7 +147,7 @@ export function renderPrBody(input: {
   releases: GhostRelease[];
   diff: ManifestDiff;
   suite: SuiteSummary;
-  /** The conformance, core-api and admin-api unit tests, incl. the client → manifest check, against the new pin. */
+  /** The conformance, core-api, admin-api and content-api unit tests, incl. the client → manifest check, against the new pin. */
   client: SuiteSummary;
   /** Client resources, so the reviewer knows which release notes matter. */
   resources: string[];

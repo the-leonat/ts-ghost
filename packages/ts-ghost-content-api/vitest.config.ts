@@ -9,7 +9,7 @@ export default defineConfig({
   test: {
     globals: true,
     include: ["./**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}"],
-    exclude: ["node_modules", "dist", ".idea", ".git", ".cache", "**/*integration.test.ts"],
+    exclude: ["node_modules", "dist", ".idea", ".git", ".cache"],
     typecheck: {
       include: ["./**/*.{ts,tsx}"],
     },

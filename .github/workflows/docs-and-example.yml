@@ -1,0 +1,45 @@
+name: 📚 Docs and example build
+on:
+  pull_request:
+    paths:
+      - "docs/**"
+      - "examples/nextjs/**"
+      - "packages/**"
+      - "pnpm-lock.yaml"
+      - ".github/workflows/docs-and-example.yml"
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: 🏗️ Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: ⬇️ Checkout repo
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - name: ⎔ Setup Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22.x
+          check-latest: true
+          cache: "pnpm"
+
+      - name: 📥 Download deps
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      # The example renders at request time: its client only needs well-formed values to construct.
+      - name: 🏄 Copy example env vars to nextjs app
+        run: cp examples/nextjs/.env.example examples/nextjs/.env
+
+      - name: 🏗️ Build docs and example
+        run: pnpm exec turbo run build --filter=@ts-ghost/docs --filter=@examples/nextjs

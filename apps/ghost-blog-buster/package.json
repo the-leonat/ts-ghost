@@ -12,8 +12,8 @@
   },
   "version": "0.8.1",
   "main": "./dist/cli.js",
-  "module": "./dist/index.mjs",
-  "types": "./dist/index.d.ts",
+  "module": "./dist/cli.js",
+  "types": "./dist/cli.d.ts",
   "exports": {
     ".": "./dist/cli.js"
   },

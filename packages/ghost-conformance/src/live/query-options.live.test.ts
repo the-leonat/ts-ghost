@@ -1,4 +1,4 @@
-// Live: fields, relations in fields, filter syntax, paginate, and a 404 and a 401 as error results.
+// Live: fields, relations in fields, filter and order syntax, paginate, and a 404, a 422 and a 401 as error results.
 
 import { beforeAll, describe, expect, inject } from "vitest";
 
@@ -73,6 +73,12 @@ describe("query options", () => {
     expect(result.data.map((post) => post.id)).toEqual([seed.full.id]);
   });
 
+  liveTest("Ghost accepts the order syntax the client's types allow", async ({ api }) => {
+    const result = await api.posts.browse({ filter: seeded(), order: "created_at ASC" }).fetch();
+    assertOk(result);
+    expect(result.data).toHaveLength(3);
+  });
+
   liveTest("paginate walks every page to the end", async ({ api }) => {
     const ids: string[] = [];
     let fetcher: ReturnType<LiveContext["api"]["posts"]["browse"]> | undefined = api.posts.browse({
@@ -88,17 +94,27 @@ describe("query options", () => {
     expect(ids.sort()).toEqual([seed.full.id, seed.bare.id, seed.emailed.id].sort());
   });
 
-  liveTest("a missing resource and an unknown key come back as error results", async ({ api, ghost }) => {
-    const failure = (status: number, type: string) => ({
-      success: false,
-      status,
-      errors: [expect.objectContaining({ type, message: expect.any(String) })],
-    });
-    const missing = await api.posts.read({ id: "0123456789abcdef01234567" }).fetch();
-    expect(missing).toMatchObject(failure(404, "NotFoundError"));
+  liveTest(
+    "a missing resource, a malformed id and an unknown key are error results",
+    async ({ api, ghost }) => {
+      const failure = (status: number, type: string) => ({
+        success: false,
+        status,
+        errors: [expect.objectContaining({ type, message: expect.any(String) })],
+      });
+      const missing = await api.posts.read({ id: "0123456789abcdef01234567" }).fetch();
+      expect(missing).toMatchObject(failure(404, "NotFoundError"));
 
-    const unknownKey = `${"a".repeat(24)}:${"b".repeat(64)}`;
-    const unauthorized = adminApi({ ...ghost, integrationKey: unknownKey }, ghost.leg, { strict: true });
-    expect(await unauthorized.posts.browse().fetch()).toMatchObject(failure(401, "UnauthorizedError"));
-  });
+      expect(await api.posts.read({ id: "not-an-id" }).fetch()).toMatchObject(
+        failure(422, "ValidationError"),
+      );
+      expect(await api.pages.read({ id: "not-an-id" }).fetch()).toMatchObject(
+        failure(422, "ValidationError"),
+      );
+
+      const unknownKey = `${"a".repeat(24)}:${"b".repeat(64)}`;
+      const unauthorized = adminApi({ ...ghost, integrationKey: unknownKey }, ghost.leg, { strict: true });
+      expect(await unauthorized.posts.browse().fetch()).toMatchObject(failure(401, "UnauthorizedError"));
+    },
+  );
 });
