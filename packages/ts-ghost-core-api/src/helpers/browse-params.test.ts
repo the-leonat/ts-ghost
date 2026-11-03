@@ -95,6 +95,16 @@ describe("parseBrowseParams", () => {
     ).toThrow();
   });
 
+  test("accepts Ghost's tag and author filter aliases only where the relation exists", () => {
+    const withRelations = simplifiedSchema.extend({
+      tags: z.array(z.string()),
+      authors: z.array(z.string()),
+    });
+    const filter = "tag:news+author:jo";
+    expect(parseBrowseParams({ filter }, withRelations)).toStrictEqual({ filter });
+    expect(() => parseBrowseParams({ filter }, simplifiedSchema)).toThrow();
+  });
+
   test("should throw if filter contains invalid fields", () => {
     expect(() =>
       parseBrowseParams(

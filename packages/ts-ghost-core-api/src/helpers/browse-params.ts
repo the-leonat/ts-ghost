@@ -29,7 +29,14 @@ export type OrderPredicate<S, Shape> = S extends string
 export type FilterQuerySeparator = "+" | "," | "(" | ")";
 export type FilterQueryOperators = `-` | `>` | `<` | `~`;
 export type FilterQuerySetOperators = `-`;
-export type FieldOrSubField<S> = S extends `${infer Field}.${string}` ? Field : S;
+// Ghost expands the `tag:` and `author:` filters to `tags.slug` and `authors.slug`.
+export type FieldOrSubField<S> = S extends `${infer Field}.${string}`
+  ? Field
+  : S extends "tag"
+    ? "tags"
+    : S extends "author"
+      ? "authors"
+      : S;
 
 export type BrowseFilter<S, Shape> = S extends string
   ? S extends `${infer Field}:${infer Rest}`
@@ -91,6 +98,8 @@ export const browseParamsSchema = z.object({
 });
 export type BrowseParamsSchema = z.infer<typeof browseParamsSchema>;
 
+const FILTER_ALIASES: Record<string, string> = { tag: "tags", author: "authors" };
+
 export const parseBrowseParams = <P, Shape extends z.ZodRawShape, IncludeShape extends z.ZodRawShape>(
   args: P,
   schema: z.ZodObject<Shape>,
@@ -133,7 +142,7 @@ export const parseBrowseParams = <P, Shape extends z.ZodRawShape, IncludeShape e
             .split(/[+(,]+(?=(?:[^']*'[^']*')*[^']*$)/);
           for (const filterPredicate of filterPredicates) {
             const field = filterPredicate.split(":")[0].split(".")[0];
-            if (!keys.includes(field)) {
+            if (!keys.includes(FILTER_ALIASES[field] ?? field)) {
               ctx.addIssue({
                 code: z.ZodIssueCode.custom,
                 message: `Field "${field}" is not a valid field`,

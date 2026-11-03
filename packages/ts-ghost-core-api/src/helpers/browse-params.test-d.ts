@@ -3,6 +3,7 @@ import { describe, expectTypeOf, test } from "vitest";
 import type { BrowseFilter } from "./browse-params";
 
 type Shape = { id: string; email: string; name: string; status: string; published_at: string; tags: string };
+type NoRelations = Omit<Shape, "tags">;
 // Whether `browse({ filter: S })` type-checks: the filter type must keep S as is.
 type Accepts<S extends string> = [S] extends [BrowseFilter<S, Shape>] ? true : false;
 
@@ -29,6 +30,17 @@ describe("BrowseFilter", () => {
     expectTypeOf<Accepts<"name:'x'+status:draft">>().toEqualTypeOf<true>();
     expectTypeOf<Accepts<"name:'x',email:'y'">>().toEqualTypeOf<true>();
     expectTypeOf<Accepts<"email:'a+b@x.com',status:draft">>().toEqualTypeOf<true>();
+  });
+
+  test("accepts Ghost's tag alias only where the resource has tags", () => {
+    expectTypeOf<Accepts<"tag:news">>().toEqualTypeOf<true>();
+    expectTypeOf<Accepts<"status:draft+tag:news">>().toEqualTypeOf<true>();
+    expectTypeOf<
+      "tag:news" extends BrowseFilter<"tag:news", NoRelations> ? true : false
+    >().toEqualTypeOf<false>();
+    expectTypeOf<
+      "author:jo" extends BrowseFilter<"author:jo", Shape> ? true : false
+    >().toEqualTypeOf<false>();
   });
 
   test("rejects an unknown field anywhere in the filter", () => {
