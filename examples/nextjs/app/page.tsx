@@ -21,6 +21,9 @@ async function getSiteSettings() {
   return response.data;
 }
 
+// Rendered per request, so a build needs no Ghost.
+export const dynamic = "force-dynamic";
+
 export default async function HomePage() {
   const [posts, settings] = await Promise.all([getBlogPosts(), getSiteSettings()]);
   return (
