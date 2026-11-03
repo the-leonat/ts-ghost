@@ -327,6 +327,9 @@ importers:
       '@ts-ghost/admin-api':
         specifier: workspace:*
         version: link:../ts-ghost-admin-api
+      '@ts-ghost/content-api':
+        specifier: workspace:*
+        version: link:../ts-ghost-content-api
       '@ts-ghost/core-api':
         specifier: workspace:*
         version: link:../ts-ghost-core-api

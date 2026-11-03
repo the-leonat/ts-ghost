@@ -1,6 +1,7 @@
-// Builds the public admin-api client for a live Ghost, on a leg's schema target, with either credential.
+// Builds the public clients for a live Ghost: admin-api on a leg's schema target, with either credential, and content-api.
 
 import { TSGhostAdminAPI } from "@ts-ghost/admin-api";
+import { TSGhostContentAPI } from "@ts-ghost/content-api";
 
 import type { GhostCredentials } from "./bootstrap.ts";
 import { clientVersion, type GhostLeg } from "./versions.ts";
@@ -27,6 +28,17 @@ export function adminApi(
   const apiKey = options.key === "staff" ? ghost.staffToken : ghost.integrationKey;
   return new TSGhostAdminAPI(ghost.url, apiKey, clientVersion(leg.ghost), {
     schema: leg.target as "latest",
+    strict: options.strict,
+  });
+}
+
+/** Public content-api client against a Ghost; with `strict`, a key its schema lacks fails the result. */
+export function contentApi(
+  ghost: Pick<LiveGhost, "url" | "contentKey">,
+  leg: Pick<GhostLeg, "ghost">,
+  options: { strict?: boolean } = {},
+) {
+  return new TSGhostContentAPI(ghost.url, ghost.contentKey, clientVersion(leg.ghost), {
     strict: options.strict,
   });
 }

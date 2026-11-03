@@ -10,7 +10,14 @@ export default defineConfig([
     rules: {
       "no-restricted-imports": [
         "error",
-        { patterns: ["@ts-ghost/*/*", "**/ts-ghost-admin-api/**", "**/ts-ghost-core-api/**"] },
+        {
+          patterns: [
+            "@ts-ghost/*/*",
+            "**/ts-ghost-admin-api/**",
+            "**/ts-ghost-content-api/**",
+            "**/ts-ghost-core-api/**",
+          ],
+        },
       ],
     },
   },

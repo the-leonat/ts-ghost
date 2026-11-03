@@ -77,12 +77,16 @@ export async function seedPosts(ghost: LiveGhost) {
   return { suffix, tierId, full, bare, emailed };
 }
 
-/** Pages through the client: a full one and a bare draft. */
+/** Pages through the client: a full one, a bare draft and a bare published one, which the Content API sees. */
 export async function seedPages(ghost: LiveGhost) {
   const api = adminApi(ghost, ghost.leg);
   const suffix = uniqueSuffix();
   const tierId = await paidTierId(api);
   const full = must(await api.pages.add(fullContent(suffix, tierId), { source: "html" }), "full page");
   const bare = must(await api.pages.add({ title: `Bare ${suffix}` }), "bare page");
-  return { suffix, tierId, full, bare };
+  const published = must(
+    await api.pages.add({ title: `Published ${suffix}`, status: "published" }),
+    "published bare page",
+  );
+  return { suffix, tierId, full, bare, published };
 }
