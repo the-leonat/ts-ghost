@@ -43,13 +43,13 @@ A resource or route only newer Ghosts have is marked `@since` and answers an old
 
 ### The live suite checks only the client's schemas
 
-It never checks Ghost's business logic. Legs: `v5` (5.130.6) and `v6.0` (6.0.0) on `compat`, `pin` on `latest`; every leg uses the strict client, so an undeclared key fails the result. Per resource, at most three tests:
+It never checks Ghost's business logic. Legs: `v5` (5.130.6) and `v6.0` (6.0.0) on `compat`, `pin` on `latest`; every leg uses the strict client, so an undeclared key fails the result. The suite covers the admin and content clients; the content client has no targets, one schema on every leg, with a key only some Ghosts send optional (`// since 6.36`), because a single widened schema serves it. Per resource, at most three tests:
 
 - **Shape and nullability** (every leg): read every seeded variant; each nullable field is null on a bare seed and set on a full one; alternate reads (slug, email) must parse.
 - **Shape modifiers** (every leg): each `include`/`formats`/`fields` entry adds its key, and leaving it out doesn't.
 - **Round trip** (`latest` only): add and edit with every input, read back everything sent except deprecated inputs.
 
-Plus, once each: both credentials, `paginate`, filter syntax, and a 404 and a 401 as error results. A monthly, hand-triggerable compat sweep runs the `compat` leg over intermediate Ghost minors, so "every 6.x" rests on evidence.
+Plus, once each: both credentials, `paginate`, filter syntax, and a 404 and a 401 as error results. A compat sweep, on PRs that touch the schemas or the pin and by hand, runs the `compat` leg over intermediate Ghost minors, so "every 6.x" rests on evidence.
 
 ### Order of the upstream PRs
 
@@ -59,4 +59,5 @@ PR 0 (client plumbing), then PR A (schemas), then PR B (conformance) based on PR
 
 - Drift edits the `latest` modules and adds one `compat.ts` line per removal or retype; the drift PR runs only the pin leg, and the `v5`/`v6.0` legs run on its normal CI.
 - Removed: selecting a target by the version string (`TargetOf`, `schemaTarget`), the frozen v5-compat and v6-compat files, the `pin-compat` leg, `ghostAtLeast`, `requireStrict`, the undeclared-key and response-recording helpers, and the expected-failure machinery.
+- The live suite replaces the integration tests against a shared blog, so no PR check needs a secret.
 - A newly accepted input stays invisible to the suite (the manifest has no bodies); release notes cover it.
