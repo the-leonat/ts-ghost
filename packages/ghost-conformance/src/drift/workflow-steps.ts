@@ -42,6 +42,7 @@ const UNIT_TESTS = {
   "client.json": PACKAGE_DIR,
   "client-core-api.json": join(PACKAGE_DIR, "../ts-ghost-core-api"),
   "client-admin-api.json": join(PACKAGE_DIR, "../ts-ghost-admin-api"),
+  "client-content-api.json": join(PACKAGE_DIR, "../ts-ghost-content-api"),
 };
 /** One fixed name, so each run replaces it and pending bumps never pile up. */
 const PIN_CHANGESET_FILE = fileURLToPath(new URL("../../../../.changeset/ghost-pin.md", import.meta.url));
