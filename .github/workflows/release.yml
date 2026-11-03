@@ -42,15 +42,15 @@ jobs:
       - name: 📥 Install Dependencies
         run: pnpm install
 
-      # Lint runs with --fix: the diff check keeps its fixes out of the version PR's commit.
+      # Lint runs with --fix: the last diff check keeps its fixes out of the version PR's commit.
       - name: 🔎 Lint, build, typecheck, unit tests, pack check
         run: |
           pnpm run lint
-          git diff --exit-code
           pnpm run build:packages
           pnpm run typecheck
           pnpm run test
           pnpm run check:pack
+          git diff --exit-code
 
       - name: 🦋 Create Release Pull Request or Publish to npm
         id: changesets
