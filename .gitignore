@@ -33,6 +33,7 @@ coverage
 .cache/
 .next/
 next-env.d.ts
+*.tsbuildinfo
 .nuxt/
 tmp/
 temp/
