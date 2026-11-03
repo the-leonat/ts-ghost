@@ -28,6 +28,8 @@
     "test:watch": "turbo run test:watch",
     "test:coverage": "turbo run test:coverage",
     "test-ci": "turbo run test-ci",
+    "dist:test": "turbo run build --filter='./packages/*' && node --test scripts/dist-branches/dist-branches.test.mjs",
+    "dist:publish": "node scripts/dist-branches/publish.mjs",
     "typecheck": "turbo run typecheck",
     "changeset": "changeset",
     "version-packages": "changeset version",
