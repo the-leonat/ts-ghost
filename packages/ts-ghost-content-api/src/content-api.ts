@@ -69,7 +69,7 @@ export class TSGhostContentAPI<Version extends `v5.${string}` | `v6.${string}` =
     ).access(["read", "browse"]);
   }
   get tiers() {
-    return new APIComposer(
+    const { browse, read } = new APIComposer(
       "tiers",
       {
         schema: tiersSchema,
@@ -79,6 +79,11 @@ export class TSGhostContentAPI<Version extends `v5.${string}` | `v6.${string}` =
       },
       this.HTTPClientFactoryFactory,
     ).access(["browse", "read"]);
+    return {
+      browse,
+      /** @deprecated The Content API has no route to read one tier: this is always an error result. Use `browse`. */
+      read,
+    };
   }
   get posts() {
     return new APIComposer(
