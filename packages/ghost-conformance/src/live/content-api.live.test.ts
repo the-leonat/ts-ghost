@@ -205,7 +205,7 @@ describe("content api", () => {
     const narrowed = await Promise.all([
       content.posts
         .browse({ filter: `id:${posts.full.id}` })
-        .fields({ slug: true, title: true, primary_author: true, authors: true })
+        .fields({ slug: true, title: true, primary_author: true })
         .include({ authors: true })
         .fetch(),
       content.tags

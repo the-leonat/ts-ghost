@@ -20,7 +20,7 @@ export async function seedTiers(ghost: LiveGhost) {
     description: "A tier with every field set",
     welcome_page_url: "https://example.com/welcome",
     visibility: "public",
-    benefits: ["First benefit", "Second benefit"],
+    benefits: [`First benefit ${suffix}`, `Second benefit ${suffix}`],
     trial_days: 7,
     ...prices,
   });
