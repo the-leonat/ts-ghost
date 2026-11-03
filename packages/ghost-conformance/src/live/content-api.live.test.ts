@@ -200,6 +200,32 @@ describe("content api", () => {
     expect(Object.keys(read.data).sort()).toEqual(["id", "name"]);
   });
 
+  // Ghost drops some included keys once `fields` is set, so requiring them would fail these results.
+  liveTest("fields and include together still parse", async ({ content }) => {
+    const narrowed = await Promise.all([
+      content.posts
+        .browse({ filter: `id:${posts.full.id}` })
+        .fields({ slug: true, title: true, primary_author: true, authors: true })
+        .include({ authors: true })
+        .fetch(),
+      content.tags
+        .browse({ filter: `slug:${tags.full.slug}` })
+        .fields({ slug: true, name: true, count: true })
+        .include({ "count.posts": true })
+        .fetch(),
+      content.authors
+        .browse({ filter: `slug:${ownerSlug}` })
+        .fields({ id: true, name: true, count: true })
+        .include({ "count.posts": true })
+        .fetch(),
+      content.tiers.browse().include({ monthly_price: true }).fields({ slug: true, name: true }).fetch(),
+    ]);
+    for (const result of narrowed) {
+      assertOk(result);
+      expect(result.data.length).toBeGreaterThan(0);
+    }
+  });
+
   liveTest("Ghost accepts the tag and author aliases the filter type allows", async ({ content }) => {
     const result = await content.posts
       .browse({ filter: `tag:tag-${posts.suffix}+author:${ownerSlug}` })
