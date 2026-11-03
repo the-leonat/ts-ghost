@@ -22,9 +22,9 @@ Per resource there are at most three tests:
 - **Shape modifiers** (every leg): each `include` and `formats` entry adds its key, and a read without it doesn't.
 - **Round trip** (`latest` only, `liveTest.runIf(onLatest)`): add and edit with every input, read back everything sent except deprecated inputs (`deprecatedKeys`, from `.meta({ deprecated: true })`) and a few keys Ghost never sends back, each listed with its reason. `unsentInputs` fails the test when an input schema gains a key the round trip doesn't send.
 
-Once each ([`query-options.live.test.ts`](./src/live/query-options.live.test.ts), [`credentials.live.test.ts`](./src/live/credentials.live.test.ts)): both credentials, `fields`, filter syntax, `paginate`, and a 404 and a 401 as error results.
+Once each ([`query-options.live.test.ts`](./src/live/query-options.live.test.ts), [`credentials.live.test.ts`](./src/live/credentials.live.test.ts)): both credentials, `fields`, filter and order syntax, `paginate`, and a 404, a 422 and a 401 as error results.
 
-The content client has one schema for every leg, not two targets ([`content-api.live.test.ts`](./src/live/content-api.live.test.ts), `content` in `liveTest`). It is strict too, so a key only some Ghosts send is optional, commented with its versions (`// since 6.36`). Its tests use the same seeds and cover posts, pages, authors, tags, tiers and settings: shape and nullability, each `include` and `formats` entry, then once each `fields`, the `tag:` and `author:` filter aliases, and a 404 and a 422 as error results. Ghost's fresh settings have one variant, so they only parse.
+The content client has one schema for every leg, not two targets ([`content-api.live.test.ts`](./src/live/content-api.live.test.ts), `content` in `liveTest`). It is strict too, so a key only some Ghosts send is optional, commented with its versions (`// since 6.36`). Its tests use the same seeds and cover posts, pages, authors, tags, tiers and settings: shape and nullability, each `include` and `formats` entry, then once each `fields`, `fields` with `include`, the `tag:` and `author:` filter aliases, and a 404 and a 422 as error results. Ghost's fresh settings have one variant, so they only parse.
 
 Seeds are bare and full records per resource, written through the client, plus a small SQL seed for what the API can't create (sent and failed emails, email recipients and suppressions, Stripe customers and subscriptions, staff users). Status variants (an inactive user, an archived tier or newsletter, a comped or paid member) are seed rows of the shape test, there because a nested schema has a null-or-set field no plain seed reaches.
 
@@ -61,11 +61,11 @@ The live suite's global setup runs Ghost's first-run setup to create the Owner, 
 
 The code depends one way, `ghost ← seeds ← live`: [`src/ghost/`](./src/ghost/) starts, bootstraps and pins Ghost and builds the clients (`adminApi(ghost, leg, options)` and `contentApi(ghost, leg, options)` in `admin-client.ts`); [`src/seeds/`](./src/seeds/) seeds a given Ghost, with its helpers in `helpers.ts`; [`src/live/`](./src/live/) holds the test run: global setup, `liveTest`, the schema helpers and the tests.
 
-CI runs the live suite on every PR to `main`, once per leg ([`.github/workflows/conformance.yml`](../../.github/workflows/conformance.yml)). The Tests workflow adds the client's route coverage to its job summary.
+CI runs the live suite on every PR to `main` and every push to it, once per leg ([`.github/workflows/conformance.yml`](../../.github/workflows/conformance.yml)). The manifest generation test runs on the `pin` leg; on a push, or when `src/manifest/` changed, on all three.
 
 ## Compat sweep
 
-The legs only see Ghost 5.130, 6.0 and the pin, but Ghost adds and removes fields between them. [`.github/workflows/conformance-sweep.yml`](../../.github/workflows/conformance-sweep.yml) runs monthly, and by hand with a list of versions: for Ghost 6.10, 6.30, 6.50, 6.60 and the minor before the pin, it generates that Ghost's manifest and runs the compat leg against it (`GHOST_LEG=v6.0 GHOST_LEG_VERSION=<version>`). A failure is a field `compat.ts` doesn't declare yet.
+The legs only see Ghost 5.130, 6.0 and the pin, but Ghost adds and removes fields between them. [`.github/workflows/conformance-sweep.yml`](../../.github/workflows/conformance-sweep.yml) runs on PRs to `main` that touch the admin or core schemas, the content client or `ghost-versions.json`, and by hand with a list of versions: for Ghost 6.10, 6.28, 6.30, 6.50, 6.60, the minor before the pin and, on a PR, the base branch's pin, it generates that Ghost's manifest and runs the compat leg and the content client against it (`GHOST_LEG=v6.0 GHOST_LEG_VERSION=<version>`). A failure is a field `compat.ts` or the content schemas don't declare yet.
 
 ## Route coverage
 
@@ -76,7 +76,7 @@ The legs only see Ghost 5.130, 6.0 and the pin, but Ghost adds and removes field
 [`.github/workflows/conformance-drift.yml`](../../.github/workflows/conformance-drift.yml) runs every Monday and can be started by hand with a Ghost version, from the default branch only. There is one drift PR, from the branch `conformance/drift`. When a newer Ghost image exists, the workflow:
 
 1. bumps the pin in `ghost-versions.json` and `GHOST_LATEST` to its minor, and regenerates the manifest,
-2. runs the conformance, core-api and admin-api unit tests (with the client → manifest check) and the live suite's `pin` leg (latest) against the new Ghost; the `v5` and `v6.0` legs run on the PR's normal CI,
+2. runs the conformance, core-api, admin-api and content-api unit tests (with the client → manifest check) and the live suite's `pin` leg (latest) against the new Ghost; the `v5` and `v6.0` legs and the compat sweep (which includes the old pin) run on the PR's normal CI,
 3. writes no schema: the reviewer updates latest (the schema modules in `packages/ts-ghost-admin-api/src/schemas/`) to what the new Ghost sends and adds a line to `schemas/compat.ts` for each field Ghost removed or retyped, so compat still parses older Ghosts, and updates the content-api schemas the same way (`// since` optional fields); an added field gets a `minor` changeset (compat makes it optional with `partial`), a removed or retyped one a `major` changeset,
 4. writes `.changeset/ghost-pin.md`, a `patch` changeset saying "Pins Ghost <minor>", replaced on each run. A pin bump alone is a patch, and each is released, so every Ghost minor has a release for `{ schema: "latest" }` users to pin to,
 5. force-pushes `conformance/drift` and rewrites the PR's title and description: always from the default branch's pin to the newest Ghost, with the manifest diff, the test results, the route coverage at both versions, and links to the release notes of every version in between,
