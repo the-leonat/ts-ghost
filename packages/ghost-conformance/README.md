@@ -1,12 +1,12 @@
 # @ts-ghost/ghost-conformance
 
-Private package that checks `@ts-ghost/admin-api`'s schemas against a real Ghost. It runs the public client against the official Ghost Docker image (with MySQL 8) at a pinned version, and it keeps a manifest of every Admin API route. Nothing here is published, and the client packages don't import from it.
+Private package that checks the schemas of `@ts-ghost/admin-api` and `@ts-ghost/content-api` against a real Ghost. It runs the public clients against the official Ghost Docker image (with MySQL 8) at a pinned version, and it keeps a manifest of every Admin API route. Nothing here is published, and the client packages don't import from it.
 
 Every Ghost image is pinned to an exact version, and by digest, in [`ghost-versions.json`](./ghost-versions.json): the last Ghost 5 (`v5`), Ghost 6.0.0 (`v6.0`) and the pin (`pin`), which the drift job moves with its new digest. A Ghost run with `GHOST_LEG_VERSION` that isn't pinned there runs by tag alone; MySQL is pinned by digest in the compose file. The compose setup, the manifest, the drift job and the client version all read it from there ([`src/ghost/versions.ts`](./src/ghost/versions.ts)). The pin's minor is also core-api's `GHOST_LATEST` ([`ghost-latest.ts`](../ts-ghost-core-api/src/schemas/ghost-latest.ts)), the minor the client's latest target matches; a unit test keeps them equal, and the drift job moves both.
 
 ## The live suite
 
-It checks the client's schemas, never Ghost's behaviour: a test earns its place only if a wrong output, input, include, format or error schema would fail it. It runs as one of three **legs**, chosen with `GHOST_LEG` (default `pin`), each one image with one client schema target:
+It checks the client's schemas, never Ghost's behaviour: a test earns its place only if a wrong output, input, include, format or error schema would fail it. It runs as one of three **legs**, chosen with `GHOST_LEG` (default `pin`), each one image with one admin client schema target:
 
 | Leg    | Ghost            | Target   |
 | ------ | ---------------- | -------- |
@@ -23,6 +23,8 @@ Per resource there are at most three tests:
 - **Round trip** (`latest` only, `liveTest.runIf(onLatest)`): add and edit with every input, read back everything sent except deprecated inputs (`deprecatedKeys`, from `.meta({ deprecated: true })`) and a few keys Ghost never sends back, each listed with its reason. `unsentInputs` fails the test when an input schema gains a key the round trip doesn't send.
 
 Once each ([`query-options.live.test.ts`](./src/live/query-options.live.test.ts), [`credentials.live.test.ts`](./src/live/credentials.live.test.ts)): both credentials, `fields`, filter syntax, `paginate`, and a 404 and a 401 as error results.
+
+The content client has one schema for every leg, not two targets ([`content-api.live.test.ts`](./src/live/content-api.live.test.ts), `content` in `liveTest`). It is strict too, so a key only some Ghosts send is optional, commented with its versions (`// since 6.36`). Its tests use the same seeds and cover posts, pages, authors, tags, tiers and settings: shape and nullability, each `include` and `formats` entry, then once each `fields`, the `tag:` and `author:` filter aliases, and a 404 and a 422 as error results. Ghost's fresh settings have one variant, so they only parse.
 
 Seeds are bare and full records per resource, written through the client, plus a small SQL seed for what the API can't create (sent and failed emails, email recipients and suppressions, Stripe customers and subscriptions, staff users). Status variants (an inactive user, an archived tier or newsletter, a comped or paid member) are seed rows of the shape test, there because a nested schema has a null-or-set field no plain seed reaches.
 
@@ -55,9 +57,9 @@ pnpm --filter @ts-ghost/ghost-conformance manifest   # regenerate manifest.json 
 
 The `manifest` and `drift` scripts run TypeScript directly with Node's type stripping, so they need Node ≥ 22.18. The live suite and the manifest need a running Docker with `docker compose`. Each run starts its own compose project (Ghost plus MySQL on tmpfs) on a free local port and removes it afterwards, so runs never share state. An interrupted run removes its Ghost on exit, and each live run first removes projects left by a killed run (their names carry the owning process id).
 
-The live suite's global setup runs Ghost's first-run setup to create the Owner, signs in, creates an integration and fetches the Owner's staff token, all through Ghost's public API, then applies the SQL seed.
+The live suite's global setup runs Ghost's first-run setup to create the Owner, signs in, creates an integration (with its Admin and Content API keys) and fetches the Owner's staff token, all through Ghost's public API, then applies the SQL seed.
 
-The code depends one way, `ghost ← seeds ← live`: [`src/ghost/`](./src/ghost/) starts, bootstraps and pins Ghost and builds the client (`adminApi(ghost, leg, options)` in `admin-client.ts`); [`src/seeds/`](./src/seeds/) seeds a given Ghost, with its helpers in `helpers.ts`; [`src/live/`](./src/live/) holds the test run: global setup, `liveTest`, the schema helpers and the tests.
+The code depends one way, `ghost ← seeds ← live`: [`src/ghost/`](./src/ghost/) starts, bootstraps and pins Ghost and builds the clients (`adminApi(ghost, leg, options)` and `contentApi(ghost, leg, options)` in `admin-client.ts`); [`src/seeds/`](./src/seeds/) seeds a given Ghost, with its helpers in `helpers.ts`; [`src/live/`](./src/live/) holds the test run: global setup, `liveTest`, the schema helpers and the tests.
 
 CI runs the live suite on every PR to `main`, once per leg ([`.github/workflows/conformance.yml`](../../.github/workflows/conformance.yml)). The Tests workflow adds the client's route coverage to its job summary.
 
@@ -75,7 +77,7 @@ The legs only see Ghost 5.130, 6.0 and the pin, but Ghost adds and removes field
 
 1. bumps the pin in `ghost-versions.json` and `GHOST_LATEST` to its minor, and regenerates the manifest,
 2. runs the conformance, core-api and admin-api unit tests (with the client → manifest check) and the live suite's `pin` leg (latest) against the new Ghost; the `v5` and `v6.0` legs run on the PR's normal CI,
-3. writes no schema: the reviewer updates latest (the schema modules in `packages/ts-ghost-admin-api/src/schemas/`) to what the new Ghost sends and adds a line to `schemas/compat.ts` for each field Ghost removed or retyped, so compat still parses older Ghosts; an added field gets a `minor` changeset (compat makes it optional with `partial`), a removed or retyped one a `major` changeset,
+3. writes no schema: the reviewer updates latest (the schema modules in `packages/ts-ghost-admin-api/src/schemas/`) to what the new Ghost sends and adds a line to `schemas/compat.ts` for each field Ghost removed or retyped, so compat still parses older Ghosts, and updates the content-api schemas the same way (`// since` optional fields); an added field gets a `minor` changeset (compat makes it optional with `partial`), a removed or retyped one a `major` changeset,
 4. writes `.changeset/ghost-pin.md`, a `patch` changeset saying "Pins Ghost <minor>", replaced on each run. A pin bump alone is a patch, and each is released, so every Ghost minor has a release for `{ schema: "latest" }` users to pin to,
 5. force-pushes `conformance/drift` and rewrites the PR's title and description: always from the default branch's pin to the newest Ghost, with the manifest diff, the test results, the route coverage at both versions, and links to the release notes of every version in between,
 6. fails the run if the manifest, the client check or the live suite failed, so a breaking release doesn't show up as green.
