@@ -17,6 +17,7 @@ const postsAuthorSchema = authorsSchema.extend({
 export const pagesSchema = z.object({
   ...ghostIdentitySchema.shape,
   ...ghostMetadataSchema.shape,
+  uuid: z.string(),
   title: z.string(),
   html: z.string().catch(""),
   plaintext: z.string().nullish(),
@@ -44,6 +45,8 @@ export const pagesSchema = z.object({
   access: z.boolean(),
   comments: z.boolean(),
   email_subject: z.string().nullish(),
+  frontmatter: z.string().nullable(),
+  show_title_and_feature_image: z.boolean(),
 });
 
 export type Page = z.infer<typeof pagesSchema>;

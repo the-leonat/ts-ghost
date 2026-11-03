@@ -16,6 +16,7 @@ const postsAuthorSchema = authorsSchema.extend({
 export const postsSchema = z.object({
   ...ghostIdentitySchema.shape,
   ...ghostMetadataSchema.shape,
+  uuid: z.string(),
   title: z.string(),
   html: z.string().catch(""),
   plaintext: z.string().nullish(),
@@ -43,6 +44,7 @@ export const postsSchema = z.object({
   access: z.boolean(),
   comments: z.boolean(),
   email_subject: z.string().nullish(),
+  frontmatter: z.string().nullable(),
 });
 
 export type Post = z.infer<typeof postsSchema>;
