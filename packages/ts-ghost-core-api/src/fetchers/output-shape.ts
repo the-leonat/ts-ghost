@@ -1,6 +1,6 @@
 import type { z, ZodRawShape } from "zod";
 
-import { requiredIncludes } from "../helpers/includes";
+import { PRIMARY_KEYS, requiredIncludes, type WithPrimaryKeys } from "../helpers/includes";
 import { sanitizeFormatMask, sanitizeMask } from "../helpers/masks";
 import type { StrictOption } from "../helpers/response-schema";
 import type { Exactly, Mask, NoUnrecognizedKeys } from "../utils";
@@ -56,7 +56,9 @@ export function withInclude<
     include: Object.keys(parsedInclude),
     config: {
       ...config,
-      output: config.output.required(requiredIncludeKeys as Exactly<Includes, Includes>),
+      output: config.output.required(
+        requiredIncludeKeys as Exactly<WithPrimaryKeys<Includes>, WithPrimaryKeys<Includes>>,
+      ),
     },
   };
 }
@@ -75,7 +77,10 @@ export function withFields<
   return { ...config, output: config.output.pick(pickedFields as Exactly<Fields, Fields>) };
 }
 
-/** The `fields`, `include` and `formats` URL params; `fields` only when the output is narrowed. */
+/**
+ * The `fields`, `include` and `formats` URL params; `fields` only when the output is narrowed.
+ * Ghost answers a relation in `fields` with a 400, so a selected relation goes in `include`.
+ */
 export function outputURLParams(
   config: OutputConfig<any, any, any>,
   params: { include?: PropertyKey[]; formats?: string[] },
@@ -84,10 +89,23 @@ export function outputURLParams(
   const urlParams: Record<string, string> = {};
   const inputKeys = config.schema.keyof().options as string[];
   const outputKeys = config.output.keyof().options as string[];
+  const include = new Set((params.include ?? []) as string[]);
   if (inputKeys.length !== outputKeys.length && outputKeys.length > 0) {
-    urlParams.fields = outputKeys.filter((key) => !options.omitFields?.includes(key)).join(",");
+    const includable = config.include.shape as Record<string, unknown>;
+    for (const key of outputKeys) if (key in includable) include.add(key);
+    for (const [relation, primary] of Object.entries(PRIMARY_KEYS)) {
+      if (relation in includable && outputKeys.includes(primary)) include.add(relation);
+    }
+    const fields = new Set(
+      outputKeys.filter((key) => !(key in includable) && !options.omitFields?.includes(key)),
+    );
+    // Without `id` a read blanks its relations, without `url` their nested urls; the fetchers drop both again.
+    if (include.size > 0) {
+      for (const key of ["id", "url"]) if (key in config.schema.shape) fields.add(key);
+    }
+    if (fields.size > 0) urlParams.fields = [...fields].join(",");
   }
-  if (params.include && params.include.length > 0) urlParams.include = params.include.join(",");
+  if (include.size > 0) urlParams.include = [...include].join(",");
   if (params.formats && params.formats.length > 0) urlParams.formats = params.formats.join(",");
   return urlParams;
 }

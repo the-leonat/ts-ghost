@@ -33,8 +33,11 @@ export const tiersSchema = z.object({
 export type Tier = z.infer<typeof tiersSchema>;
 
 export const tiersIncludeSchema = z.object({
+  /** @deprecated Ghost always sends a paid tier's monthly price; the include is a no-op. */
   monthly_price: z.literal(true).optional(),
+  /** @deprecated Ghost always sends a paid tier's yearly price; the include is a no-op. */
   yearly_price: z.literal(true).optional(),
+  /** @deprecated Ghost always sends a tier's benefits; the include is a no-op. */
   benefits: z.literal(true).optional(),
 });
 export type TiersIncludeSchema = z.infer<typeof tiersIncludeSchema>;

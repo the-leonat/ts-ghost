@@ -1,4 +1,4 @@
-// Ghost's first-run setup over its public API: the Owner, a session, an integration key and a staff token.
+// Ghost's first-run setup over its public API: the Owner, a session, an integration's keys and a staff token.
 
 import { randomBytes } from "node:crypto";
 
@@ -7,6 +7,8 @@ import { adminApiUrl } from "./admin-url.ts";
 export type GhostCredentials = {
   /** Admin API key of a custom integration, "<id>:<secret>". */
   integrationKey: string;
+  /** Content API key of the same integration. */
+  contentKey: string;
   /** The Owner's personal staff token, "<id>:<secret>". */
   staffToken: string;
   /** `Cookie` header value of a signed-in Owner session. */
@@ -17,7 +19,7 @@ export type GhostCredentials = {
 /** Title the first-run setup gives the site. */
 export const BLOG_TITLE = "ts-ghost conformance";
 
-/** Turns a fresh Ghost into one with an Owner and three credentials, using only public Admin API endpoints. */
+/** Turns a fresh Ghost into one with an Owner and four credentials, using only public Admin API endpoints. */
 export async function bootstrapGhost(url: string): Promise<GhostCredentials> {
   const admin = adminApiUrl(url);
   const owner = { email: "owner@conformance.test", password: `Cf-${randomBytes(12).toString("hex")}` };
@@ -40,9 +42,11 @@ export async function bootstrapGhost(url: string): Promise<GhostCredentials> {
   ) as { integrations: { api_keys: { type: string; secret: string }[] }[] };
   const integrationKey = integration.integrations[0]?.api_keys.find((k) => k.type === "admin")?.secret;
   if (!integrationKey) throw new Error("New integration has no admin API key");
+  const contentKey = integration.integrations[0]?.api_keys.find((k) => k.type === "content")?.secret;
+  if (!contentKey) throw new Error("New integration has no content API key");
 
   const staffToken = await readStaffToken(url, sessionCookie);
-  return { integrationKey, staffToken, sessionCookie, owner };
+  return { integrationKey, contentKey, staffToken, sessionCookie, owner };
 }
 
 /** Reads the signed-in user's staff token, "<id>:<secret>". */

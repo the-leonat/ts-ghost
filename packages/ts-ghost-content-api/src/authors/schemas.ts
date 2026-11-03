@@ -12,6 +12,13 @@ export const authorsSchema = z.object({
   location: z.string().nullable(),
   facebook: z.string().nullable(),
   twitter: z.string().nullable(),
+  threads: z.string().nullable(),
+  bluesky: z.string().nullable(),
+  mastodon: z.string().nullable(),
+  tiktok: z.string().nullable(),
+  youtube: z.string().nullable(),
+  instagram: z.string().nullable(),
+  linkedin: z.string().nullable(),
   count: z
     .object({
       posts: z.number(),

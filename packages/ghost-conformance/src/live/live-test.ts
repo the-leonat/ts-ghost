@@ -2,7 +2,7 @@
 
 import { assert, inject, test } from "vitest";
 
-import { adminApi, type CredentialKind, type LiveGhost } from "../ghost/admin-client.ts";
+import { adminApi, contentApi, type CredentialKind, type LiveGhost } from "../ghost/admin-client.ts";
 
 type LiveApi = ReturnType<typeof adminApi>;
 
@@ -13,6 +13,8 @@ type LiveFixtures = {
   apiFor: (key: CredentialKind) => LiveApi;
   /** `apiFor("integration")`. */
   api: LiveApi;
+  /** A strict content-api client. */
+  content: ReturnType<typeof contentApi>;
 };
 
 /** What a live test's function receives. */
@@ -28,6 +30,9 @@ export const liveTest = test.extend<LiveFixtures>({
   },
   api: async ({ apiFor }, use) => {
     await use(apiFor("integration"));
+  },
+  content: async ({ ghost }, use) => {
+    await use(contentApi(ghost, ghost.leg, { strict: true }));
   },
 });
 

@@ -16,8 +16,9 @@ const postsAuthorSchema = authorsSchema.extend({
 export const postsSchema = z.object({
   ...ghostIdentitySchema.shape,
   ...ghostMetadataSchema.shape,
+  uuid: z.string(),
   title: z.string(),
-  html: z.string().catch(""),
+  html: z.string().nullish(),
   plaintext: z.string().nullish(),
   comment_id: z.string().nullable(),
   feature_image: z.string().nullable(),
@@ -32,10 +33,10 @@ export const postsSchema = z.object({
   canonical_url: z.string().nullable(),
   authors: z.array(postsAuthorSchema).optional(),
   tags: z.array(tagsSchema).optional(),
-  primary_author: postsAuthorSchema.nullish(),
+  primary_author: postsAuthorSchema.optional(),
   primary_tag: tagsSchema.nullish(),
   url: z.string(),
-  excerpt: z.string().catch(""),
+  excerpt: z.string().nullable(),
   reading_time: z.number().optional().default(0),
   created_at: z.string(),
   updated_at: z.string().nullish(),
@@ -43,6 +44,7 @@ export const postsSchema = z.object({
   access: z.boolean(),
   comments: z.boolean(),
   email_subject: z.string().nullish(),
+  frontmatter: z.string().nullable(),
 });
 
 export type Post = z.infer<typeof postsSchema>;
