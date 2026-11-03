@@ -3,6 +3,7 @@ on:
   pull_request:
     branches:
       - main
+      - ci-base-d
     # Only what the suite runs on.
     paths:
       - "packages/ghost-conformance/**"

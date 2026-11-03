@@ -5,6 +5,7 @@ on:
   pull_request:
     branches:
       - main
+      - ci-base-d
     paths:
       - "packages/ts-ghost-admin-api/src/schemas/**"
       - "packages/ts-ghost-content-api/src/**"
