@@ -2,6 +2,9 @@ import { ghostAdminAPI } from "~/ghost";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
+// Rendered per request, so a build needs no Ghost.
+export const dynamic = "force-dynamic";
+
 async function getBlogPost(slug: string) {
   const response = await ghostAdminAPI.posts
     .read({ slug })
