@@ -218,7 +218,7 @@ describe("ReadFetcher", () => {
     );
     const result = await readFetcher.fetch();
     expect(fetchMocker).toHaveBeenCalledWith(
-      "https://ghost.org/ghost/api/content/posts/slug/this-is-a-slug/?fields=title%2Cslug%2Ccount&include=count&key=1234",
+      "https://ghost.org/ghost/api/content/posts/slug/this-is-a-slug/?fields=title%2Cslug&include=count&key=1234",
       {
         headers: {
           "Content-Type": "application/json",
@@ -305,7 +305,7 @@ describe("ReadFetcher", () => {
 
     const result = await readFetcher.fetch();
     expect(fetchMocker).toHaveBeenCalledWith(
-      "https://ghost.org/ghost/api/content/posts/slug/this-is-a-slug/?fields=title%2Cslug%2Ccount&include=count&key=1234",
+      "https://ghost.org/ghost/api/content/posts/slug/this-is-a-slug/?fields=title%2Cslug&include=count&key=1234",
       {
         headers: {
           "Content-Type": "application/json",
@@ -497,7 +497,7 @@ describe("ReadFetcherFetcher outputs test suite", () => {
     await res.fetch();
     expect(fetchMocker).toHaveBeenCalledTimes(1);
     expect(fetchMocker).toHaveBeenCalledWith(
-      "https://ghost.org/ghost/api/content/posts/slug/this-is-a-slug/?fields=html%2Cpublished%2Ccount&include=count%2Cnested.key&formats=html&key=1234",
+      "https://ghost.org/ghost/api/content/posts/slug/this-is-a-slug/?fields=html%2Cpublished&include=count%2Cnested.key&formats=html&key=1234",
       {
         headers: {
           "Content-Type": "application/json",
@@ -529,7 +529,7 @@ describe("ReadFetcherFetcher outputs test suite", () => {
     await res.fetch();
     expect(fetchMocker).toHaveBeenCalledTimes(1);
     expect(fetchMocker).toHaveBeenCalledWith(
-      "https://ghost.org/ghost/api/content/posts/email/abc@foo.com/?fields=html%2Cpublished%2Ccount&include=count%2Cnested.key&formats=html&key=1234",
+      "https://ghost.org/ghost/api/content/posts/email/abc@foo.com/?fields=html%2Cpublished&include=count%2Cnested.key&formats=html&key=1234",
       {
         headers: {
           "Content-Type": "application/json",
@@ -564,7 +564,7 @@ describe("ReadFetcherFetcher outputs test suite", () => {
     await res.fetch();
     expect(fetchMocker).toHaveBeenCalledTimes(1);
     expect(fetchMocker).toHaveBeenCalledWith(
-      "https://ghost.org/ghost/api/content/posts/slug/this-is-a-slug/?fields=html%2Cpublished%2Ccount&include=count&formats=html&key=1234",
+      "https://ghost.org/ghost/api/content/posts/slug/this-is-a-slug/?fields=html%2Cpublished&include=count&formats=html&key=1234",
       {
         headers: {
           "Content-Type": "application/json",

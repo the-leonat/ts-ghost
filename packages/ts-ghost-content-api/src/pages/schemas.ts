@@ -34,7 +34,7 @@ export const pagesSchema = z.object({
   canonical_url: z.string().nullable(),
   authors: z.array(postsAuthorSchema).optional(),
   tags: z.array(tagsSchema).optional(),
-  primary_author: postsAuthorSchema.nullish(),
+  primary_author: postsAuthorSchema.optional(),
   primary_tag: tagsSchema.nullish(),
   url: z.string(),
   excerpt: z.string().nullable(),

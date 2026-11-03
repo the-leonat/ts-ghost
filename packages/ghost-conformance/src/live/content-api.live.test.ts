@@ -60,7 +60,6 @@ const NOT_SEEDABLE = {
   updated_at: "Ghost sets it on every write",
   published_at: "the Content API sends only published content",
   frontmatter: "no input sets it",
-  primary_author: "every post or page has an author",
   url: "Ghost always sends it",
 };
 
@@ -198,6 +197,39 @@ describe("content api", () => {
     assertOk(read);
     expect(browsed.data.map((post) => Object.keys(post).sort())).toEqual([["id", "title"]]);
     expect(Object.keys(read.data).sort()).toEqual(["id", "name"]);
+  });
+
+  describe.each(["posts", "pages"] as const)("%s: fields naming relations", (resource) => {
+    const seeds = () => (resource === "posts" ? posts : pages);
+    const reads = () => [
+      ["browse", (f: any) => f.browse({ filter: `id:${seeds().full.id}` })],
+      ["read by id", (f: any) => f.read({ id: seeds().full.id })],
+      ["read by slug", (f: any) => f.read({ slug: seeds().full.slug })],
+    ];
+
+    liveTest("come back filled, and only what was selected", async ({ content }) => {
+      for (const [, query] of reads() as [string, (f: any) => any][]) {
+        const fields = { slug: true, authors: true, tags: true, primary_author: true, primary_tag: true };
+        const result = await query(content[resource]).fields(fields).fetch();
+        assertOk(result);
+        const record = Array.isArray(result.data) ? result.data[0] : result.data;
+        expect(Object.keys(record).sort()).toEqual(Object.keys(fields).sort());
+        expect(record.authors.length).toBeGreaterThan(0);
+        expect(record.tags.length).toBeGreaterThan(0);
+        expect(record.primary_author.url).toEqual(expect.any(String));
+        expect(record.primary_tag.url).toEqual(expect.any(String));
+      }
+    });
+
+    liveTest("a primary key alone brings its relation", async ({ content }) => {
+      const result = await (content as any)[resource]
+        .read({ id: seeds().full.id })
+        .fields({ primary_author: true })
+        .fetch();
+      assertOk(result);
+      expect(Object.keys(result.data)).toEqual(["primary_author"]);
+      expect(result.data.primary_author.url).toEqual(expect.any(String));
+    });
   });
 
   liveTest("Ghost accepts the tag and author aliases the filter type allows", async ({ content }) => {
