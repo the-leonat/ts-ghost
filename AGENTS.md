@@ -38,8 +38,8 @@ pnpm test:watch
 # Run tests for a specific package
 pnpm test:watch --filter @ts-ghost/core-api
 
-# Integration tests (requires .env with real Ghost instance credentials)
-pnpm test:integration
+# Live conformance suite (needs Docker, no credentials)
+pnpm --filter @ts-ghost/ghost-conformance test:live
 
 # Linting and type checking
 pnpm lint
@@ -108,7 +108,7 @@ Results are discriminated unions with `{ success: true, data: T }` or `{ success
 
 ## Environment Variables
 
-For integration testing and playground scripts, create `.env`:
+For the example app and your own playground scripts, create `.env`:
 
 ```
 GHOST_URL=https://your-ghost-instance.com
@@ -138,7 +138,7 @@ pnpm version-packages # Apply changesets and bump versions
 
 - Tests are extremly important, especially on new features.
 - Unit tests run against mocked fetch responses
-- Integration tests require a real Ghost instance with specific test data (CI uses `astro-starter.digitalpress.blog`)
+- Live tests run the clients against a pinned Ghost in Docker (`packages/ghost-conformance`)
 - Tests include type checking via `vitest --typecheck`
 
 ## Ghost resources (adding or updating)

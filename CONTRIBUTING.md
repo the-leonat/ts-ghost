@@ -35,22 +35,9 @@ pnpm test:watch
 pnpm test:watch --filter @ts-ghost/core-api
 ```
 
-### Integration Testing against real Ghost Instance
-
-Integration testing is done in `@ts-ghost/content-api` and `@ts-ghost/admin-api` packages, against a test instance of Ghost called [`astro-starter-ghost`](https://astro-starter.digitalpress.blog). These tests are
-made to be run in CI with the hidden `.env` variables containing admin and content API key set for that specific ghost instance.
-
-Trying to run these tests locally without having the correct `.env` values will certainly fail.
-
-```bash
-# From the project root directory
-# This will fail as it is expecting specific values from a specific Ghost Instance
-pnpm test:integration:watch
-```
-
 ### Conformance suite against a real Ghost in Docker
 
-`packages/ghost-conformance` checks `@ts-ghost/admin-api` against the official Ghost Docker image at a pinned version. It needs Docker; see its [README](./packages/ghost-conformance/README.md).
+`packages/ghost-conformance` checks `@ts-ghost/admin-api` and `@ts-ghost/content-api` against the official Ghost Docker image at a pinned version. It needs Docker and no credentials; see its [README](./packages/ghost-conformance/README.md).
 
 ```bash
 pnpm --filter @ts-ghost/ghost-conformance test:live
@@ -86,7 +73,7 @@ This project is a monorepo of packages with well-defined purposes. It is compose
 
 - The `ghost-blog-buster` CLI is located in the `apps` directory.
 - Client API Packages are located in the `packages` directory.
-- `packages/ghost-conformance` is a private test package: the admin-api client against a real Ghost in Docker.
+- `packages/ghost-conformance` is a private test package: the admin-api and content-api clients against a real Ghost in Docker.
 
 ### `@ts-ghost/ghost-blog-buster`
 
